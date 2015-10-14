@@ -25,7 +25,7 @@ class AvakasJobQueue(BaseJobQueue)
 
 		job_name = '_'.join(time.strftime('%Y-%m-%d_%H-%M-%S'), job.descr, job.uuid)
 
-		local_job_dir = './.jobs/' + job_name
+		local_job_dir = './jobs/' + job_name
 
 		format_dict = {
 			'username':self.ssh_cfg['username'],
@@ -80,8 +80,8 @@ job.run()
 """.format(**format_dict))
 
 
-		with open(local_job_dir + "/epilogue.sh", "w") as pbs_file:
-			pbs_file.write("""
+		with open(local_job_dir + "/epilogue.sh", "w") as epilogue_file:
+			epilogue_file.write("""
 #!/bin/bash
 cp -f {base_work_dir}/$PBS_JOBID/* {job_dir}/
 """.format(**format_dict))

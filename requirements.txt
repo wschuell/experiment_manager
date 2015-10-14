@@ -2,9 +2,7 @@ numpy
 scipy
 seaborn
 matplotlib
-cPickle
 paramiko
-multiprocessing
 sqlite3
 bz2
 uuid
