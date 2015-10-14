@@ -3,6 +3,4 @@ scipy
 seaborn
 matplotlib
 paramiko
-sqlite3
-bz2
 uuid
