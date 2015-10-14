@@ -2,7 +2,7 @@
 
 import time
 from importlib import import_module
-from .job import Job
+from .. import Job
 
 
 job_queue_class={
