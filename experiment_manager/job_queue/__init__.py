@@ -2,7 +2,7 @@
 
 import time
 from importlib import import_module
-from .. import Job
+from ..job import Job
 
 
 job_queue_class={
@@ -34,14 +34,17 @@ class BaseJobQueue(object):
 	def update_queue(self):
 		for j in self.job_list:
 			if j.status == 'pending':
+				j.prepare()
 				self.submit_job(j)
 			elif j.status == 'running':
 				if not self.check_job_running(j):
-					self.retrieve_data(job)
+					self.retrieve_job(job)
 			if j.status == 'unfinished':
 				j.fix()
 				j.status == 'pending'
 			elif j.status == 'done':
+				j.unpack_data()
+				j.clean()
 				self.job_list.remove(j)
 			elif self.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join(job.descr,job.uuid))
@@ -51,6 +54,14 @@ class BaseJobQueue(object):
 			self.update_queue()
 			time.sleep(t)
 			self.auto_finish_queue(t=t)
+
+	def check_virtualenvs(self):
+		envs = []
+		for j in self.job_list:
+			env = str(j.virtual_env)
+			if env not in envs:
+				self.update_virtualenv(env)
+				envs.append(env)
 
 	def submit_job(self, job):
 		pass
@@ -64,14 +75,6 @@ class BaseJobQueue(object):
 	def update_virtualenv(self, virtual_env, requirements):
 		pass
 
-	def check_virtualenvs(self):
-		envs = []
-		for j in self.job_list:
-			env = str(j.virtual_env)
-			if env not in envs:
-				self.update_virtualenv(env)
-				envs.append(env)
-
-	def retrieve_data(self, job):
+	def retrieve_job(self, job):
 		pass
 

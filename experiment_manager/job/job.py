@@ -2,33 +2,35 @@ import uuid
 import cPickle
 import bz2
 import time
+import os
+import copy
+import shutil
 
-def idle(*args,**kwargs):
-	pass
 
 class Job(object):
 
-	def __init__(self, descr='', db=None, virtual_env=None, estimated_time=600, max_time=48*3600):
+	def __init__(self, descr='', db=None, virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs'):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
-		self.script = script
-		self.make_data_file = make_data_file
-		self.reinsert_data = reinsert_data
 		self.virtual_env = virtual_env
 		self.init_time = 0.
 		self.exec_time = 0.
+		self.path = os.path.join(path, self.uuid)
+		self.estimated_time = estimated_time
+		self.data = None
+		self.save()
 
-
-	def get_data(self, filename):
-		with open(filename, 'r') as f:
-			data cPickle.loads(bz2.decompress(f.read()))
-
-	def run():
+	def run(self):
+		os.chdir(self.path)
 		self.status = 'unfinished'
 		self.init_time += time.mktime(time.gmtime())
+		self.get_data()
 		self.script()
 		self.update_exec_time()
+		self.save_data()
+		os.chdir('../..')
+		self.save()
 		self.status = 'done'
 
 	def update_exec_time(self):
@@ -38,13 +40,12 @@ class Job(object):
 		if t is None:
 			t = self.estimated_time/10
 		self.update_exec_time()
-		if self.exec_time - self.lastsave_time > t:
+		if (self.exec_time + self.init_time) - self.lastsave_time > t:
 			self.save()
 
 	def fix(self):
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
-		self.status = 'pending'
 		else:
 			if self.estimated_time == self.max_time:
 				raise Exception('JobError: Job is too long, consider saving it while running!')
@@ -52,25 +53,41 @@ class Job(object):
 		self.status = 'pending'
 
 	def save(self):
-		path = './jobs/'+self.uuid
-		if not os.path.exists(path):
-			os.makedirs(path)
-		with open(path+'/job.b') as f:
+		if self.data is not None:
+			self.save_data()
+		tempdata = copy.deepcopy(self.data)
+		self.data = None
+		if not os.path.exists(self.path):
+			os.makedirs(self.path)
+		with open(self.path+'/job.b','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
-
-	def pack_data(self):
-		self.save()
-
-	def unpack_data(self, erase=True):
-		UNPACKDATA
-		if erase:
-			self.clean()
+		self.data = tempdata
+		self.lastsave_time = time.mktime(time.gmtime())
 
 	def clean(self):
-		path = './jobs/'+self.uuid
-		shutil.rmtree(path)
-		if not os.listdir('./jobs'):
-			shutil.rmtree('./jobs')
+		shutil.rmtree(self.path)
+		head, tail = os.path.split(self.path)
+		if not os.listdir(head):
+			shutil.rmtree(head)
+
+	def prepare(self):
+		self.save()
+		self.pack_data()
+
+	def pack_data(self):
+		pass
+
+	def unpack_data(self):
+		pass
+
+	def save_data(self,data):
+		pass
+
+	def get_data(self):
+		pass
+
+	def script(self, data):
+		pass
 
 #make data files
 #self.data_file_list
