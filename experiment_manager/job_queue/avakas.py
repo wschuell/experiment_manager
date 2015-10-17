@@ -94,25 +94,14 @@ PBS_JOBID = os.environ['PBS_JOBID']
 job_dir = '{job_dir}'
 work_dir = '{base_work_dir}'+PBS_JOBID
 
-i = 0
-print i
-i+=1
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
-print i
-i+=1
 with open('job.b','r') as f:
 	job = cPickle.loads(f.read())
 
-print i
-i+=1
 job.path = '.'
-print i
-i+=1
 job.run()
-
-shutil.copytree(work_dir,job_dir+'/new')
 
 sys.exit(0)
 """.format(**format_dict))
@@ -121,7 +110,10 @@ sys.exit(0)
 		with open("{local_job_dir}/epilogue.sh".format(**format_dict), "w") as epilogue_file:
 			epilogue_file.write(
 """#!/bin/bash
+echo epilogue
+PBS_JOBID=$1
 cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
+exit 0
 """.format(**format_dict))
 
 
@@ -129,7 +121,8 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 		session.command('module load torque')
 		session.create_path("{job_dir}".format(**format_dict))
 		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
-
+		session.command('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
+		session.command('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		session.command("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
 		session.close()
 

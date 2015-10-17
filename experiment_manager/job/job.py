@@ -46,8 +46,8 @@ class Job(object):
 		self.update_exec_time()
 		self.save_data()
 		os.chdir(self.get_back_path())
-		self.save()
 		self.status = 'done'
+		self.save()
 
 	def update_exec_time(self):
 		self.exec_time = time.mktime(time.gmtime()) - self.init_time
