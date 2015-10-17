@@ -112,18 +112,9 @@ print i
 i+=1
 job.run()
 
+shutil.copytree(work_dir,job_dir+'/new')
+
 sys.exit(0)
-print i
-i+=1
-sys.exit()
-print i
-i+=1
-os._exit(1)
-print i
-i+=1
-os._exit(0)
-i+=1
-exit()
 """.format(**format_dict))
 
 
