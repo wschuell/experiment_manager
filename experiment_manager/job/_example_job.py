@@ -10,7 +10,7 @@ class ExampleJob(Job):
 
 	def script(self):
 		for i in range(0,7):
-			for j in range(0,10):
+			for j in range(0,5):
 				self.data+=1
 				print self.data
 				time.sleep(1)

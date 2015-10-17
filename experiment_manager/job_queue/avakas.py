@@ -114,6 +114,8 @@ os._exit(1)
 print i
 i+=1
 os._exit(0)
+i+=1
+exit()
 """.format(**format_dict))
 
 
