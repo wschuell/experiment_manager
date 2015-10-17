@@ -151,34 +151,38 @@ exit 0
 
 	def set_virtualenv(self, virtual_env, requirements):
 		session = SSHSession(**self.ssh_cfg)
+		cmd = []
 		if virtual_env is None:
 			for package in requirements:
 				session.command('pip install --user '+package)
 		else:
 			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-				session.command('virtualenv /home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env))
-			session.command('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
+				cmd.append('virtualenv /home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env))
+			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 			for package in requirements:
-				session.command('pip install '+package)
-			session.command('deactivate')
+				cmd.append('pip install '+package)
+			cmd.append('deactivate')
+			session.command(' && '.join(cmd))
 		session.close()
 
 	def update_virtualenv(self, virtual_env, requirements=[]):
+		cmd = []
 		session = SSHSession(**self.ssh_cfg)
 		if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
 			session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:
 			if virtual_env is not None:
-				session.command('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
+				cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 				option=''
 			else:
 				option='--user '
 			for package in requirements:
 				if package is None:
-					session.command("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U")
+					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U")
 				else:
-					session.command('pip install --upgrade '+option+package)
+					cmd.append('pip install --upgrade '+option+package)
 				if virtual_env is not None:
-					session.command('deactivate')
+					cmd.append('deactivate')
+			session.command(' && '.join(cmd))
 			session.close()
