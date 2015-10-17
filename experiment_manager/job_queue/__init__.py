@@ -38,16 +38,16 @@ class BaseJobQueue(object):
 				self.submit_job(j)
 			elif j.status == 'running':
 				if not self.check_job_running(j):
-					self.retrieve_job(job)
+					self.retrieve_job(j)
+					print j.status
 			if j.status == 'unfinished':
 				j.fix()
-				j.status == 'pending'
 			elif j.status == 'done':
 				j.unpack_data()
 				j.clean()
 				self.job_list.remove(j)
-			elif self.status == 'missubmitted':
-				print('Missubmitted job: '+'_'.join(job.descr,job.uuid))
+			elif j.status == 'missubmitted':
+				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 
 	def auto_finish_queue(self,t=60):
 		if not job_list == []:

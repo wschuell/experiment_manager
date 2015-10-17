@@ -1,5 +1,6 @@
 
 from . import BaseJobQueue
+import pip
 
 class LocalJobQueue(BaseJobQueue):
 	def __init__(self):
@@ -14,11 +15,10 @@ class LocalJobQueue(BaseJobQueue):
 		if job.status == 'running':
 			job.status = 'unfinished'
 
-	def check_requirements(self, requirements):
-		pass
+	def set_virtualenv(self, virtual_env, requirements):
+		for package in requirements:
+			pip.main(['install', package])
 
-	def update_requirements(self, requirements):
-		pass
-
-	def retrieve_data(self, job):
-		pass
+	def update_virtualenv(self, virtual_env, requirements=[]):
+		for package in requirements:
+			pip.main(['install', '--upgrade', package])

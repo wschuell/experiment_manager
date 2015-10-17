@@ -9,27 +9,42 @@ import shutil
 
 class Job(object):
 
-	def __init__(self, descr='', db=None, virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs'):
+	def __init__(self, descr='', virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs'):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
 		self.virtual_env = virtual_env
 		self.init_time = 0.
 		self.exec_time = 0.
-		self.path = os.path.join(path, self.uuid)
+		if path[0] == '/':
+			raise IOError('path must be relative')
+		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
+		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
 		self.data = None
 		self.save()
 
+	def get_path(self):
+		if os.path.exists(self.path):
+			return self.path
+		else:
+			return '.'
+
+	def get_back_path(self):
+		if os.path.exists(self.path):
+			return os.path.join(['..']*len(self.path.split('/')))
+		else:
+			return '.'
+
 	def run(self):
-		os.chdir(self.path)
+		os.chdir(self.get_path())
 		self.status = 'unfinished'
 		self.init_time += time.mktime(time.gmtime())
 		self.get_data()
 		self.script()
 		self.update_exec_time()
 		self.save_data()
-		os.chdir('../..')
+		os.chdir(self.get_back_path())
 		self.save()
 		self.status = 'done'
 
@@ -46,14 +61,17 @@ class Job(object):
 	def fix(self):
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
+			print 'fix situation1'
 		else:
 			if self.estimated_time == self.max_time:
 				raise Exception('JobError: Job is too long, consider saving it while running!')
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
+			print 'fix situation2'
 		self.status = 'pending'
 
 	def save(self):
 		if self.data is not None:
+			os.chdir(self.get_path())
 			self.save_data()
 		tempdata = copy.deepcopy(self.data)
 		self.data = None
@@ -73,6 +91,12 @@ class Job(object):
 	def prepare(self):
 		self.save()
 		self.pack_data()
+
+	def update(self):
+		if os.path.isfile(self.path + '/job.b'):
+			with open(self.path + '/job.b') as f:
+				out_job = cPickle.loads(f.read())
+			self.__dict__.update(out_job.__dict__)
 
 	def pack_data(self):
 		pass

@@ -7,7 +7,7 @@ import copy
 class BatchExp(object):
 
 	def __init__(self, filename=None, db=None, uuid=None, def_meth=None, secondary_dbs=[], jq_cfg={'jq_type':'local'}):
-		if filename:
+		if filename and os.path.isfile(filename):
 			with open(filename+'.b', 'wb') as f:
 				unpickled = cPickle.loads(bz2.decompress(f.read()))
 			self.__dict__ = copy.deepcopy(unpickled.__dict__)
