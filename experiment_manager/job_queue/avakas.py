@@ -94,16 +94,24 @@ PBS_JOBID = os.environ['PBS_JOBID']
 job_dir = '{job_dir}'
 work_dir = '{base_work_dir}'+PBS_JOBID
 
+i = 0
+print i
+i+=1
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
+print i
+i+=1
 with open('job.b','r') as f:
 	job = cPickle.loads(f.read())
 
+print i
+i+=1
 job.path = '.'
+print i
+i+=1
 job.run()
 
-i = 0
 sys.exit(0)
 print i
 i+=1

@@ -9,7 +9,7 @@ import shutil
 class ExampleJob(Job):
 
 	def script(self):
-		for i in range(0,7):
+		for i in range(0,6):
 			for j in range(0,5):
 				self.data+=1
 				print self.data
