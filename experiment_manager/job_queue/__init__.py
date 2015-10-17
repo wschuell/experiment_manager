@@ -39,7 +39,8 @@ class BaseJobQueue(object):
 			elif j.status == 'running':
 				if not self.check_job_running(j):
 					self.retrieve_job(j)
-					print j.status
+					if j.status == 'pending':
+						j.status = 'missubmitted'
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':

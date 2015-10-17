@@ -32,7 +32,8 @@ class Job(object):
 
 	def get_back_path(self):
 		if os.path.exists(self.path):
-			return os.path.join(['..']*len(self.path.split('/')))
+			depth = len(os.path.normpath(self.path).split('/'))
+			return os.path.join(*(['..']*depth))
 		else:
 			return '.'
 

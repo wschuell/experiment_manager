@@ -25,7 +25,7 @@ class AvakasJobQueue(BaseJobQueue):
 		if job.virtual_env is None:
 			python_bin = '/usr/bin/env python'
 		else:
-			python_bin = '/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], job.virtual_env)
+			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_cfg['username'], job.virtual_env)
 
 		time = job.estimated_time
 
@@ -154,7 +154,7 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 			session.command('source $HOME/virtualenvs/'+virtual_env+'/activate')
 			for package in requirements:
 				session.command('pip install '+package)
-			session.command(deactivate)
+			session.command('deactivate')
 		session.close()
 
 	def update_virtualenv(self, virtual_env, requirements=[]):
@@ -174,5 +174,5 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 				else:
 					session.command('pip install --upgrade '+option+package)
 				if virtual_env is not None:
-					session.command(deactivate)
+					session.command('deactivate')
 			session.close()
