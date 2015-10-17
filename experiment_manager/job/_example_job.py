@@ -15,6 +15,7 @@ class ExampleJob(Job):
 				print self.data
 				time.sleep(1)
 			self.check_time()
+		os.makedirs('testdir')
 
 	def get_data(self):
 		if os.path.isfile(self.descr+'data.dat'):

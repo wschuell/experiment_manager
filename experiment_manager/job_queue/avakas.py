@@ -112,7 +112,7 @@ sys.exit(0)
 """#!/bin/bash
 echo epilogue
 PBS_JOBID=$1
-cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
+cp -f -R {base_work_dir}$PBS_JOBID/* {job_dir}/
 exit 0
 """.format(**format_dict))
 

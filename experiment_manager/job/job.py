@@ -47,6 +47,7 @@ class Job(object):
 		self.save_data()
 		os.chdir(self.get_back_path())
 		self.status = 'done'
+		print 'done'
 		self.save()
 
 	def update_exec_time(self):
@@ -113,14 +114,3 @@ class Job(object):
 
 	def script(self, data):
 		pass
-
-#make data files
-#self.data_file_list
-#reinsert_data
-
-
-
-#		if db:
-#			self.db = db
-#		else:
-#			self.db = Database(path='{}_{}.db'.format(self.descr, self.uuid))
