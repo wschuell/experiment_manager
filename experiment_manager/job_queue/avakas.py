@@ -86,6 +86,7 @@ class AvakasJobQueue(BaseJobQueue):
 
 
 import os
+import sys
 import shutil
 import cPickle
 
@@ -102,6 +103,17 @@ with open('job.b','r') as f:
 job.path = '.'
 job.run()
 
+i = 0
+sys.exit(0)
+print i
+i+=1
+sys.exit()
+print i
+i+=1
+os._exit(1)
+print i
+i+=1
+os._exit(0)
 """.format(**format_dict))
 
 

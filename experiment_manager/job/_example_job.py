@@ -12,6 +12,7 @@ class ExampleJob(Job):
 		for i in range(0,7):
 			for j in range(0,10):
 				self.data+=1
+				print self.data
 				time.sleep(1)
 			self.check_time()
 
