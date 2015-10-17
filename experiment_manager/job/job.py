@@ -31,11 +31,11 @@ class Job(object):
 			return '.'
 
 	def get_back_path(self):
-		if os.path.exists(self.path):
+		if self.path == '.':
+			return '.'
+		else:
 			depth = len(os.path.normpath(self.path).split('/'))
 			return os.path.join(*(['..']*depth))
-		else:
-			return '.'
 
 	def run(self):
 		os.chdir(self.get_path())
@@ -47,7 +47,6 @@ class Job(object):
 		self.save_data()
 		os.chdir(self.get_back_path())
 		self.status = 'done'
-		print 'done'
 		self.save()
 
 	def update_exec_time(self):
