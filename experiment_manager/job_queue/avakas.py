@@ -162,9 +162,9 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 			for package in requirements:
 				session.command('pip install --user '+package)
 		else:
-			if not session.path_exists('$HOME/virtualenvs/'+virtual_env):
-				session.command('virtualenv $HOME/virtualenvs/'+virtual_env)
-			session.command('source $HOME/virtualenvs/'+virtual_env+'/activate')
+			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
+				session.command('virtualenv /home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env))
+			session.command('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 			for package in requirements:
 				session.command('pip install '+package)
 			session.command('deactivate')
@@ -172,12 +172,12 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 
 	def update_virtualenv(self, virtual_env, requirements=[]):
 		session = SSHSession(**self.ssh_cfg)
-		if not session.path_exists('$HOME/virtualenvs/'+virtual_env):
+		if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
 			session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:
 			if virtual_env is not None:
-				session.command('source $HOME/virtualenvs/'+virtual_env+'/activate')
+				session.command('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 				option=''
 			else:
 				option='--user '
