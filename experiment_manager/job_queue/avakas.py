@@ -106,8 +106,8 @@ job.run()
 
 
 		with open("{local_job_dir}/epilogue.sh".format(**format_dict), "w") as epilogue_file:
-			epilogue_file.write("""
-#!/bin/bash
+			epilogue_file.write(
+"""#!/bin/bash
 cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 """.format(**format_dict))
 
@@ -126,7 +126,7 @@ cp -f {base_work_dir}$PBS_JOBID/* {job_dir}/
 
 	def check_job_running(self, job):
 		session = SSHSession(**self.ssh_cfg)
-		test = session.command_output('qstat|grep {job_name}'.format(**self.format_dict(job)))
+		test = session.command_output('qstat -f|grep {job_name}'.format(**self.format_dict(job)))
 		session.close()
 		if test:
 			return True

@@ -9,10 +9,10 @@ import shutil
 class ExampleJob(Job):
 
 	def script(self):
-		for i in range(0,6):
+		for i in range(0,7):
 			for j in range(0,10):
 				self.data+=1
-				time.sleep(10)
+				time.sleep(1)
 			self.check_time()
 
 	def get_data(self):
