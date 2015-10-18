@@ -110,7 +110,7 @@ sys.exit(0)
 		with open("{local_job_dir}/epilogue.sh".format(**format_dict), "w") as epilogue_file:
 			epilogue_file.write(
 """#!/bin/bash
-echo epilogue
+echo "job finished, backing up files."
 PBS_JOBID=$1
 cp -f -R {base_work_dir}$PBS_JOBID/* {job_dir}/
 exit 0

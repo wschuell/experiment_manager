@@ -7,6 +7,7 @@ import os
 from stat import S_ISDIR
 import getpass
 from Crypto.PublicKey import RSA
+import socket
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -114,8 +115,9 @@ class SSHSession(object):
             os.chmod(self.key_file, 0600)
             content_file.write(key.exportKey('PEM'))
         pubkey = key.publickey()
+        pubkey_string = pubkey.exportKey('OpenSSH') + ' {}@{}'.format(os.environ['USER'], socket.gethostname())
         with open(self.key_file+'.pub', 'w') as content_file:
-            content_file.write(pubkey.exportKey('OpenSSH'))
-        self.command('echo -e "{}" >> /home/{}/.ssh/authorized_keys'.format(pubkey.exportKey('OpenSSH'), self.username))
+            content_file.write(pubkey_string)
+        self.command('echo -e "{}" >> /home/{}/.ssh/authorized_keys'.format(pubkey_string, self.username))
 
 

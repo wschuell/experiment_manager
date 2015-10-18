@@ -8,6 +8,11 @@ import shutil
 
 class ExampleJob(Job):
 
+	def __init__(self):
+		super(ExampleJob,self).__init__()
+		if os.path.isfile(self.descr+'data.dat'):
+			shutil.copy(self.descr+'data.dat', self.path+'/'+self.descr+'data.dat')
+
 	def script(self):
 		for i in range(0,6):
 			for j in range(0,4):
@@ -30,6 +35,3 @@ class ExampleJob(Job):
 	def unpack_data(self):
 		shutil.move(self.path+'/'+self.descr+'data.dat', self.descr+'data.dat')
 
-	def pack_data(self):
-		if os.path.isfile(self.descr+'data.dat'):
-			shutil.copy(self.descr+'data.dat', self.path+'/'+self.descr+'data.dat')

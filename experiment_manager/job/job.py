@@ -9,10 +9,11 @@ import shutil
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs'):
+	def __init__(self, descr='', virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs', erase=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
+		self.erase = erase
 		self.virtual_env = virtual_env
 		self.init_time = 0.
 		self.exec_time = 0.
@@ -62,12 +63,10 @@ class Job(object):
 	def fix(self):
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
-			print 'fix situation1'
 		else:
-			if self.estimated_time == self.max_time:
-				raise Exception('JobError: Job is too long, consider saving it while running!')
+			if self.estimated_time >= self.max_time:
+				raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
-			print 'fix situation2'
 		self.status = 'pending'
 
 	def save(self):
@@ -89,18 +88,11 @@ class Job(object):
 		if not os.listdir(head):
 			shutil.rmtree(head)
 
-	def prepare(self):
-		self.save()
-		self.pack_data()
-
 	def update(self):
 		if os.path.isfile(self.path + '/job.b'):
 			with open(self.path + '/job.b') as f:
 				out_job = cPickle.loads(f.read())
 			self.__dict__.update(out_job.__dict__)
-
-	def pack_data(self):
-		pass
 
 	def unpack_data(self):
 		pass

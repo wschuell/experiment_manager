@@ -24,17 +24,21 @@ def JobQueue(jq_type='local', **jq_cfg2):
 
 
 class BaseJobQueue(object):
-	def __init__(self):
+	def __init__(self, erase=True):
 		self.job_list = []
+		self.erase = erase
 
 	def add_job(self, job):
 		job.status = 'pending'
-		self.job_list.append(job)
+		if not job in self.job_list:
+			self.job_list.append(job)
+		else:
+			print 'Job already in queue!'
 
 	def update_queue(self):
 		for j in self.job_list:
 			if j.status == 'pending':
-				j.prepare()
+				j.save()
 				self.submit_job(j)
 			elif j.status == 'running':
 				if not self.check_job_running(j):
@@ -44,9 +48,12 @@ class BaseJobQueue(object):
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
+				j.get_data()
 				j.unpack_data()
-				j.clean()
+				j.data = None
 				self.job_list.remove(j)
+				if (not self.erase) and (not j.erase):
+					j.clean()
 			elif j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 
