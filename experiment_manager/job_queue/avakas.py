@@ -165,8 +165,10 @@ exit 0
 			session.command(' && '.join(cmd))
 		session.close()
 
-	def update_virtualenv(self, virtual_env, requirements=[]):
+	def update_virtualenv(self, virtual_env=None, requirements=[]):
 		cmd = []
+		if not isinstance(requirements, (list, tuple)):
+			requirements = [requirements]
 		session = SSHSession(**self.ssh_cfg)
 		if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
 			session.close()
