@@ -18,8 +18,10 @@ class SSHSession(object):
         home = os.environ['HOME']
         if os.path.isfile('{}/.ssh/{}/id_rsa'.format(home,key_file)):
             self.key_file = '{}/.ssh/{}/id_rsa'.format(home,key_file)
-        else:
+        elif os.path.isfile(key_file):
             self.key_file = key_file
+        else:
+            self.key_file = '{}/.ssh/id_rsa'.format(home)
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
@@ -32,6 +34,14 @@ class SSHSession(object):
             self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
             question = raw_input('Install SSH key? Y/N')
             if question == 'Y' or question == 'y':
+                where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
+                if where == 'default':
+                    where = '{}/.ssh/id_rsa'.format(home)
+                elif where == 'key_file_name':
+                    where = '{}/.ssh/{}/id_rsa'.format(home,key_file)
+                elif where == 'key_file':
+                    where = key_file
+                self.key_file = where
                 self.install_ssh_key()
                 self.close()
                 self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)

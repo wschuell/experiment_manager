@@ -8,8 +8,8 @@ import shutil
 
 class ExampleJob(Job):
 
-	def __init__(self):
-		super(ExampleJob,self).__init__()
+	def __init__(self,*args,**kwargs):
+		super(ExampleJob,self).__init__(*args,**kwargs)
 		if os.path.isfile(self.descr+'data.dat'):
 			shutil.copy(self.descr+'data.dat', self.path+'/'+self.descr+'data.dat')
 
