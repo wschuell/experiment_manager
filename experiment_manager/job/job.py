@@ -9,7 +9,7 @@ import shutil
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, estimated_time=600, max_time=48*3600, path = 'jobs', erase=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr

@@ -8,8 +8,9 @@ from . import BaseJobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(BaseJobQueue):
-	def __init__(self, ssh_cfg, basedir='jobs'):
+	def __init__(self, ssh_cfg, basedir='jobs', auto_update=False):
 		super(AvakasJobQueue,self).__init__()
+		self.auto_update = auto_update
 		self.ssh_cfg = ssh_cfg
 		self.basedir = basedir
 		if basedir[0] == '/':
@@ -117,7 +118,8 @@ exit 0
 """.format(**format_dict))
 
 
-
+		if self.auto_update:
+			self.update_virtualenv(virtual_env=job.virtualenv, requirements=job.requirements)
 		session.command('module load torque')
 		session.create_path("{job_dir}".format(**format_dict))
 		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
@@ -152,6 +154,8 @@ exit 0
 	def set_virtualenv(self, virtual_env, requirements):
 		session = SSHSession(**self.ssh_cfg)
 		cmd = []
+		if not isinstance(requirements, (list, tuple)):
+			requirements = [requirements]
 		if virtual_env is None:
 			for package in requirements:
 				session.command('pip install --user '+package)
@@ -162,7 +166,7 @@ exit 0
 			for package in requirements:
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
-			session.command(' && '.join(cmd))
+			print session.command_output(' && '.join(cmd))
 		session.close()
 
 	def update_virtualenv(self, virtual_env=None, requirements=[]):
@@ -186,5 +190,5 @@ exit 0
 					cmd.append('pip install --upgrade '+option+package)
 				if virtual_env is not None:
 					cmd.append('deactivate')
-			session.command(' && '.join(cmd))
+			print session.command_output(' && '.join(cmd))
 			session.close()

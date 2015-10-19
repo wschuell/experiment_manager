@@ -71,6 +71,7 @@ class GraphExpJob(ExperimentJob):
 	def __init__(self, exp, **graph_cfg):
 		super(ExperimentJob, self).__init__()
 		self.data = {}
+		self.graph_filename = None
 		self.data['exp'] = copy.deepcopy(exp)
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
@@ -89,6 +90,7 @@ class GraphExpJob(ExperimentJob):
 			graph_cfg['tmin'] += self.data['exp']._time_step
 			if 'graph' not in self.data.keys():
 				self.data['graph'] = self.data['exp'].graph(**graph_cfg)
+				self.graph_filename = self.data['graph'].filename
 			else:
 				self.data['graph'].complete_with(self.data['exp'].graph(**graph_cfg))
 			self.check_time()
@@ -96,8 +98,8 @@ class GraphExpJob(ExperimentJob):
 	def get_data(self):
 		with open(self.xp_uuid+'.b','r') as f:
 			self.data['exp'] = cPickle.loads(f.read())
-		if os.path.isfile(GRAPHFILE):
-			with open(GRAPHFILE, 'r') as f:
+		if self.graph_filename is not None and os.path.isfile(self.graph_filename+'.b'):
+			with open(self.graph_filename, 'r') as f:
 				self.data['graph'] = cPickle.loads(f.read())
 
 	def save_data(self):
