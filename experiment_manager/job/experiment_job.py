@@ -75,7 +75,7 @@ class GraphExpJob(ExperimentJob):
 		self.data['exp'] = copy.deepcopy(exp)
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
-			self.graph_cfg['tmax'] = self.data['exp'].-T[-1]
+			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
 		self.save()
@@ -125,7 +125,7 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.xp_uuid = self.data.uuid
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
-			self.graph_cfg['tmax'] = self.data['exp'].-T[-1]
+			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
 		self.save()
