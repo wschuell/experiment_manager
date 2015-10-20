@@ -17,7 +17,7 @@ def requirements():
 setup(name='experiment_manager',
       version=version(),
       packages=find_packages(),
-      requires=[requirements()],
+      install_requires=[requirements()],
       author='William Schueller',
       author_email='william.schueller@gmail.com',
       description='Python Library for Simulated Experiment Management',
