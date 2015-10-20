@@ -40,3 +40,4 @@ nosetests.xml
 
 # iPython Notebooks
 .ipynb_checkpoints/
+*/jobs/*
