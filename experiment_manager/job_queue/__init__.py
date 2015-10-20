@@ -1,5 +1,6 @@
 #partly based on Thibaut Munzer's script
 
+import os
 import time
 from importlib import import_module
 from ..job import Job
