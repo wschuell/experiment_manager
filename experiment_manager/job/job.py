@@ -22,14 +22,13 @@ class Job(object):
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
 		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
-		self.data = None
-		self.save()
+		#self.data = None
+		#self.save()
 
 	def get_path(self):
-		if os.path.exists(self.path):
-			return self.path
-		else:
-			return '.'
+		if not os.path.exists(self.path):
+			os.makedirs(self.path)
+		return self.path
 
 	def get_back_path(self):
 		if self.path == '.':
@@ -73,6 +72,7 @@ class Job(object):
 		if self.data is not None:
 			os.chdir(self.get_path())
 			self.save_data()
+			os.chdir(self.get_back_path())
 		tempdata = copy.deepcopy(self.data)
 		self.data = None
 		if not os.path.exists(self.path):

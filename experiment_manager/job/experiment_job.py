@@ -19,7 +19,7 @@ class ExperimentJob(Job):
 
 	def script(self):
 		for i in range(self.data._T[-1],self.T):
-			self.data.continue_exp(self.data.step)
+			self.data.continue_exp(self.data._time_step)
 			self.check_time()
 
 	def get_data(self):
@@ -51,7 +51,7 @@ class ExperimentDBJob(ExperimentJob):
 
 	def script(self):
 		for i in range(self.data._T[-1],self.T):
-			self.data.continue_exp(self.data.step, autocommit=False)
+			self.data.continue_exp(self.data._time_step, autocommit=False)
 			self.check_time()
 
 	def get_data(self):

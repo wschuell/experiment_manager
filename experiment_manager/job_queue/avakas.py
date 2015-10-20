@@ -190,5 +190,6 @@ exit 0
 					cmd.append('pip install --upgrade '+option+package)
 				if virtual_env is not None:
 					cmd.append('deactivate')
+			print cmd
 			print session.command_output(' && '.join(cmd))
 			session.close()
