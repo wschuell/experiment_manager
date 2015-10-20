@@ -48,7 +48,9 @@ class BaseJobQueue(object):
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
+				os.chdir(j.get_path())
 				j.get_data()
+				os.chdir(j.get_back_path())
 				j.unpack_data()
 				j.data = None
 				self.job_list.remove(j)
