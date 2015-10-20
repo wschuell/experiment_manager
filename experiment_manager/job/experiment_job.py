@@ -38,12 +38,12 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(ExperimentJob):
 
-	def __init__(self, exp, T, db_info=None):
-		super(ExperimentJob, self).__init__()
+	def __init__(self, exp, T, db_cfg={}, **kwargs):
+		super(ExperimentJob, self).__init__(**kwargs)
 		self.data = copy.deepcopy(exp)
 		self.T = T
 		self.origin_db = copy.deepcopy(self.data.db)
-		self.db = self.data.db.__class__(**db_info)
+		self.db = self.data.db.__class__(**db_cfg)
 		self.data.db = self.db
 		self.xp_uuid = self.data.uuid
 		self.save()
@@ -68,8 +68,8 @@ class ExperimentDBJob(ExperimentJob):
 
 class GraphExpJob(ExperimentJob):
 
-	def __init__(self, exp, **graph_cfg):
-		super(ExperimentJob, self).__init__()
+	def __init__(self, exp, graph_cfg, **kwargs):
+		super(ExperimentJob, self).__init__(**kwargs)
 		self.data = {}
 		self.graph_filename = None
 		self.data['exp'] = copy.deepcopy(exp)
@@ -112,21 +112,10 @@ class GraphExpJob(ExperimentJob):
 		shutil.move(self.path+'/'+self.data['exp'].uuid+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
 
 
+
 class GraphExpDBJob(ExperimentDBJob):
 
 	def __init__(self, exp, **graph_cfg):
-		super(ExperimentJob, self).__init__()
-		self.data = {}
-		self.data['exp'] = copy.deepcopy(exp)
-		self.graph_cfg = graph_cfg
-		if 'tmax' not in graph_cfg:
-			self.graph_cfg['tmax'] = self.data['exp'].-T[-1]
-		if 'tmin' not in graph_cfg:
-			self.graph_cfg['tmin'] = 0
-		self.save()
-		self.data = None
-
-	def __init__(self, exp, T, db_info=None):
 		super(ExperimentJob, self).__init__()
 		self.data = copy.deepcopy(exp)
 		self.T = T
@@ -134,6 +123,11 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.db = self.data.db.__class__(**db_info)
 		self.data.db = self.db
 		self.xp_uuid = self.data.uuid
+		self.graph_cfg = graph_cfg
+		if 'tmax' not in graph_cfg:
+			self.graph_cfg['tmax'] = self.data['exp'].-T[-1]
+		if 'tmin' not in graph_cfg:
+			self.graph_cfg['tmin'] = 0
 		self.save()
 		self.data = None
 
@@ -144,36 +138,25 @@ class GraphExpDBJob(ExperimentDBJob):
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
 			graph_cfg['tmax'] += self.data['exp']._time_step
 			graph_cfg['tmin'] += self.data['exp']._time_step
-			if 'graph' not in self.data.keys():
-				self.data['graph'] = self.data['exp'].graph(**graph_cfg)
-			else:
-				self.data['graph'].complete_with(self.data['exp'].graph(**graph_cfg))
-			self.check_time()
-
-
-	def script(self):
-		for i in range(self.data._T[-1],self.T):
-			self.data.continue_exp(self.data.step, autocommit=False)
+			self.data.graph(autocommit=False, **graph_cfg)
 			self.check_time()
 
 	def get_data(self):
 		self.db.get_experiment(uuid=self.xp_uuid)
 
-	def get_data(self):
-		self.db.get_experiment(uuid=self.xp_uuid)
-
 	def save_data(self):
-		with open(self.data['exp'].uuid+'.b','w') as f:
-			f.write(cPickle.dumps(self.data))
-		if 'graph' in self.data.keys():
-			self.data['graph'].write_files()
-
-	def save_data(self):
-		self.data['exp'].commit_to_db()
-		self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
+		self.data.commit_to_db()
+		self.data.commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		self.data['exp'].db = self.origin_db
-		self.data['exp'].commit_to_db()
-		self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
+		if hasattr(self.data.db, 'dbpath'):
+			self.data.db.dbpath = os.path.join(self.path, self.data.db.dbpath)
+		self.origin_db.merge(other_db=self.data.db, id_list=[self.xp_uuid], main_only=False)
+		self.data.db = self.origin_db
+		self.data.commit_to_db()
+
+
+#id list is list
+# other db instead of other db path
+#save data graph???
 
