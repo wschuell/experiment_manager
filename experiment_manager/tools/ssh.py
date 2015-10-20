@@ -59,7 +59,7 @@ class SSHSession(object):
             return True
 
     def create_path(self, path):
-        self.command("mkdir -p {}".format(path))
+        self.command_output("mkdir -p {}".format(path))
 
     def command(self,cmd):
         return self.client.exec_command(cmd)
@@ -69,6 +69,12 @@ class SSHSession(object):
         return std_out.read()
 
     def put(self,localfile,remotefile):
+        #print os.getcwd()
+        #print localfile
+        #print remotefile
+        #print self.sftp.getcwd()
+        #print os.path.exists(localfile)
+        #print self.path_exists(os.path.dirname(remotefile))
         self.sftp.put(localfile,remotefile)
 
     def put_dir(self,localdir,remotedir, max_depth=10):
