@@ -69,7 +69,7 @@ class ExperimentDBJob(ExperimentJob):
 class GraphExpJob(ExperimentJob):
 
 	def __init__(self, exp, graph_cfg, **kwargs):
-		super(ExperimentJob, self).__init__(exp=exp, **kwargs)
+		super(ExperimentJob, self).__init__(**kwargs)
 		self.data = {}
 		self.xp_uuid = exp.uuid
 		self.graph_filename = None
@@ -98,6 +98,8 @@ class GraphExpJob(ExperimentJob):
 
 	def get_data(self):
 		with open(self.xp_uuid+'.b','r') as f:
+			if self.data is None:
+				self.data = {}
 			self.data['exp'] = cPickle.loads(f.read())
 		if self.graph_filename is not None and os.path.isfile(self.graph_filename+'.b'):
 			with open(self.graph_filename, 'r') as f:
