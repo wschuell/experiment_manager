@@ -69,8 +69,9 @@ class ExperimentDBJob(ExperimentJob):
 class GraphExpJob(ExperimentJob):
 
 	def __init__(self, exp, graph_cfg, **kwargs):
-		super(ExperimentJob, self).__init__(**kwargs)
+		super(ExperimentJob, self).__init__(exp=exp, **kwargs)
 		self.data = {}
+		self.xp_uuid = exp.uuid
 		self.graph_filename = None
 		self.data['exp'] = copy.deepcopy(exp)
 		self.graph_cfg = graph_cfg
