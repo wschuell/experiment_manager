@@ -102,17 +102,18 @@ class GraphExpJob(ExperimentJob):
 				self.data = {}
 			self.data['exp'] = cPickle.loads(f.read())
 		if self.graph_filename is not None and os.path.isfile(self.graph_filename+'.b'):
-			with open(self.graph_filename, 'r') as f:
+			with open(self.graph_filename+'.b', 'r') as f:
 				self.data['graph'] = cPickle.loads(f.read())
 
 	def save_data(self):
 		with open(self.data['exp'].uuid+'.b','w') as f:
-			f.write(cPickle.dumps(self.data))
+			f.write(cPickle.dumps(self.data['exp']))
 		if 'graph' in self.data.keys():
 			self.data['graph'].write_files()
 
 	def unpack_data(self):
 		shutil.move(self.path+'/'+self.data['exp'].uuid+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
+		shutil.move(self.path+'/'+self.graph_filename+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
 
 
 
