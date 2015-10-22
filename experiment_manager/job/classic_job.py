@@ -9,9 +9,13 @@ import shutil
 
 class ClassicJob(Job):
 
-	def __init__(self,filename='data.dat', run_fun='run', *args,**kwargs):
+	def __init__(self,filename='data.dat', run_fun='run', out_files=None, *args,**kwargs):
 		super(ExampleJob,self).__init__(*args,**kwargs)
 		self.filename = filename
+		if out_files is None:
+			self.out_files = [self.filename]
+		elif not isinstance(out_files,(list,tuple)):
+			self.out_files = [out_files]
 		if os.path.isfile(self.filename):
 			shutil.copy(self.filename, self.path+'/'+self.filename)
 
@@ -22,16 +26,21 @@ class ClassicJob(Job):
 		try:
 			with open(self.filename,'r') as f:
 				self.data = cPickle.loads(f.read())
+				self.bz2=False
 		except UnpicklingError:
 			with open(self.filename,'r') as f:
 				self.data = cPickle.loads(bz2.decompress(f.read()))
+				self.bz2 = True
 
 	def save_data(self):
 		with open(self.filename,'w') as f:
-			f.write(json.dumps(self.data))
+			if self.bz2:
+				f.write(cPickle.dumps(bz2.compress(self.data)))
+			else:
+				f.write(cPickle.dumps(self.data))
 
 	def unpack_data(self):
-		for f in os.listdir(self.path):
+		for f in self.out_files:
 			shutil.copy(os.path.join(self.path,f), f)
 
 
@@ -45,12 +54,4 @@ class IteratedJob(ClassicJob):
 		for i in range(steps):
 			getattr(self.data,self.step_fun)()
 			self.check_time()
-
-	def save_data(self):
-		with open(self.filename,'w') as f:
-			f.write(json.dumps(self.data))
-
-	def unpack_data(self):
-		for f in os.listdir(self.path):
-			shutil.copy(os.path.join(self.path,f), f)
 
