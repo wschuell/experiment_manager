@@ -27,7 +27,7 @@ class ClassicJob(Job):
 			with open(self.filename,'r') as f:
 				self.data = cPickle.loads(f.read())
 				self.bz2=False
-		except UnpicklingError:
+		except cPickle.UnpicklingError:
 			with open(self.filename,'r') as f:
 				self.data = cPickle.loads(bz2.decompress(f.read()))
 				self.bz2 = True

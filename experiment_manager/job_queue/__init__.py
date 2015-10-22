@@ -30,7 +30,6 @@ class BaseJobQueue(object):
 		self.erase = erase
 
 	def add_job(self, job):
-		job.status = 'pending'
 		if not job in self.job_list:
 			self.job_list.append(job)
 		else:
@@ -38,6 +37,8 @@ class BaseJobQueue(object):
 
 	def update_queue(self):
 		for j in [x for x in self.job_list]:
+			if j.status == 'dependencies not satisfied':
+				j.re_init()
 			if j.status == 'pending':
 				j.save()
 				self.submit_job(j)
@@ -59,20 +60,24 @@ class BaseJobQueue(object):
 					j.clean()
 			elif j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
+			elif j.status == 'dependencies not satisfied':
+				print('Dependencies not satisfied for job: '+'_'.join([j.descr,j.uuid]))
 
 	def auto_finish_queue(self,t=60):
-		if not job_list == []:
+		while job_list:
 			self.update_queue()
 			time.sleep(t)
-			self.auto_finish_queue(t=t)
 
 	def check_virtualenvs(self):
-		envs = []
+		envs = {}
 		for j in self.job_list:
 			env = str(j.virtual_env)
-			if env not in envs:
-				self.update_virtualenv(env)
-				envs.append(env)
+			if env not in envs.keys():
+				envs[env] = copy.deepcopy(j.requirements)
+			else:
+				envs[env] += copy.deepcopy(j.requirements)
+		for env in envs.keys():
+			self.update_virtualenv(env, requirements=list(set(envs[env])))
 
 	def submit_job(self, job):
 		pass

@@ -82,6 +82,7 @@ class GraphExpJob(ExperimentJob):
 		self.save()
 		self.data = None
 
+
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		graph_cfg['tmin'] = self.graph_cfg['tmin']-0.1 - self.data['exp']._time_step
@@ -122,20 +123,30 @@ class GraphExpDBJob(ExperimentDBJob):
 		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env)
 		self.data = {}
 		self.data['exp'] = copy.deepcopy(exp)
+		self.xp_uuid = self.data['exp'].uuid
 		self.origin_db = copy.deepcopy(self.data['exp'].db)
 		os.chdir(self.get_path())
 		new_db = self.data['exp'].db.__class__(**db_cfg)
 		os.chdir(self.get_back_path())
 		self.db = new_db
 		self.data['exp'].db = self.db
-		self.xp_uuid = self.data['exp'].uuid
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
 			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
+		print self.data['exp']._T[-1]
+		print self.graph_cfg['tmax']
+		if self.data['exp']._T[-1]<self.graph_cfg['tmax']:
+			self.status = 'dependencies not satisfied'
 		self.save()
 		self.data = None
+
+	def re_init(self):
+		self.data = {}
+		self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
+		if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
+			self.status = 'pending'
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)

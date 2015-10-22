@@ -105,3 +105,6 @@ class Job(object):
 
 	def script(self, data):
 		pass
+
+	def re_init(self):
+		pass
