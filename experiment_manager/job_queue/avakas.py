@@ -151,9 +151,13 @@ exit 0
 		job.update()
 		job.path = path
 
-	def set_virtualenv(self, virtual_env, requirements):
+	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
 		session = SSHSession(**self.ssh_cfg)
 		cmd = []
+		if sys_site_packages:
+			site_pack = '--system-site-packages '
+		else:
+			site_pack = ''
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		if virtual_env is None:
@@ -161,7 +165,7 @@ exit 0
 				session.command('pip install --user '+package)
 		else:
 			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-				cmd.append('virtualenv /home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env))
+				cmd.append('virtualenv {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_cfg['username'], virtual_env))
 			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 			for package in requirements:
 				cmd.append('pip install '+package)
@@ -184,11 +188,11 @@ exit 0
 			else:
 				option='--user '
 			for package in requirements:
-				if package is None:
+				if package is 'all':
 					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U")
 				else:
 					cmd.append('pip install --upgrade '+option+package)
-				if virtual_env is not None:
-					cmd.append('deactivate')
+			if virtual_env is not None:
+				cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
 			session.close()
