@@ -37,7 +37,7 @@ class BaseJobQueue(object):
 			print 'Job already in queue!'
 
 	def update_queue(self):
-		for j in self.job_list:
+		for j in [x for x in self.job_list]:
 			if j.status == 'pending':
 				j.save()
 				self.submit_job(j)

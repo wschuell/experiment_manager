@@ -34,16 +34,16 @@ class ExperimentJob(Job):
 		shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
 
 
-
-
-class ExperimentDBJob(ExperimentJob):
+class ExperimentDBJob(Job):
 
 	def __init__(self, exp, T, db_cfg={}, **kwargs):
-		super(ExperimentJob, self).__init__(**kwargs)
+		super(ExperimentDBJob, self).__init__(**kwargs)
 		self.data = copy.deepcopy(exp)
 		self.T = T
 		self.origin_db = copy.deepcopy(self.data.db)
+		os.chdir(self.get_path())
 		self.db = self.data.db.__class__(**db_cfg)
+		os.chdir(self.get_back_path())
 		self.data.db = self.db
 		self.xp_uuid = self.data.uuid
 		self.save()
@@ -55,7 +55,7 @@ class ExperimentDBJob(ExperimentJob):
 			self.check_time()
 
 	def get_data(self):
-		self.db.get_experiment(uuid=self.xp_uuid)
+		self.data = self.db.get_experiment(uuid=self.xp_uuid)
 
 	def save_data(self):
 		self.data.commit_to_db()
@@ -116,17 +116,19 @@ class GraphExpJob(ExperimentJob):
 		shutil.move(self.path+'/'+self.graph_filename+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
 
 
-
 class GraphExpDBJob(ExperimentDBJob):
 
-	def __init__(self, exp, **graph_cfg):
-		super(ExperimentJob, self).__init__()
-		self.data = copy.deepcopy(exp)
-		self.T = T
-		self.origin_db = copy.deepcopy(self.data.db)
-		self.db = self.data.db.__class__(**db_info)
-		self.data.db = self.db
-		self.xp_uuid = self.data.uuid
+	def __init__(self, exp, db_cfg={}, descr='', requirements=[], virtual_env=None, **graph_cfg):
+		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env)
+		self.data = {}
+		self.data['exp'] = copy.deepcopy(exp)
+		self.origin_db = copy.deepcopy(self.data['exp'].db)
+		os.chdir(self.get_path())
+		new_db = self.data['exp'].db.__class__(**db_cfg)
+		os.chdir(self.get_back_path())
+		self.db = new_db
+		self.data['exp'].db = self.db
+		self.xp_uuid = self.data['exp'].uuid
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
 			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
@@ -137,30 +139,42 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		graph_cfg['tmin'] = self.graph_cfg['tmin']-0.1 - self.data['exp']._time_step
-		graph_cfg['tmax'] = self.graph_cfg['tmin']-0.1
+		if 'graph' in self.data.keys():
+			tmax = self.data['graph']._X[-1]
+		else:
+			tmax = 0
+		graph_cfg['tmax'] = max(tmax,self.graph_cfg['tmin'])-0.1
+		graph_cfg['tmin'] = graph_cfg['tmax']- self.data['exp']._time_step
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
 			graph_cfg['tmax'] += self.data['exp']._time_step
 			graph_cfg['tmin'] += self.data['exp']._time_step
-			self.data.graph(autocommit=False, **graph_cfg)
+			if 'graph' not in self.data.keys():
+				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
+				self.graph_filename = self.data['graph'].filename
+			else:
+				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
 			self.check_time()
 
 	def get_data(self):
-		self.db.get_experiment(uuid=self.xp_uuid)
+		self.data = {}
+		self.data['exp'] = self.db.get_experiment(uuid=self.xp_uuid)
+		if self.db.data_exists(uuid=self.xp_uuid, method=self.graph_cfg['method']):
+			self.data['graph'] = self.db.get_graph(uuid=self.xp_uuid,method=self.graph_cfg['method'])
+			self.graph_filename = self.data['graph'].filename
 
 	def save_data(self):
-		self.data.commit_to_db()
-		self.data.commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
+		self.data['exp'].commit_to_db()
+		if 'graph' in self.data.keys():
+			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		if hasattr(self.data.db, 'dbpath'):
-			self.data.db.dbpath = os.path.join(self.path, self.data.db.dbpath)
-		self.origin_db.merge(other_db=self.data.db, id_list=[self.xp_uuid], main_only=False)
-		self.data.db = self.origin_db
-		self.data.commit_to_db()
+		if hasattr(self.data['exp'].db, 'dbpath'):
+			self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
+		self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
+		self.data['exp'].db = self.origin_db
+		self.data['exp'].commit_to_db()
 
 
 #id list is list
-# other db instead of other db path
 #save data graph???
 

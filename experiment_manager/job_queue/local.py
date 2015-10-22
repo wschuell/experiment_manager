@@ -15,10 +15,14 @@ class LocalJobQueue(BaseJobQueue):
 		if job.status == 'running':
 			job.status = 'unfinished'
 
-	def set_virtualenv(self, virtual_env, requirements):
+	def set_virtualenv(self, virtual_env, requirements=[]):
+		if not isinstance(requirements,list):
+			requirements = [requirements]
 		for package in requirements:
 			pip.main(['install', package])
 
 	def update_virtualenv(self, virtual_env, requirements=[]):
+		if not isinstance(requirements,list):
+			requirements = [requirements]
 		for package in requirements:
 			pip.main(['install', '--upgrade', package])
