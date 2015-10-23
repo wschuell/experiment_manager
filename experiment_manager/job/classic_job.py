@@ -9,15 +9,19 @@ import shutil
 
 class ClassicJob(Job):
 
-	def __init__(self,filename='data.dat', run_fun='run', out_files=None, *args,**kwargs):
-		super(ExampleJob,self).__init__(*args,**kwargs)
+	def __init__(self, obj=None, filename='data.dat', run_fun='run', out_files=None, bz2=True, *args,**kwargs):
+		super(ClassicJob,self).__init__(*args,**kwargs)
 		self.filename = filename
+		self.bz2 = bz2
+		self.run_fun = run_fun
+		if obj is None:
+			self.get_data()
+		else:
+			self.data = obj
 		if out_files is None:
 			self.out_files = [self.filename]
 		elif not isinstance(out_files,(list,tuple)):
 			self.out_files = [out_files]
-		if os.path.isfile(self.filename):
-			shutil.copy(self.filename, self.path+'/'+self.filename)
 
 	def script(self):
 		getattr(self.data,self.run_fun)()
@@ -35,7 +39,7 @@ class ClassicJob(Job):
 	def save_data(self):
 		with open(self.filename,'w') as f:
 			if self.bz2:
-				f.write(cPickle.dumps(bz2.compress(self.data)))
+				f.write(bz2.compress(cPickle.dumps(self.data)))
 			else:
 				f.write(cPickle.dumps(self.data))
 
@@ -46,12 +50,13 @@ class ClassicJob(Job):
 
 class IteratedJob(ClassicJob):
 
-	def __init__(self,steps=1, step_fun='step', filename='data.dat',*args,**kwargs):
-		super(ClassicJob,self).__init__(filename=filename,*args,**kwargs)
+	def __init__(self, obj=None, steps=1, step_fun='step', *args,**kwargs):
+		super(IteratedJob,self).__init__(obj=obj, *args,**kwargs)
 		self.steps = steps
+		self.step_fun = step_fun
 
 	def script(self):
-		for i in range(steps):
+		for i in range(self.steps):
 			getattr(self.data,self.step_fun)()
 			self.check_time()
 
