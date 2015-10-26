@@ -1,10 +1,10 @@
 
-from . import BaseJobQueue
+from . import JobQueue
 import pip
 
-class LocalJobQueue(BaseJobQueue):
-	def __init__(self):
-		super(LocalJobQueue, self).__init__()
+class LocalJobQueue(JobQueue):
+	def __init__(self, **kwargs):
+		super(LocalJobQueue, self).__init__(**kwargs)
 
 	def submit_job(self, job):
 		job.status = 'running'

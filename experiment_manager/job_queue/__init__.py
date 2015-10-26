@@ -6,6 +6,7 @@ import cPickle
 import uuid
 from importlib import import_module
 from ..job import Job
+import copy
 
 
 job_queue_class={
@@ -30,7 +31,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True):
+	def __init__(self, erase=True, auto_update=True, name=None):
 		self.job_list = []
 		self.erase = erase
 		self.auto_update = auto_update
