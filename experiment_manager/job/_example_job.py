@@ -1,5 +1,5 @@
 
-from. import Job
+from . import Job
 
 import time
 import json

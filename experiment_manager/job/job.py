@@ -5,6 +5,7 @@ import time
 import os
 import copy
 import shutil
+import jsonpickle
 
 
 class Job(object):
@@ -15,6 +16,7 @@ class Job(object):
 		self.descr = descr
 		self.erase = erase
 		self.virtual_env = virtual_env
+		self.requirements = requirements
 		self.init_time = 0.
 		self.exec_time = 0.
 		if path[0] == '/':
@@ -40,7 +42,7 @@ class Job(object):
 	def run(self):
 		os.chdir(self.get_path())
 		self.status = 'unfinished'
-		self.init_time += time.mktime(time.gmtime())
+		self.init_time += time.time()
 		self.get_data()
 		self.script()
 		self.update_exec_time()
@@ -50,7 +52,7 @@ class Job(object):
 		self.save()
 
 	def update_exec_time(self):
-		self.exec_time = time.mktime(time.gmtime()) - self.init_time
+		self.exec_time = time.time() - self.init_time
 
 	def check_time(self, t=None):
 		if t is None:
@@ -78,9 +80,9 @@ class Job(object):
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		with open(self.path+'/job.b','w') as f:
-			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
+			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
-		self.lastsave_time = time.mktime(time.gmtime())
+		self.lastsave_time = time.time()
 
 	def clean(self):
 		shutil.rmtree(self.path)
@@ -91,8 +93,23 @@ class Job(object):
 	def update(self):
 		if os.path.isfile(self.path + '/job.b'):
 			with open(self.path + '/job.b') as f:
-				out_job = cPickle.loads(f.read())
+				out_job = jsonpickle.loads(f.read())
 			self.__dict__.update(out_job.__dict__)
+		else:
+			self.save()
+
+	def __eq__(self, other):
+		dict1 = copy.deepcopy(self.__dict__)
+		dict2 = copy.deepcopy(other.__dict__)
+		dict1.pop('uuid')
+		dict2.pop('uuid')
+		return (self.__class__ == other.__class__) and (dict1 == dict2)
+
+	def __gt__(self, other):
+		return False
+
+	def __lt__(self, other):
+		return False
 
 	def unpack_data(self):
 		pass
@@ -105,3 +122,9 @@ class Job(object):
 
 	def script(self, data):
 		pass
+
+	def re_init(self):
+		pass
+
+	def gen_depend(self):
+		return []
