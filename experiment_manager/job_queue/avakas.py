@@ -4,13 +4,13 @@ import shutil
 import time
 import copy
 
-from . import BaseJobQueue
+from . import JobQueue
 from ..tools.ssh import SSHSession
 
-class AvakasJobQueue(BaseJobQueue):
-	def __init__(self, ssh_cfg, basedir='jobs', auto_update=False):
-		super(AvakasJobQueue,self).__init__()
-		self.auto_update = auto_update
+class AvakasJobQueue(JobQueue):
+	def __init__(self, ssh_cfg, basedir='jobs', max_jobs=100, **kwargs):
+		super(AvakasJobQueue,self).__init__(**kwargs)
+		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.basedir = basedir
 		if basedir[0] == '/':
@@ -118,14 +118,12 @@ exit 0
 """.format(**format_dict))
 
 
-		if self.auto_update:
-			self.update_virtualenv(virtual_env=job.virtualenv, requirements=job.requirements)
 		session.command('module load torque')
 		session.create_path("{job_dir}".format(**format_dict))
 		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
-		session.command('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
-		session.command('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
-		session.command("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
+		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
+		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
+		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
 		session.close()
 
 		job.status = 'running'
@@ -187,12 +185,23 @@ exit 0
 				option=''
 			else:
 				option='--user '
-			for package in requirements:
-				if package is 'all':
-					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U")
-				else:
-					cmd.append('pip install --upgrade '+option+package)
+			if requirements == ['all']:
+					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U "+option)
+			else:
+					cmd.append('pip install --upgrade '+option+' '.join(requirements))
 			if virtual_env is not None:
 				cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
 			session.close()
+
+	def cancel_job(self, job, clean=False):
+		if job.status == 'running':
+			session = SSHSession(**self.ssh_cfg)
+			session.command_output('qdel ' + job.PBS_JOBID)
+			session.close()
+		super(AvakasJobQueue, self).cancel_job(job, clean=clean)
+
+	def avail_workers(self):
+		session = SSHSession(**self.ssh_cfg)
+		qstat = session.command_output('qstat |grep ' + self.ssh_cfg['username'])
+		return self.max_jobs - len(qstat.split('\n')) + 1

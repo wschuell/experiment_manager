@@ -33,6 +33,11 @@ class ExperimentJob(Job):
 	def unpack_data(self):
 		shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
 
+	def __eq__(self, other):
+		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+
+	def __lt__(self, other):
+		return self.__eq__(other) and self.T < other.T
 
 class ExperimentDBJob(Job):
 
@@ -64,6 +69,11 @@ class ExperimentDBJob(Job):
 		self.data.db = self.origin_db
 		self.data.commit_to_db()
 
+	def __eq__(self, other):
+		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+
+	def __lt__(self, other):
+		return self.__eq__(other) and self.T < other.T
 
 
 class GraphExpJob(ExperimentJob):
@@ -82,6 +92,11 @@ class GraphExpJob(ExperimentJob):
 		self.save()
 		self.data = None
 
+	def __eq__(self, other):
+		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+
+	def __lt__(self, other):
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
@@ -124,9 +139,10 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.data = {}
 		self.data['exp'] = copy.deepcopy(exp)
 		self.xp_uuid = self.data['exp'].uuid
+		self.db_cfg = db_cfg
 		self.origin_db = copy.deepcopy(self.data['exp'].db)
 		os.chdir(self.get_path())
-		new_db = self.data['exp'].db.__class__(**db_cfg)
+		new_db = self.data['exp'].db.__class__(**self.db_cfg)
 		os.chdir(self.get_back_path())
 		self.db = new_db
 		self.data['exp'].db = self.db
@@ -142,11 +158,18 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.save()
 		self.data = None
 
+	def __eq__(self, other):
+		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+
+	def __lt__(self, other):
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
+
 	def re_init(self):
 		self.data = {}
 		self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
 		if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
 			self.status = 'pending'
+		self.data = None
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
@@ -184,6 +207,11 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
 		self.data['exp'].db = self.origin_db
 		self.data['exp'].commit_to_db()
+
+	def gen_depend(self):
+		exp = self.origin_db.get_experiment(uuid=self.xp_uuid)
+		T = self.graph_cfg['tmax']
+		return [ExperimentDBJob(T=T, exp=exp, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)]
 
 
 #id list is list
