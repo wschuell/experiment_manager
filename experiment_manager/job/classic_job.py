@@ -23,6 +23,7 @@ class ClassicJob(Job):
 		elif not isinstance(out_files,(list,tuple)):
 			self.out_files = [out_files]
 		self.data = None
+		self.save()
 
 	def script(self):
 		getattr(self.data,self.run_fun)()
@@ -36,6 +37,8 @@ class ClassicJob(Job):
 			with open(self.filename,'r') as f:
 				self.data = cPickle.loads(bz2.decompress(f.read()))
 				self.bz2 = True
+		except Exception:
+			raise Exception
 
 	def save_data(self):
 		with open(self.filename,'w') as f:
@@ -56,6 +59,7 @@ class IteratedJob(ClassicJob):
 		self.steps = steps
 		self.step_fun = step_fun
 		self.data = None
+		self.save()
 
 	def script(self):
 		for i in range(self.steps):
