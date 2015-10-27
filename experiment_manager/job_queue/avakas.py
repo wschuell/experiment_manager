@@ -89,7 +89,7 @@ class AvakasJobQueue(JobQueue):
 import os
 import sys
 import shutil
-import cPickle
+import jsonpickle
 
 PBS_JOBID = os.environ['PBS_JOBID']
 job_dir = '{job_dir}'
@@ -99,7 +99,7 @@ shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
 with open('job.b','r') as f:
-	job = cPickle.loads(f.read())
+	job = jsonpickle.loads(f.read())
 
 job.path = '.'
 job.run()

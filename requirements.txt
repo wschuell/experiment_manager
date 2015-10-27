@@ -5,3 +5,4 @@ matplotlib
 paramiko
 uuid
 importlib
+jsonpickle
