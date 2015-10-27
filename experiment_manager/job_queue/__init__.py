@@ -97,9 +97,9 @@ class JobQueue(object):
 			self.save()
 
 	def auto_finish_queue(self,t=60):
-		while job_list:
+		while [j for j in job_list if j.status != 'missubmitted']:
 			self.update_queue()
-			print 'Queue updated'
+			print time.gmtime(),' Queue updated'
 			time.sleep(t)
 
 	def check_virtualenvs(self):

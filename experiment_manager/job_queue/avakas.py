@@ -188,7 +188,8 @@ exit 0
 			if requirements == ['all']:
 					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U "+option)
 			else:
-					cmd.append('pip install --upgrade '+option+' '.join(requirements))
+					cmd.append('pip install --upgrade --no-deps '+option+' '.join(requirements))
+					cmd.append('pip install '+option+' '.join(requirements))
 			if virtual_env is not None:
 				cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
