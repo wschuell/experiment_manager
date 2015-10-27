@@ -6,11 +6,12 @@ import os
 import copy
 import shutil
 import jsonpickle
+import cProfile, pstats, StringIO
 
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True, profiling=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -24,6 +25,7 @@ class Job(object):
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
 		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
+		self.profiling = profiling
 		#self.save()
 		#self.data = None
 
@@ -43,8 +45,19 @@ class Job(object):
 		os.chdir(self.get_path())
 		self.status = 'unfinished'
 		self.init_time += time.time()
+		if self.profiling:
+			pr = cProfile.Profile()
+			pr.enable()
 		self.get_data()
 		self.script()
+		if self.profiling:
+			pr.disable()
+			s = StringIO.StringIO()
+			sortby = 'cumulative'
+			ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+			ps.print_stats()
+			with open('profile.txt','w') as f:
+				f.write(s.getvalue())
 		self.update_exec_time()
 		self.save_data()
 		os.chdir(self.get_back_path())
