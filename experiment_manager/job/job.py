@@ -24,8 +24,8 @@ class Job(object):
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
 		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
-		#self.data = None
 		#self.save()
+		#self.data = None
 
 	def get_path(self):
 		if not os.path.exists(self.path):
