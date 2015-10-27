@@ -22,8 +22,8 @@ class ClassicJob(Job):
 			self.out_files = [self.filename]
 		elif not isinstance(out_files,(list,tuple)):
 			self.out_files = [out_files]
-		self.data = None
 		self.save()
+		self.data = None
 
 	def script(self):
 		getattr(self.data,self.run_fun)()
@@ -58,8 +58,8 @@ class IteratedJob(ClassicJob):
 		super(IteratedJob,self).__init__(obj=obj, *args,**kwargs)
 		self.steps = steps
 		self.step_fun = step_fun
-		self.data = None
 		self.save()
+		self.data = None
 
 	def script(self):
 		for i in range(self.steps):
