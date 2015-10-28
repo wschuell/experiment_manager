@@ -6,31 +6,43 @@ import os
 import shutil
 import cPickle
 import copy
+import json
+from .classic_job import IteratedJob
 
-class ExperimentJob(Job):
-
-    def __init__(self, exp, T, *args,**kwargs):
-        super(ExperimentJob, self).__init__(*args,**kwargs)
-        self.data = copy.deepcopy(exp)
-        self.xp_uuid = self.data.uuid
-        self.T = T
-        self.save()
-        self.data = None
+class KidlearnJob(IteratedJob):
 
     def script(self):
-        for i in range(self.data._T[-1],self.T):
-            self.data.continue_exp(self.data.step)
-            self.check_time()
+        cost = {}
+        nb_step = self.data.nb_step
+        for key,val in self.data.groups.items():
+            yolo = copy.deepcopy(val)
+            yolo[0].run(nb_step)
+            cost[key] = copy.deepcopy(yolo[0].calcul_cost())
+            del yolo
+        jstr = json.dumps(cost)
 
-    def get_data(self):
-        with open(self.xp_uuid+'.b','r') as f:
-            self.data = cPickle.loads(f.read())
+        with open("cost.json","w") as f:
+            f.write(jstr)
 
-    def save_data(self):
-        with open(self.data.uuid+'.b','w') as f:
-            f.write(cPickle.dumps(self.data))
+        self.data = None
 
     def unpack_data(self):
-        shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
+        with open(os.path.join(self.path,"cost.json"),"r") as f:
+            cost = json.loads(f.read())
+
+        all_cost_file_name = "all_cost_{}.json".format(self.descr)
+        if os.path.isfile(all_cost_file_name):
+            with open(all_cost_file_name,"r") as f:
+                all_cost = json.loads(f.read())
+        else:
+            all_cost = {}
+
+        with open(all_cost_file_name,"w") as f:
+            all_cost.update(cost)
+            f.write(json.dumps(all_cost))
+
+
+
+
 
 
