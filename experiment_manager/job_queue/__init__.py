@@ -32,7 +32,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True, name=None):
+	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False):
 		self.job_list = []
 		self.erase = erase
 		self.auto_update = auto_update
@@ -42,13 +42,19 @@ class JobQueue(object):
 			self.name = self.uuid
 		else:
 			self.name = name
+		self.deep_check = deep_check
 
 	def save(self):
 		with open('jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
-	def add_job(self, job):
-		eq_filter = [j for j in self.job_list if (j == job)]
+	def add_job(self, job, deep_check=None):
+		if deep_check is None:
+			deep_check = self.deep_check
+		if deep_check:
+			eq_filter = [j for j in self.job_list if (j == job)]
+		else:
+			eq_filter = [j for j in self.job_list if (j.uuid == job.uuid)]
 		lt_filter = [j for j in eq_filter if eq_filter and (j < job)]
 		if not eq_filter:
 			self.status = 'pending'
