@@ -62,7 +62,8 @@ class IteratedJob(ClassicJob):
 		self.data = None
 
 	def script(self):
-		for i in range(self.steps):
+		while self.steps > 0:
 			getattr(self.data,self.step_fun)()
+			self.steps -= 1
 			self.check_time()
 

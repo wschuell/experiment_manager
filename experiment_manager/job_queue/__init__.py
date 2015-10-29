@@ -7,6 +7,7 @@ import uuid
 from importlib import import_module
 from ..job import Job
 import copy
+import path
 
 
 job_queue_class={
@@ -31,22 +32,29 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True, name=None):
+	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False):
 		self.job_list = []
 		self.erase = erase
 		self.auto_update = auto_update
 		self.past_exec_time = 0
+		self.uuid = str(uuid.uuid1())
 		if name is None:
-			self.name = str(uuid.uuid1())
+			self.name = self.uuid
 		else:
 			self.name = name
+		self.deep_check = deep_check
 
 	def save(self):
 		with open('jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
-	def add_job(self, job):
-		eq_filter = [j for j in self.job_list if (j == job)]
+	def add_job(self, job, deep_check=None):
+		if deep_check is None:
+			deep_check = self.deep_check
+		if deep_check:
+			eq_filter = [j for j in self.job_list if (j == job)]
+		else:
+			eq_filter = [j for j in self.job_list if (j.uuid == job.uuid)]
 		lt_filter = [j for j in eq_filter if eq_filter and (j < job)]
 		if not eq_filter:
 			self.status = 'pending'
@@ -81,9 +89,8 @@ class JobQueue(object):
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
-				os.chdir(j.get_path())
-				j.get_data()
-				os.chdir(j.get_back_path())
+				with path.Path(j.get_path()):
+					j.get_data()
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time
