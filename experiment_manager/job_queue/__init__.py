@@ -7,6 +7,7 @@ import uuid
 from importlib import import_module
 from ..job import Job
 import copy
+import path
 
 
 job_queue_class={
@@ -36,8 +37,9 @@ class JobQueue(object):
 		self.erase = erase
 		self.auto_update = auto_update
 		self.past_exec_time = 0
+		self.uuid = str(uuid.uuid1())
 		if name is None:
-			self.name = str(uuid.uuid1())
+			self.name = self.uuid
 		else:
 			self.name = name
 
@@ -81,9 +83,8 @@ class JobQueue(object):
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
-				os.chdir(j.get_path())
-				j.get_data()
-				os.chdir(j.get_back_path())
+				with path.Path(j.get_path()):
+					j.get_data()
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time

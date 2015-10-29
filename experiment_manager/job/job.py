@@ -7,7 +7,8 @@ import copy
 import shutil
 import jsonpickle
 import cProfile, pstats, StringIO
-
+import path
+from memory_profiler import memory_usage
 
 class Job(object):
 
@@ -26,6 +27,8 @@ class Job(object):
 		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
 		self.profiling = profiling
+		self.memory_usage = []
+		self.mem_max = None
 		#self.save()
 		#self.data = None
 
@@ -42,25 +45,24 @@ class Job(object):
 			return os.path.join(*(['..']*depth))
 
 	def run(self):
-		os.chdir(self.get_path())
-		self.status = 'unfinished'
-		self.init_time += time.time()
-		if self.profiling:
-			pr = cProfile.Profile()
-			pr.enable()
-		self.get_data()
-		self.script()
-		if self.profiling:
-			pr.disable()
-			s = StringIO.StringIO()
-			sortby = 'cumulative'
-			ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-			ps.print_stats()
-			with open('profile.txt','w') as f:
-				f.write(s.getvalue())
-		self.update_exec_time()
-		self.save_data()
-		os.chdir(self.get_back_path())
+		with path.Path(self.get_path()):
+			self.status = 'unfinished'
+			self.init_time += time.time()
+			if self.profiling:
+				pr = cProfile.Profile()
+				pr.enable()
+			self.get_data()
+			self.script()
+			if self.profiling:
+				pr.disable()
+				s = StringIO.StringIO()
+				sortby = 'cumulative'
+				ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+				ps.print_stats()
+				with open('profile.txt','w') as f:
+					f.write(s.getvalue())
+			self.update_exec_time()
+			self.save_data()
 		self.status = 'done'
 		self.save()
 
@@ -68,11 +70,17 @@ class Job(object):
 		self.exec_time = time.time() - self.init_time
 
 	def check_time(self, t=None):
+		self.check_mem()
 		if t is None:
 			t = self.estimated_time/10
 		self.update_exec_time()
 		if (self.exec_time + self.init_time) - self.lastsave_time > t:
 			self.save()
+
+	def check_mem(self):
+		mem = memory_usage()
+		self.memory_usage.append(mem)
+		self.mem_max = max(mem,self.mem_max)
 
 	def fix(self):
 		if self.exec_time > 0:
@@ -85,14 +93,13 @@ class Job(object):
 
 	def save(self):
 		if self.data is not None:
-			os.chdir(self.get_path())
-			self.save_data()
-			os.chdir(self.get_back_path())
+			with path.Path(self.get_path()):
+				self.save_data()
 		tempdata = copy.deepcopy(self.data)
 		self.data = None
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
-		with open(self.path+'/job.b','w') as f:
+		with open(self.path+'/job.json','w') as f:
 			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
 		self.lastsave_time = time.time()
@@ -104,8 +111,8 @@ class Job(object):
 			shutil.rmtree(head)
 
 	def update(self):
-		if os.path.isfile(self.path + '/job.b'):
-			with open(self.path + '/job.b') as f:
+		if os.path.isfile(self.path + '/job.json'):
+			with open(self.path + '/job.json') as f:
 				out_job = jsonpickle.loads(f.read())
 			self.__dict__.update(out_job.__dict__)
 		else:
