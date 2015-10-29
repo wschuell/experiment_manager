@@ -7,6 +7,7 @@ import shutil
 import cPickle
 import copy
 import json
+import kidlearn_lib as klib
 from .classic_job import IteratedJob
 
 class KidlearnJob(IteratedJob):
