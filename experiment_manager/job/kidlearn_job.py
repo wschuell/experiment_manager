@@ -27,6 +27,27 @@ class KidlearnJob(IteratedJob):
 
         self.data = None
 
+    def gen_xp_to_optimize(zpdes_confs,xp_conf,ref_xp="optimize",nb_stud=1000,nb_step=100, base_path_to_save="experimentation/data/"):
+        stud = k_lib.student.KTstudent(params=xp_conf["stud"])
+
+        wkgs = {}
+        for ref,conf in zpdes_confs.items():
+            zpdes = k_lib.seq_manager.ZpdesHssbg(params=conf)
+            wss = []
+            for k in range(nb_stud):
+                wss.append(k_lib.experimentation.WorkingSession(student=copy.deepcopy(stud), seq_manager=copy.deepcopy(zpdes)))
+            wkgs["zpdes_{}".format(ref)] = [k_lib.experimentation.WorkingGroup(WorkingSessions=wss)]
+
+        xp = k_lib.experimentation.Experiment(WorkingGroups=wkgs,
+                            ref_expe=ref_xp,
+                            path_to_save=base_path_to_save,
+                            seq_manager_list=wkgs.keys(),
+                            nb_step=nb_step,
+                            population={"nb_students" : nb_stud, 
+                                        "model" : "KT_student"})
+        return xp
+
+
     def unpack_data(self):
         with open(os.path.join(self.path,"cost.json"),"r") as f:
             cost = json.loads(f.read())
