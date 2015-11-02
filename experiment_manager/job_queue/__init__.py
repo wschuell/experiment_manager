@@ -45,6 +45,7 @@ class JobQueue(object):
 		else:
 			self.name = name
 		self.deep_check = deep_check
+		self.executed_jobs = 0
 
 	def save(self):
 		with open('jobs/'+self.name+'.jq','w') as f:
@@ -96,6 +97,7 @@ class JobQueue(object):
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time
+				self.executed_jobs += 1
 				self.job_list.remove(j)
 				if (not self.erase) and (not j.erase):
 					j.clean()
