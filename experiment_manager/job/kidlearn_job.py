@@ -30,7 +30,7 @@ class KidlearnJob(IteratedJob):
         
 
     def gen_multi_zpdes(xp_conf,ref_xp="optimize",nb_stud=1000,nb_step=100, base_path_to_save="experimentation/data/"):
-        stud_confs = xp_conf["students"]
+        stud_confs = xp_conf["stud_confs"]
         zpdes_confs = xp_conf["zpdes_conf"]
         nb_stud = len(stud_confs)
         nb_step = xp_conf["nb_steps"]
