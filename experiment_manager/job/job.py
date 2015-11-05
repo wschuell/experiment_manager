@@ -100,7 +100,8 @@ class Job(object):
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		with open(self.path+'/job.json','w') as f:
-			f.write(jsonpickle.dumps(self, indent=4, sort_keys=True))#,cPickle.HIGHEST_PROTOCOL))
+			jsonpickle.set_encoder_options('simplejson', sort_keys=True, indent=4)
+			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
 		self.lastsave_time = time.time()
 
