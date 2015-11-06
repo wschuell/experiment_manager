@@ -56,7 +56,7 @@ class Job(object):
 			if self.profiling:
 				pr.disable()
 				s = StringIO.StringIO()
-				sortby = 'cumulative'
+				sortby = 'time'
 				ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 				ps.print_stats()
 				with open('profile.txt','w') as f:
@@ -100,6 +100,7 @@ class Job(object):
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		with open(self.path+'/job.json','w') as f:
+			jsonpickle.set_encoder_options('simplejson', sort_keys=True, indent=4)
 			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
 		self.lastsave_time = time.time()
@@ -119,11 +120,14 @@ class Job(object):
 			self.save()
 
 	def __eq__(self, other):
-		dict1 = copy.deepcopy(self.__dict__)
-		dict2 = copy.deepcopy(other.__dict__)
-		dict1.pop('uuid')
-		dict2.pop('uuid')
-		return (self.__class__ == other.__class__) and (dict1 == dict2)
+		if (self.__class__ == other.__class__):
+			k1 = self.__dict__.keys()
+			k2 = other.__dict__.keys()
+			#k1.remove('uuid')
+			#k2.remove('uuid')
+			return set(k1) == set(k2) and all(self.__dict__[k] == other.__dict__[k] for k in k1)
+		else:
+			return False
 
 	def __gt__(self, other):
 		return False

@@ -25,26 +25,39 @@ class SSHSession(object):
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
+        self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         try:
+            print self.hostname, self.username, self.port, self.password, self.key_file
             self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         except:
-            temp_password = getpass.getpass('SSH Password:')
-            if not self.key_file[0] == '/':
-                self.key_file = '{}/.ssh/{}/id_rsa'.format(home,key_file)
-            self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
-            question = raw_input('Install SSH key? Y/N')
-            if question == 'Y' or question == 'y':
-                where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
-                if where == 'default':
-                    where = '{}/.ssh/id_rsa'.format(home)
-                elif where == 'key_file_name':
-                    where = '{}/.ssh/{}/id_rsa'.format(home,key_file)
-                elif where == 'key_file':
-                    where = key_file
-                self.key_file = where
-                self.install_ssh_key()
-                self.close()
-                self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
+            retry = True
+            while retry:
+                try:
+                    self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
+                except:
+                    a = raw_input('Connection failed. Retry? Y/N/catch')
+                    if a == 'catch':
+                        raise
+                    elif a not in ['y','Y']:
+                        retry = False
+            if not retry:
+                temp_password = getpass.getpass('SSH Password:')
+                if not self.key_file[0] == '/':
+                    self.key_file = '{}/.ssh/{}/id_rsa'.format(home,key_file)
+                self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
+                question = raw_input('Install SSH key? Y/N')
+                if question == 'Y' or question == 'y':
+                    where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
+                    if where == 'default':
+                        where = '{}/.ssh/id_rsa'.format(home)
+                    elif where == 'key_file_name':
+                        where = '{}/.ssh/{}/id_rsa'.format(home,key_file)
+                    elif where == 'key_file':
+                        where = key_file
+                    self.key_file = where
+                    self.install_ssh_key()
+                    self.close()
+                    self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         self.sftp = self.client.open_sftp()
 
 

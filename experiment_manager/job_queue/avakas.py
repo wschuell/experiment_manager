@@ -8,13 +8,15 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self, ssh_cfg, basedir='jobs', max_jobs=100, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=100, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.basedir = basedir
 		if basedir[0] == '/':
 			raise IOError('basedir must be relative path')
+		if username is not None:
+			self.ssh_cfg['username'] = username
 		if 'hostname' not in self.ssh_cfg.keys():
 			self.ssh_cfg['hostname'] = 'avakas.mcia.univ-bordeaux.fr'
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
@@ -204,5 +206,5 @@ exit 0
 
 	def avail_workers(self):
 		session = SSHSession(**self.ssh_cfg)
-		qstat = session.command_output('qstat |grep ' + self.ssh_cfg['username'])
+		qstat = session.command_output('qstat -u {}|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
 		return self.max_jobs - len(qstat.split('\n')) + 1

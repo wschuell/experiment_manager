@@ -151,8 +151,6 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
-		print self.data['exp']._T[-1]
-		print self.graph_cfg['tmax']
 		if self.data['exp']._T[-1]<self.graph_cfg['tmax']:
 			self.status = 'dependencies not satisfied'
 		self.save()

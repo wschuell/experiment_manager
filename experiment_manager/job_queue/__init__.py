@@ -21,14 +21,16 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 	if name is not None and os.path.isfile('jobs/'+name+'.jq'):
 		with open('jobs/'+name+'.jq','r') as f:
 			jq = cPickle.loads(f.read())
-	tempstr = jq_type
-	if tempstr in job_queue_class.keys():
-		tempstr = job_queue_class[tempstr]
-	templist = tempstr.split('.')
-	temppath = '.'.join(templist[:-1])
-	tempclass = templist[-1]
-	_tempmod = import_module('.'+temppath,package=__name__)
-	return getattr(_tempmod,tempclass)(name=name, **jq_cfg2)
+	else:
+		tempstr = jq_type
+		if tempstr in job_queue_class.keys():
+			tempstr = job_queue_class[tempstr]
+		templist = tempstr.split('.')
+		temppath = '.'.join(templist[:-1])
+		tempclass = templist[-1]
+		_tempmod = import_module('.'+temppath,package=__name__)
+		jq = getattr(_tempmod,tempclass)(name=name, **jq_cfg2)
+	return jq
 
 
 class JobQueue(object):
@@ -43,6 +45,7 @@ class JobQueue(object):
 		else:
 			self.name = name
 		self.deep_check = deep_check
+		self.executed_jobs = 0
 
 	def save(self):
 		with open('jobs/'+self.name+'.jq','w') as f:
@@ -94,6 +97,7 @@ class JobQueue(object):
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time
+				self.executed_jobs += 1
 				self.job_list.remove(j)
 				if (not self.erase) and (not j.erase):
 					j.clean()
@@ -104,7 +108,7 @@ class JobQueue(object):
 			self.save()
 
 	def auto_finish_queue(self,t=60):
-		while [j for j in job_list if j.status != 'missubmitted']:
+		while [j for j in self.job_list if j.status != 'missubmitted']:
 			self.update_queue()
 			print time.gmtime(),' Queue updated'
 			time.sleep(t)
@@ -129,12 +133,12 @@ class JobQueue(object):
 
 	def total_time(self):
 		t = 0
-		for j in job_list:
+		for j in self.job_list:
 			t += j.estimated_time
 
 	def exec_time(self):
 		t = self.past_exec_time
-		for j in job_list:
+		for j in self.job_list:
 			t += j.exec_time
 
 	def submit_job(self, job):
