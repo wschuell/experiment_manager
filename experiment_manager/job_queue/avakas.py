@@ -63,7 +63,7 @@ class AvakasJobQueue(JobQueue):
 			'local_job_dir': job.path,
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
-			'job_pbsjobid': job.PBS_JOBID
+			'job_pbsjobid': job.PBS_JOBID,
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}
 
