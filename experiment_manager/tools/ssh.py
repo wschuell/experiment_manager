@@ -8,6 +8,7 @@ from stat import S_ISDIR
 import getpass
 from Crypto.PublicKey import RSA
 import socket
+import time
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -27,9 +28,9 @@ class SSHSession(object):
         self.client.load_system_host_keys()
         self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         try:
-            print self.hostname, self.username, self.port, self.password, self.key_file
             self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         except:
+            time.sleep(1)
             retry = True
             while retry:
                 try:
