@@ -7,13 +7,13 @@ import shutil
 import cPickle
 import copy
 import json
-import kidlearn_lib as klib
+import kidlearn_lib as k_lib
 from .classic_job import IteratedJob
 
 class KidlearnJob(IteratedJob):
 
     def script(self):
-        xp = self.gen_xp_to_optimize(self.data)
+        xp = self.gen_multi_zpdes(self.data)
 
         self.out_files = ["{}.dat".format(xp.uuid)]
 
@@ -31,7 +31,7 @@ class KidlearnJob(IteratedJob):
 
         
 
-    def gen_multi_zpdes(xp_conf,ref_xp="optimize",nb_stud=1000,nb_step=100, base_path_to_save="experimentation/data/"):
+    def gen_multi_zpdes(self, xp_conf, ref_xp="optimize", base_path_to_save="experimentation/data/"):
         stud_confs = xp_conf["stud_confs"]
         zpdes_confs = xp_conf["zpdes_conf"]
         nb_stud = len(stud_confs)
