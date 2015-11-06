@@ -13,7 +13,9 @@ from .classic_job import IteratedJob
 class KidlearnJob(IteratedJob):
 
     def script(self):
-        xp = slef.gen_xp_to_optimize(self.data)
+        xp = self.gen_xp_to_optimize(self.data)
+
+        self.out_files = ["{}.dat".format(xp.uuid)]
 
         cost = {}
         nb_step = xp.nb_step
