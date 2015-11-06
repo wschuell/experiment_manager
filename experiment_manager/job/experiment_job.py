@@ -34,7 +34,7 @@ class ExperimentJob(Job):
 		shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
 
 	def __eq__(self, other):
-		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
 
 	def __lt__(self, other):
 		return self.__eq__(other) and self.T < other.T
@@ -56,7 +56,7 @@ class ExperimentDBJob(Job):
 
 	def script(self):
 		 while self.data._T[-1]<self.T:
-			self.data.continue_exp(self.data._time_step, autocommit=False)
+			self.data.continue_exp(autocommit=False)
 			self.check_time()
 
 	def get_data(self):
@@ -70,10 +70,13 @@ class ExperimentDBJob(Job):
 		self.data.commit_to_db()
 
 	def __eq__(self, other):
-		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
 
 	def __lt__(self, other):
 		return self.__eq__(other) and self.T < other.T
+
+	def __gt__(self, other):
+		return self.__eq__(other) and self.T > other.T
 
 
 class GraphExpJob(ExperimentJob):
@@ -93,7 +96,7 @@ class GraphExpJob(ExperimentJob):
 		self.data = None
 
 	def __eq__(self, other):
-		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
 
 	def __lt__(self, other):
 		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
@@ -157,7 +160,10 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.data = None
 
 	def __eq__(self, other):
-		return Job.__eq__(self, other) and self.xp_uuid == other.xp_uuid
+		try:
+			return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid and self.graph_cfg['method'] == other.graph_cfg['method']
+		except KeyError:
+			return True
 
 	def __lt__(self, other):
 		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
@@ -175,7 +181,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			tmax = self.data['graph']._X[-1]
 		else:
 			tmax = 0
-		graph_cfg['tmax'] = max(tmax,self.graph_cfg['tmin'])-0.1
+		graph_cfg['tmax'] = max(tmax,self.graph_cfg['tmin'])#-0.1
 		graph_cfg['tmin'] = graph_cfg['tmax']- self.data['exp']._time_step
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
 			graph_cfg['tmax'] += self.data['exp']._time_step

@@ -120,14 +120,7 @@ class Job(object):
 			self.save()
 
 	def __eq__(self, other):
-		if (self.__class__ == other.__class__):
-			k1 = self.__dict__.keys()
-			k2 = other.__dict__.keys()
-			#k1.remove('uuid')
-			#k2.remove('uuid')
-			return set(k1) == set(k2) and all(self.__dict__[k] == other.__dict__[k] for k in k1)
-		else:
-			return False
+		return self.uuid == other.uuid
 
 	def __gt__(self, other):
 		return False

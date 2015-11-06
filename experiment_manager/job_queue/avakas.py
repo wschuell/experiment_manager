@@ -100,7 +100,7 @@ work_dir = '{base_work_dir}'+PBS_JOBID
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
-with open('job.b','r') as f:
+with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
@@ -178,7 +178,7 @@ exit 0
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		session = SSHSession(**self.ssh_cfg)
-		if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
+		if virtual_env is not None and not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
 			session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:

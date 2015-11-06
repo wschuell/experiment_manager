@@ -7,7 +7,7 @@ from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob
 
 class BatchExp(object):
 
-	def __init__(self, name=None, jq_cfg = None, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, **kwargs):
+	def __init__(self, name=None, jq_cfg = None, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, virtual_env=None, requirements=[], **kwargs):
 		self.uuid = str(uuid.uuid1())
 		if name is None:
 			self.name = self.uuid
@@ -29,7 +29,8 @@ class BatchExp(object):
 		self.other_dbs = other_dbs
 		self.other_dbs_lookup = other_dbs_lookup
 		self.auto_job = auto_job
-
+		self.virtual_env = virtual_env
+		self.requirements = requirements
 #	def control_exp(self, exp):
 #		exp.originclass = copy.deepcopy(exp.__class__)
 #		exp.__class__ = Experiment
@@ -60,12 +61,12 @@ class BatchExp(object):
 	def add_exp_job(self, tmax, uuid=None, xp_cfg=None):
 		exp = self.get_experiment(uuid=uuid, **xp_cfg)
 		if not exp._T[-1]>=tmax:
-			job = ExperimentDBJob(exp=exp, T=tmax)
+			job = ExperimentDBJob(exp=exp, T=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 			self.jobqueue.add_job(job)
 
 	def add_graph_job(self, method, uuid=None, tmax=None, xp_cfg=None):
 		exp = self.get_experiment(uuid=uuid, **xp_cfg)
-		job = GraphExpDBJob(exp=exp, method=method, tmax=tmax)
+		job = GraphExpDBJob(exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 		self.jobqueue.add_job(job)
 
 	def add_jobs(self, cfg_list):
@@ -84,7 +85,7 @@ class BatchExp(object):
 					blacklist.append(uuid)
 				else:
 					uuid = cfg['uuid']
-				cfg2 = dict((k,cfg[k]) for k in ('uuid', 'xp_cfg', 'method', 'tmax') if k in cfg)
+				cfg2 = dict((k,cfg[k]) for k in ('uuid', 'xp_cfg', 'method', 'tmax') if k in cfg.keys())
 				if 'method' in cfg.keys():
 					self.add_graph_job(**cfg2)
 				else:
