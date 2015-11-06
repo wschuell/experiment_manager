@@ -63,6 +63,7 @@ class AvakasJobQueue(JobQueue):
 			'local_job_dir': job.path,
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
+			'job_pbsjobid': job.PBS_JOBID
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}
 
@@ -134,7 +135,7 @@ exit 0
 
 	def check_job_running(self, job):
 		session = SSHSession(**self.ssh_cfg)
-		test = session.command_output('qstat -f|grep {job_name}'.format(**self.format_dict(job)))
+		test = session.command_output('qstat -f|grep {job_pbsjobid}'.format(**self.format_dict(job)))
 		session.close()
 		if test:
 			return True
