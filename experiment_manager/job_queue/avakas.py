@@ -52,6 +52,11 @@ class AvakasJobQueue(JobQueue):
 		else:
 			walltime_s = str(walltime_s)
 
+		if hasattr(job,'PBS_JOBID'):
+			pbs_jobid = job.PBS_JOBID
+		else:
+			pbs_jobid = 'NO_PBS_JOBID'
+
 		format_dict = {
 			'username':self.ssh_cfg['username'],
 			'basedir': self.basedir,
@@ -63,7 +68,7 @@ class AvakasJobQueue(JobQueue):
 			'local_job_dir': job.path,
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
-			'job_pbsjobid': job.PBS_JOBID,
+			'job_pbsjobid': pbs_jobid,
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}
 
@@ -130,6 +135,7 @@ exit 0
 		session.close()
 
 		job.status = 'running'
+		job.save()
 		time.sleep(1)
 
 
