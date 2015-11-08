@@ -10,6 +10,10 @@ import cProfile, pstats, StringIO
 import path
 from memory_profiler import memory_usage
 
+jsonpickle.set_preferred_backend('json')
+jsonpickle.set_encoder_options('json', indent=4)
+
+
 class Job(object):
 
 	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True, profiling=True):
@@ -100,7 +104,6 @@ class Job(object):
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		with open(self.path+'/job.json','w') as f:
-			jsonpickle.set_encoder_options('simplejson', sort_keys=True, indent=4)
 			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
 		self.lastsave_time = time.time()
