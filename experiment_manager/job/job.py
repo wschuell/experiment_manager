@@ -33,6 +33,7 @@ class Job(object):
 		self.profiling = profiling
 		self.memory_usage = []
 		self.mem_max = None
+		self.deps = []
 		#self.save()
 		#self.data = None
 
@@ -79,7 +80,7 @@ class Job(object):
 			t = self.estimated_time/10
 		self.update_exec_time()
 		if (self.exec_time + self.init_time) - self.lastsave_time > t:
-			self.save()
+			self.save(chdir=False)
 
 	def check_mem(self):
 		mem = memory_usage()
@@ -95,16 +96,21 @@ class Job(object):
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
 		self.status = 'pending'
 
-	def save(self):
+	def save(self,chdir=True):
+		if chdir:
+			j_path = self.get_path()
+		else:
+			j_path = '.'
 		if self.data is not None:
-			with path.Path(self.get_path()):
+			with path.Path(j_path):
 				self.save_data()
 		tempdata = copy.deepcopy(self.data)
 		self.data = None
-		if not os.path.exists(self.path):
-			os.makedirs(self.path)
-		with open(self.path+'/job.json','w') as f:
-			f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
+		with path.Path(j_path):
+			#if not os.path.exists(self.path):
+			#	os.makedirs(self.path)
+			with open('job.json','w') as f:
+				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		self.data = tempdata
 		self.lastsave_time = time.time()
 

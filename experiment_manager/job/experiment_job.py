@@ -9,16 +9,16 @@ import copy
 
 class ExperimentJob(Job):
 
-	def __init__(self, exp, T, *args,**kwargs):
+	def __init__(self, exp, tmax, *args,**kwargs):
 		super(ExperimentJob, self).__init__(*args,**kwargs)
 		self.data = copy.deepcopy(exp)
 		self.xp_uuid = self.data.uuid
-		self.T = T
+		self.tmax = tmax
 		self.save()
 		self.data = None
 
 	def script(self):
-		 while self.data._T[-1]<self.T:
+		 while self.data._T[-1]<self.tmax:
 			self.data.continue_exp()
 			self.check_time()
 
@@ -37,14 +37,17 @@ class ExperimentJob(Job):
 		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
 
 	def __lt__(self, other):
-		return self.__eq__(other) and self.T < other.T
+		return self.__eq__(other) and self.tmax < other.tmax
+
+	def __ge__(self, other):
+		return self.__eq__(other) and self.tmax >= other.tmax
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, exp, T, db_cfg={}, **kwargs):
+	def __init__(self, exp, tmax, db_cfg={}, **kwargs):
 		super(ExperimentDBJob, self).__init__(**kwargs)
 		self.data = copy.deepcopy(exp)
-		self.T = T
+		self.tmax = tmax
 		self.origin_db = copy.deepcopy(self.data.db)
 		os.chdir(self.get_path())
 		self.db = self.data.db.__class__(**db_cfg)
@@ -55,7 +58,7 @@ class ExperimentDBJob(Job):
 		self.data = None
 
 	def script(self):
-		 while self.data._T[-1]<self.T:
+		 while self.data._T[-1]<self.tmax:
 			self.data.continue_exp(autocommit=False)
 			self.check_time()
 
@@ -73,10 +76,16 @@ class ExperimentDBJob(Job):
 		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
 
 	def __lt__(self, other):
-		return self.__eq__(other) and self.T < other.T
+		return self.__eq__(other) and self.tmax < other.tmax
 
 	def __gt__(self, other):
-		return self.__eq__(other) and self.T > other.T
+		return self.__eq__(other) and self.tmax > other.tmax
+
+	def __le__(self, other):
+		return self.__eq__(other) and self.tmax <= other.tmax
+
+	def __ge__(self, other):
+		return self.__eq__(other) and self.tmax >= other.tmax
 
 
 class GraphExpJob(ExperimentJob):
@@ -178,20 +187,20 @@ class GraphExpDBJob(ExperimentDBJob):
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		if 'graph' in self.data.keys():
-			tmax = self.data['graph']._X[-1]
+			tmax = self.data['graph']._X[-1] + 2*self.data['exp']._time_step
 		else:
 			tmax = 0
-		graph_cfg['tmax'] = max(tmax,self.graph_cfg['tmin'])#-0.1
+		graph_cfg['tmax'] = max(tmax, self.graph_cfg['tmin'])-0.1
 		graph_cfg['tmin'] = graph_cfg['tmax']- self.data['exp']._time_step
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
-			graph_cfg['tmax'] += self.data['exp']._time_step
-			graph_cfg['tmin'] += self.data['exp']._time_step
 			if 'graph' not in self.data.keys():
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
 				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
 			self.check_time()
+			graph_cfg['tmax'] += self.data['exp']._time_step
+			graph_cfg['tmin'] += self.data['exp']._time_step
 
 	def get_data(self):
 		self.data = {}
@@ -214,8 +223,8 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def gen_depend(self):
 		exp = self.origin_db.get_experiment(uuid=self.xp_uuid)
-		T = self.graph_cfg['tmax']
-		return [ExperimentDBJob(T=T, exp=exp, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)]
+		tmax = self.graph_cfg['tmax']
+		return [ExperimentDBJob(tmax=tmax, exp=exp, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)]
 
 
 #id list is list

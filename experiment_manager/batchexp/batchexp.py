@@ -58,13 +58,13 @@ class BatchExp(object):
 			self.add_graph_job(uuid=exp.uuid, method=method, tmax=tmax)
 			print 'added graph job for exp {}, method {} to {}'.format(uuid, method, tmax)
 
-	def add_exp_job(self, tmax, uuid=None, xp_cfg=None):
+	def add_exp_job(self, tmax, uuid=None, xp_cfg={}):
 		exp = self.get_experiment(uuid=uuid, **xp_cfg)
 		if not exp._T[-1]>=tmax:
-			job = ExperimentDBJob(exp=exp, T=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
+			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 			self.jobqueue.add_job(job)
 
-	def add_graph_job(self, method, uuid=None, tmax=None, xp_cfg=None):
+	def add_graph_job(self, method, uuid=None, tmax=None, xp_cfg={}):
 		exp = self.get_experiment(uuid=uuid, **xp_cfg)
 		job = GraphExpDBJob(exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 		self.jobqueue.add_job(job)
@@ -85,11 +85,11 @@ class BatchExp(object):
 					blacklist.append(uuid)
 				else:
 					uuid = cfg['uuid']
-				cfg2 = dict((k,cfg[k]) for k in ('uuid', 'xp_cfg', 'method', 'tmax') if k in cfg.keys())
+				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in cfg.keys())
 				if 'method' in cfg.keys():
-					self.add_graph_job(**cfg2)
+					self.add_graph_job(uuid=uuid,**cfg2)
 				else:
-					self.add_exp_job(**cfg2)
+					self.add_exp_job(uuid=uuid,**cfg2)
 
 	def update_queue(self):
 		self.jobqueue.update_queue()
