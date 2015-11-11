@@ -175,7 +175,16 @@ class GraphExpDBJob(ExperimentDBJob):
 			return True
 
 	def __lt__(self, other):
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] > other.graph_cfg['tmax']
+
+	def __le__(self, other):
 		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
+
+	def __gt__(self, other):
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] < other.graph_cfg['tmax']
+
+	def __ge__(self, other):
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] <= other.graph_cfg['tmax']
 
 	def re_init(self):
 		self.data = {}
@@ -187,7 +196,7 @@ class GraphExpDBJob(ExperimentDBJob):
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		if 'graph' in self.data.keys():
-			tmax = self.data['graph']._X[-1] + self.data['exp']._time_step
+			tmax = self.data['graph']._X[0][-1] + self.data['exp']._time_step
 		else:
 			tmax = 0
 		graph_cfg['tmax'] = max(tmax, self.graph_cfg['tmin']) + self.data['exp']._time_step -0.1

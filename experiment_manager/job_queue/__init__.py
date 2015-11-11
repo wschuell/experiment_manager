@@ -88,14 +88,15 @@ class JobQueue(object):
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
 				job_uuids = [jj.uuid for jj in self.job_list]
-				for x in [x for x in j.deps]:
-					if x not in job_uuids:
-						j.deps.remove(x)
+				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
+					if dep_uuid not in job_uuids:
+						j.deps.remove(dep_uuid)
 				if not j.deps:
 					j.re_init()
 				#self.job_list.remove(j)
 				#self.add_job(j)
 			if j.status == 'pending' and self.avail_workers()>0:
+				j.save()
 				self.submit_job(j)
 				j.save()
 			elif j.status == 'running':
@@ -124,13 +125,12 @@ class JobQueue(object):
 			elif j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
+		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated", time.localtime())
 
 	def auto_finish_queue(self,t=60):
 		self.update_queue()
-		print time.gmtime(),' Queue updated'
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
 			self.update_queue()
-			print strftime("[%Y %m %d %H:%M:%S]: Queue updated", gmtime())
 			time.sleep(t)
 
 	def check_virtualenvs(self):
