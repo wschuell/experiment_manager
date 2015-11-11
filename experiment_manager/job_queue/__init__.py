@@ -130,7 +130,7 @@ class JobQueue(object):
 		print time.gmtime(),' Queue updated'
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
 			self.update_queue()
-			print time.gmtime(),' Queue updated'
+			print strftime("[%Y %m %d %H:%M:%S]: Queue updated", gmtime())
 			time.sleep(t)
 
 	def check_virtualenvs(self):

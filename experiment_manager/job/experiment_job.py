@@ -187,10 +187,10 @@ class GraphExpDBJob(ExperimentDBJob):
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		if 'graph' in self.data.keys():
-			tmax = self.data['graph']._X[-1] + 2*self.data['exp']._time_step
+			tmax = self.data['graph']._X[-1] + self.data['exp']._time_step
 		else:
 			tmax = 0
-		graph_cfg['tmax'] = max(tmax, self.graph_cfg['tmin'])-0.1
+		graph_cfg['tmax'] = max(tmax, self.graph_cfg['tmin']) + self.data['exp']._time_step -0.1
 		graph_cfg['tmin'] = graph_cfg['tmax']- self.data['exp']._time_step
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
 			if 'graph' not in self.data.keys():
