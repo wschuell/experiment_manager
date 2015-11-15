@@ -136,7 +136,7 @@ exit 0
 
 		job.status = 'running'
 		job.save()
-		time.sleep(1)
+		time.sleep(0.2)
 
 
 	def check_job_running(self, job):

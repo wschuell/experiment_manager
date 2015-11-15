@@ -2,6 +2,7 @@ import uuid
 import cPickle
 import bz2
 import time
+import random
 import os
 import copy
 import shutil
@@ -9,6 +10,7 @@ import jsonpickle
 import cProfile, pstats, StringIO
 import path
 from memory_profiler import memory_usage
+import numpy as np
 
 jsonpickle.set_preferred_backend('json')
 jsonpickle.set_encoder_options('json', indent=4)
@@ -34,6 +36,9 @@ class Job(object):
 		self.memory_usage = []
 		self.mem_max = None
 		self.deps = []
+		#self.rnd_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
+		self.rnd_states = {'random':random.get_state(), 'numpy':np.random.get_state()}
+		self.data = None
 		#self.save()
 		#self.data = None
 
@@ -50,6 +55,10 @@ class Job(object):
 			return os.path.join(*(['..']*depth))
 
 	def run(self):
+		#random.seed(seed=self.rnd_seeds['random'])
+		#np.random.seed(seed=self.rnd_seeds['numpy'])
+		random.set_state(self.rnd_states['random'])
+		np.random.set_state(self.rnd_states['numpy'])
 		with path.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
@@ -96,29 +105,36 @@ class Job(object):
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
 		self.status = 'pending'
 
-	def save(self,chdir=True):
+	def save(self,chdir=True, keep_data=True):
+		data_exists = False
 		if chdir:
 			j_path = self.get_path()
 		else:
 			j_path = '.'
 		if self.data is not None:
+			data_exists = True
 			with path.Path(j_path):
 				self.save_data()
-		tempdata = copy.deepcopy(self.data)
 		self.data = None
 		with path.Path(j_path):
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
+		self.rnd_states = {'random':random.get_state(), 'numpy':np.random.get_state()}
+		self.lastsave_time = time.time()
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
-		self.data = tempdata
-		self.lastsave_time = time.time()
+		if keep_data and data_exists:
+			with path.Path(j_path):
+				self.get_data()
 
 	def clean(self):
-		shutil.rmtree(self.path)
-		head, tail = os.path.split(self.path)
-		if not os.listdir(head):
-			shutil.rmtree(head)
+		try:
+			shutil.rmtree(self.path)
+			head, tail = os.path.split(self.path)
+			if not os.listdir(head):
+				shutil.rmtree(head)
+		except OSError:
+			pass
 
 	def update(self):
 		if os.path.isfile(self.path + '/job.json'):

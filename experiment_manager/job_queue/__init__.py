@@ -52,7 +52,10 @@ class JobQueue(object):
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def add_job(self, job, deep_check=None):
-		if job.status == 'dependencies not satisfied':
+		if job.status == 'already done':
+			job.clean()
+			ans = []
+		elif job.status == 'dependencies not satisfied':
 			deps = job.gen_depend()
 			for d in deps:
 				uuid_l = self.add_job(d)
