@@ -37,7 +37,7 @@ class Job(object):
 		self.mem_max = None
 		self.deps = []
 		#self.rnd_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
-		self.rnd_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
+		self.rnd_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
 		self.data = None
 		#self.save()
 		#self.data = None
@@ -58,7 +58,7 @@ class Job(object):
 		#random.seed(seed=self.rnd_seeds['random'])
 		#np.random.seed(seed=self.rnd_seeds['numpy'])
 		random.setstate(self.rnd_states['random'])
-		np.random.set_state(self.rnd_states['numpy'])
+		#np.random.set_state(self.rnd_states['numpy'])
 		with path.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
@@ -118,7 +118,7 @@ class Job(object):
 		self.data = None
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
-		self.rnd_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
+		self.rnd_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
 		self.lastsave_time = time.time()
 		with path.Path(j_path):
 			with open('job.json','w') as f:
