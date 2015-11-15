@@ -118,7 +118,7 @@ class Job(object):
 		self.data = None
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
-		self.rnd_states = {'random':random.get_state(), 'numpy':np.random.get_state()}
+		self.rnd_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
 		self.lastsave_time = time.time()
 		with path.Path(j_path):
 			with open('job.json','w') as f:
