@@ -37,7 +37,7 @@ class Job(object):
 		self.mem_max = None
 		self.deps = []
 		#self.rnd_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
-		self.rnd_states = {'random':random.get_state(), 'numpy':np.random.get_state()}
+		self.rnd_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
 		self.data = None
 		#self.save()
 		#self.data = None
@@ -57,7 +57,7 @@ class Job(object):
 	def run(self):
 		#random.seed(seed=self.rnd_seeds['random'])
 		#np.random.seed(seed=self.rnd_seeds['numpy'])
-		random.set_state(self.rnd_states['random'])
+		random.setstate(self.rnd_states['random'])
 		np.random.set_state(self.rnd_states['numpy'])
 		with path.Path(self.get_path()):
 			self.status = 'unfinished'
