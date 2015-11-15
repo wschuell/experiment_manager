@@ -116,11 +116,11 @@ class Job(object):
 			with path.Path(j_path):
 				self.save_data()
 		self.data = None
-		with path.Path(j_path):
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
 		self.rnd_states = {'random':random.get_state(), 'numpy':np.random.get_state()}
 		self.lastsave_time = time.time()
+		with path.Path(j_path):
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		if keep_data and data_exists:
