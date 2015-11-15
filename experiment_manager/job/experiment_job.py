@@ -243,7 +243,6 @@ class GraphExpDBJob(ExperimentDBJob):
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
-				RECURSION SOMEWHERE!!!
 				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
 			graph_cfg['tmax'] += step
 			graph_cfg['tmin'] += step
