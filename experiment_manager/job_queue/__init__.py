@@ -52,27 +52,54 @@ class JobQueue(object):
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def add_job(self, job, deep_check=None):
+		if job.status == 'already done':
+			job.clean()
+			return []
+		elif job.status == 'dependencies not satisfied':
+			deps = job.gen_depend()
+			for d in deps:
+				uuid_l = self.add_job(d)
+				job.deps += uuid_l
 		eq_filter = [j for j in self.job_list if (j == job)]
 		lt_filter = [j for j in eq_filter if eq_filter and (j < job)]
+		ge_filter = [j for j in eq_filter if eq_filter and (j >= job)]
 		if not eq_filter:
-			self.status = 'pending'
 			self.job_list.append(job)
-		elif lt_filter:
-			self.status = 'dependencies not satisfied'
+			self.update_needed = True
+			#job.status = 'pending'
+			job.save()
+			ans = [job.uuid]
+		elif lt_filter and not ge_filter:
+			job.status = 'dependencies not satisfied'
+			self.job_list.append(job)
+			self.update_needed = True
+			job.deps += [jj.uuid for jj in lt_filter]
+			#job.status = 'pending'
+			job.save()
+			ans = [job.uuid]
 		else:
 			print 'Job already in queue!'
-		job.save()
+			job.clean()
+			ans = [jj.uuid for jj in eq_filter]
 		self.save()
+		return ans
 
 	def update_queue(self):
-		if self.auto_update:
+		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
+			self.update_needed = False
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
-				j.re_init()
-				self.job_list.remove(j)
-				self.add_job(j)
+				job_uuids = [jj.uuid for jj in self.job_list]
+				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
+					if dep_uuid not in job_uuids:
+						j.deps.remove(dep_uuid)
+				if not j.deps:
+					j.re_init()
+				#self.job_list.remove(j)
+				#self.add_job(j)
 			if j.status == 'pending' and self.avail_workers()>0:
+				j.save()
 				self.submit_job(j)
 				j.save()
 			elif j.status == 'running':
@@ -80,10 +107,10 @@ class JobQueue(object):
 					self.retrieve_job(j)
 					if j.status == 'pending':
 						j.status = 'missubmitted'
-			elif j.status == 'dependencies not satisfied':
-				for dep in j.gen_depend():
-					print 'Adding dependency for job ' + j.job_dir
-					self.add_job(dep)
+			#elif j.status == 'dependencies not satisfied':
+				#for dep in j.gen_depend():
+				#	print 'Adding dependency for job ' + j.job_dir
+				#	self.add_job(dep)
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
@@ -101,11 +128,12 @@ class JobQueue(object):
 			elif j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
+		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated", time.localtime())
 
 	def auto_finish_queue(self,t=60):
-		while [j for j in self.job_list if j.status != 'missubmitted']:
+		self.update_queue()
+		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
 			self.update_queue()
-			print time.gmtime(),' Queue updated'
 			time.sleep(t)
 
 	def check_virtualenvs(self):
