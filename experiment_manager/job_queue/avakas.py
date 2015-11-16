@@ -21,6 +21,7 @@ class AvakasJobQueue(JobQueue):
 			self.ssh_cfg['hostname'] = 'avakas.mcia.univ-bordeaux.fr'
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
 			self.ssh_cfg['key_file'] = 'avakas'
+		self.ssh_session = SSHSession(**self.ssh_cfg)
 
 
 	def format_dict(self, job):
@@ -81,7 +82,8 @@ class AvakasJobQueue(JobQueue):
 			pass
 		job.status = 'missubmitted'
 		format_dict = self.format_dict(job)
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		if not os.path.exists(format_dict['local_job_dir']):
 			os.makedirs(format_dict['local_job_dir'])
 		with open("{local_job_dir}/pbs.py".format(**format_dict), "w") as pbs_file:
@@ -132,17 +134,18 @@ exit 0
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
-		session.close()
+		#session.close()
 
 		job.status = 'running'
 		job.save()
-		time.sleep(0.2)
+		#time.sleep(0.2)
 
 
 	def check_job_running(self, job):
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		test = session.command_output('qstat -f|grep {job_pbsjobid}'.format(**self.format_dict(job)))
-		session.close()
+		#session.close()
 		if test:
 			return True
 		else:
@@ -150,16 +153,18 @@ exit 0
 
 	def retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		job_dir = self.format_dict(job)['job_dir']
 		local_job_dir = self.format_dict(job)['local_job_dir']
 		session.get_dir(job_dir, local_job_dir)
-		session.close()
+		#session.close()
 		job.update()
 		job.path = path
 
 	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		cmd = []
 		if sys_site_packages:
 			site_pack = '--system-site-packages '
@@ -178,15 +183,16 @@ exit 0
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
-		session.close()
+		#session.close()
 
 	def update_virtualenv(self, virtual_env=None, requirements=[]):
 		cmd = []
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		if virtual_env is not None and not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-			session.close()
+			#session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:
 			if virtual_env is not None:
@@ -202,16 +208,28 @@ exit 0
 			if virtual_env is not None:
 				cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
-			session.close()
+			#session.close()
 
 	def cancel_job(self, job, clean=False):
 		if job.status == 'running':
-			session = SSHSession(**self.ssh_cfg)
+			#session = SSHSession(**self.ssh_cfg)
+			session = self.ssh_session
 			session.command_output('qdel ' + job.PBS_JOBID)
-			session.close()
+			#session.close()
 		super(AvakasJobQueue, self).cancel_job(job, clean=clean)
 
 	def avail_workers(self):
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		qstat = session.command_output('qstat -u {}|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
 		return self.max_jobs - len(qstat.split('\n')) + 1
+		#session.close()
+
+	def __getstate__(self):
+		out_dict = self.__dict__.copy()
+		del out_dict['ssh_session']
+		return out_dict
+
+	def __setstate__(self, in_dict):
+		self.__dict__.update(in_dict)
+		self.ssh_session = SSHSession(**self.ssh_cfg)
