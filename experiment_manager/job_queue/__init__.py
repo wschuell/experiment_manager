@@ -54,7 +54,7 @@ class JobQueue(object):
 	def add_job(self, job, deep_check=None):
 		if job.status == 'already done':
 			job.clean()
-			ans = []
+			return []
 		elif job.status == 'dependencies not satisfied':
 			deps = job.gen_depend()
 			for d in deps:

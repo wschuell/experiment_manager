@@ -4,11 +4,12 @@ import bz2
 import time
 import random
 import os
+import sys
 import copy
 import shutil
 import jsonpickle
 import cProfile, pstats, StringIO
-import path
+import path as pathpy
 from memory_profiler import memory_usage
 import numpy as np
 
@@ -36,8 +37,11 @@ class Job(object):
 		self.memory_usage = []
 		self.mem_max = None
 		self.deps = []
-		#self.rnd_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
-		self.rnd_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
+		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
+		random.seed(self.prg_seeds['random'])
+		np.random.seed(self.prg_seeds['numpy'])
+		with pathpy.Path(self.get_path()):
+			self.save_prg_states()
 		self.data = None
 		#self.save()
 		#self.data = None
@@ -54,23 +58,33 @@ class Job(object):
 			depth = len(os.path.normpath(self.path).split('/'))
 			return os.path.join(*(['..']*depth))
 
+	def save_prg_states(self):
+		self.prg_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
+		with open('prg_states.b','w') as f:
+			f.write(cPickle.dumps(self.prg_states, cPickle.HIGHEST_PROTOCOL))
+
+	def load_prg_states(self):
+		with open('prg_states.b','r') as f:
+			self.prg_states = cPickle.loads(f.read())
+		random.setstate(self.prg_states['random'])
+		np.random.set_state(self.prg_states['numpy'])
+
 	def run(self):
-		#random.seed(seed=self.rnd_seeds['random'])
-		#np.random.seed(seed=self.rnd_seeds['numpy'])
-		random.setstate(self.rnd_states['random'])
-		#np.random.set_state(self.rnd_states['numpy'])
-		with path.Path(self.get_path()):
+		self.lastsave_time = time.time()
+		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
 			if self.profiling:
 				pr = cProfile.Profile()
 				pr.enable()
 			self.get_data()
+			self.load_prg_states()
 			self.script()
+			self.save_prg_states()
 			if self.profiling:
 				pr.disable()
 				s = StringIO.StringIO()
-				sortby = 'time'
+				sortby = 'cumulative'
 				ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 				ps.print_stats()
 				with open('profile.txt','w') as f:
@@ -84,11 +98,12 @@ class Job(object):
 		self.exec_time = time.time() - self.init_time
 
 	def check_time(self, t=None):
-		self.check_mem()
 		if t is None:
 			t = self.estimated_time/10
 		self.update_exec_time()
 		if (self.exec_time + self.init_time) - self.lastsave_time > t:
+			self.check_mem()
+			self.save_prg_states()
 			self.save(chdir=False)
 
 	def check_mem(self):
@@ -113,18 +128,19 @@ class Job(object):
 			j_path = '.'
 		if self.data is not None:
 			data_exists = True
-			with path.Path(j_path):
+			with pathpy.Path(j_path):
 				self.save_data()
+		self.prg_states = None
 		self.data = None
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
-		self.rnd_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
+		#self.prg_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
 		self.lastsave_time = time.time()
-		with path.Path(j_path):
+		with pathpy.Path(j_path):
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		if keep_data and data_exists:
-			with path.Path(j_path):
+			with pathpy.Path(j_path):
 				self.get_data()
 
 	def clean(self):
