@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True, profiling=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True, profiling=True, seeds=None):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -38,6 +38,8 @@ class Job(object):
 		self.mem_max = None
 		self.deps = []
 		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
+		if seeds is not None:
+			self.prg_seeds.update(seeds)
 		random.seed(self.prg_seeds['random'])
 		np.random.seed(self.prg_seeds['numpy'])
 		with pathpy.Path(self.get_path()):
