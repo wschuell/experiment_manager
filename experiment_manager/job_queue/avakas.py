@@ -4,21 +4,24 @@ import shutil
 import time
 import copy
 
-from . import BaseJobQueue
+from . import JobQueue
 from ..tools.ssh import SSHSession
 
-class AvakasJobQueue(BaseJobQueue):
-	def __init__(self, ssh_cfg, basedir='jobs', auto_update=False):
-		super(AvakasJobQueue,self).__init__()
-		self.auto_update = auto_update
+class AvakasJobQueue(JobQueue):
+	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=100, **kwargs):
+		super(AvakasJobQueue,self).__init__(**kwargs)
+		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.basedir = basedir
 		if basedir[0] == '/':
 			raise IOError('basedir must be relative path')
+		if username is not None:
+			self.ssh_cfg['username'] = username
 		if 'hostname' not in self.ssh_cfg.keys():
 			self.ssh_cfg['hostname'] = 'avakas.mcia.univ-bordeaux.fr'
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
 			self.ssh_cfg['key_file'] = 'avakas'
+		self.ssh_session = SSHSession(**self.ssh_cfg)
 
 
 	def format_dict(self, job):
@@ -50,6 +53,11 @@ class AvakasJobQueue(BaseJobQueue):
 		else:
 			walltime_s = str(walltime_s)
 
+		if hasattr(job,'PBS_JOBID'):
+			pbs_jobid = job.PBS_JOBID
+		else:
+			pbs_jobid = 'NO_PBS_JOBID'
+
 		format_dict = {
 			'username':self.ssh_cfg['username'],
 			'basedir': self.basedir,
@@ -61,6 +69,7 @@ class AvakasJobQueue(BaseJobQueue):
 			'local_job_dir': job.path,
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
+			'job_pbsjobid': pbs_jobid,
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}
 
@@ -73,7 +82,8 @@ class AvakasJobQueue(BaseJobQueue):
 			pass
 		job.status = 'missubmitted'
 		format_dict = self.format_dict(job)
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		if not os.path.exists(format_dict['local_job_dir']):
 			os.makedirs(format_dict['local_job_dir'])
 		with open("{local_job_dir}/pbs.py".format(**format_dict), "w") as pbs_file:
@@ -89,7 +99,7 @@ class AvakasJobQueue(BaseJobQueue):
 import os
 import sys
 import shutil
-import cPickle
+import jsonpickle
 
 PBS_JOBID = os.environ['PBS_JOBID']
 job_dir = '{job_dir}'
@@ -98,8 +108,8 @@ work_dir = '{base_work_dir}'+PBS_JOBID
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
-with open('job.b','r') as f:
-	job = cPickle.loads(f.read())
+with open('job.json','r') as f:
+	job = jsonpickle.loads(f.read())
 
 job.path = '.'
 job.run()
@@ -118,24 +128,24 @@ exit 0
 """.format(**format_dict))
 
 
-		if self.auto_update:
-			self.update_virtualenv(virtual_env=job.virtualenv, requirements=job.requirements)
 		session.command('module load torque')
 		session.create_path("{job_dir}".format(**format_dict))
 		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
-		session.command('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
-		session.command('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
-		session.command("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
-		session.close()
+		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
+		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
+		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
+		#session.close()
 
 		job.status = 'running'
-		time.sleep(1)
+		job.save()
+		#time.sleep(0.2)
 
 
 	def check_job_running(self, job):
-		session = SSHSession(**self.ssh_cfg)
-		test = session.command_output('qstat -f|grep {job_name}'.format(**self.format_dict(job)))
-		session.close()
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
+		test = session.command_output('qstat -f|grep {job_pbsjobid}'.format(**self.format_dict(job)))
+		#session.close()
 		if test:
 			return True
 		else:
@@ -143,17 +153,23 @@ exit 0
 
 	def retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
-		session = SSHSession(**self.ssh_cfg)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		job_dir = self.format_dict(job)['job_dir']
 		local_job_dir = self.format_dict(job)['local_job_dir']
 		session.get_dir(job_dir, local_job_dir)
-		session.close()
+		#session.close()
 		job.update()
 		job.path = path
 
-	def set_virtualenv(self, virtual_env, requirements):
-		session = SSHSession(**self.ssh_cfg)
+	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
 		cmd = []
+		if sys_site_packages:
+			site_pack = '--system-site-packages '
+		else:
+			site_pack = ''
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		if virtual_env is None:
@@ -161,21 +177,22 @@ exit 0
 				session.command('pip install --user '+package)
 		else:
 			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-				cmd.append('virtualenv /home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env))
+				cmd.append('virtualenv {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_cfg['username'], virtual_env))
 			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 			for package in requirements:
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
-		session.close()
+		#session.close()
 
 	def update_virtualenv(self, virtual_env=None, requirements=[]):
 		cmd = []
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
-		session = SSHSession(**self.ssh_cfg)
-		if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-			session.close()
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
+		if virtual_env is not None and not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
+			#session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:
 			if virtual_env is not None:
@@ -183,12 +200,36 @@ exit 0
 				option=''
 			else:
 				option='--user '
-			for package in requirements:
-				if package is None:
-					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U")
-				else:
-					cmd.append('pip install --upgrade '+option+package)
-				if virtual_env is not None:
-					cmd.append('deactivate')
+			if requirements == ['all']:
+					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U "+option)
+			else:
+					cmd.append('pip install --upgrade --no-deps '+option+' '.join(requirements))
+					cmd.append('pip install '+option+' '.join(requirements))
+			if virtual_env is not None:
+				cmd.append('deactivate')
 			print session.command_output(' && '.join(cmd))
-			session.close()
+			#session.close()
+
+	def cancel_job(self, job, clean=False):
+		if job.status == 'running':
+			#session = SSHSession(**self.ssh_cfg)
+			session = self.ssh_session
+			session.command_output('qdel ' + job.PBS_JOBID)
+			#session.close()
+		super(AvakasJobQueue, self).cancel_job(job, clean=clean)
+
+	def avail_workers(self):
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
+		qstat = session.command_output('qstat -u {}|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
+		return self.max_jobs - len(qstat.split('\n')) + 1
+		#session.close()
+
+	def __getstate__(self):
+		out_dict = self.__dict__.copy()
+		del out_dict['ssh_session']
+		return out_dict
+
+	def __setstate__(self, in_dict):
+		self.__dict__.update(in_dict)
+		self.ssh_session = SSHSession(**self.ssh_cfg)

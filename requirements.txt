@@ -5,3 +5,7 @@ matplotlib
 paramiko
 uuid
 importlib
+jsonpickle
+path.py
+memory_profiler
+psutil
