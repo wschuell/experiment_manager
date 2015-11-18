@@ -29,7 +29,8 @@ class KidlearnJob(IteratedJob):
         with open("cost.json","w") as f:
             f.write(jstr)
 
-        
+        with open("data_job.json","w") as f:
+            f.write(self.data)
 
     def gen_multi_zpdes(self, xp_conf, ref_xp="optimize", base_path_to_save="experimentation/data/"):
         stud_confs = xp_conf["stud_confs"]
@@ -61,11 +62,13 @@ class KidlearnJob(IteratedJob):
         with open(os.path.join(self.path,"cost.json"),"r") as f:
             cost = json.loads(f.read())
 
-        all_cost_file_name = "all_cost_{}.json".format(self.descr)
+        jq_path = "jq_data/jq_{}/".format(self.descr)
+        all_cost_file_name = "{}all_cost_{}.json".format(jq_path,self.descr)
         if os.path.isfile(all_cost_file_name):
             with open(all_cost_file_name,"r") as f:
                 all_cost = json.loads(f.read())
         else:
+            k_lib.config.datafile.create_directories([jq_path])
             all_cost = {}
 
         with open(all_cost_file_name,"w") as f:
