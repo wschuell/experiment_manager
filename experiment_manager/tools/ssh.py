@@ -26,7 +26,6 @@ class SSHSession(object):
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
-        self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         try:
             self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         except:
