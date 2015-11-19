@@ -104,7 +104,7 @@ class BatchExp(object):
 		self.jobqueue.update_queue()
 
 	def auto_finish_queue(self,t=60):
-		self.jobqueue.auto_finish_queue(t=60)
+		self.jobqueue.auto_finish_queue(t=t)
 
 #class Experiment(object):
 #

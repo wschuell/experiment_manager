@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=600, max_time=48*3600, path = 'jobs', erase=True, profiling=True, seeds=None):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs', erase=True, profiling=True, seeds=None):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -28,6 +28,7 @@ class Job(object):
 		self.requirements = requirements
 		self.init_time = 0.
 		self.exec_time = 0.
+		self.max_time = max_time
 		if path[0] == '/':
 			raise IOError('path must be relative')
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
@@ -116,6 +117,7 @@ class Job(object):
 	def fix(self):
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
+			self.estimated_time = min(self.estimated_time*1.2, self.max_time)
 		else:
 			if self.estimated_time >= self.max_time:
 				raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
