@@ -205,7 +205,8 @@ class Job(object):
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
-		del out_dict['profiler']
+		if 'profiler' in out_dict.keys():
+			del out_dict['profiler']
 		return out_dict
 
 	def __setstate__(self, in_dict):
