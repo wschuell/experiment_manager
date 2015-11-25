@@ -77,25 +77,36 @@ class Job(object):
 		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
-			if self.profiling:
-				pr = cProfile.Profile()
-				pr.enable()
+			self.start_profiler()
 			self.get_data()
 			self.load_prg_states()
 			self.script()
 			self.save_prg_states()
-			if self.profiling:
-				pr.disable()
-				s = StringIO.StringIO()
-				sortby = 'cumulative'
-				ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-				ps.print_stats()
-				with open('profile.txt','w') as f:
-					f.write(s.getvalue())
+			self.stop_profiler()
+			self.save_profile()
 			self.update_exec_time()
 			self.save_data()
 		self.status = 'done'
 		self.save()
+
+	def start_profiler(self):
+		if self.profiling:
+			self.profiler = cProfile.Profile()
+			self.profiler.enable()
+
+	def stop_profiler(self):
+		if hasattr(self,'profiler')
+			self.profiler.disable()
+
+	def save_profile(self):
+		if self.profiling:
+			s = StringIO.StringIO()
+			sortby = 'cumulative'
+			ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
+			ps.print_stats()
+			with open('profile.txt','w') as f:
+				f.write(s.getvalue())
+			s.close()
 
 	def update_exec_time(self):
 		self.exec_time = time.time() - self.init_time
@@ -107,6 +118,7 @@ class Job(object):
 		if (self.exec_time + self.init_time) - self.lastsave_time > t:
 			self.check_mem()
 			self.save_prg_states()
+			self.save_profile()
 			self.save(chdir=False)
 
 	def check_mem(self):
@@ -115,12 +127,12 @@ class Job(object):
 		self.mem_max = max(mem,self.mem_max)
 
 	def fix(self):
+		if self.estimated_time >= self.max_time:
+			raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
 			self.estimated_time = min(self.estimated_time*1.2, self.max_time)
 		else:
-			if self.estimated_time >= self.max_time:
-				raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
 		self.status = 'pending'
 
@@ -190,3 +202,12 @@ class Job(object):
 
 	def gen_depend(self):
 		return []
+
+	def __getstate__(self):
+		out_dict = self.__dict__.copy()
+		del out_dict['profiler']
+		return out_dict
+
+	def __setstate__(self, in_dict):
+		self.__dict__.update(in_dict)
+

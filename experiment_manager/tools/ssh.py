@@ -57,9 +57,9 @@ class SSHSession(object):
                     if where == 'default':
                         where = '{}/.ssh/id_rsa'.format(home)
                     elif where == 'key_file_name':
-                        where = '{}/.ssh/{}/id_rsa'.format(home,key_file)
+                        where = '{}/.ssh/{}/id_rsa'.format(home,self.key_file)
                     elif where == 'key_file':
-                        where = key_file
+                        where = self.key_file
                     self.key_file = where
                     self.install_ssh_key()
                     self.close()
@@ -140,9 +140,9 @@ class SSHSession(object):
         path = os.path.dirname(self.key_file)
         if not os.path.exists(path):
             os.makedirs(path)
-        key = RSA.generate(2048)
         if os.path.isfile(self.key_file) or os.path.isfile(self.key_file+'.pub'):
             raise Exception('Keys already exist!')
+        key = RSA.generate(2048)
         with open(self.key_file, 'w') as content_file:
             os.chmod(self.key_file, 0600)
             content_file.write(key.exportKey('PEM'))
