@@ -95,7 +95,7 @@ class Job(object):
 			self.profiler.enable()
 
 	def stop_profiler(self):
-		if profiling and hasattr(self,'profiler'):
+		if self.profiling and hasattr(self,'profiler'):
 			self.profiler.disable()
 
 	def save_profile(self):
