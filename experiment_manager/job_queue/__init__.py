@@ -17,9 +17,10 @@ job_queue_class={
 	'plafrim':'plafrim.PlafrimJobQueue'
 }
 
-def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
-	if name is not None and os.path.isfile('jobs/'+name+'.jq'):
-		with open('jobs/'+name+'.jq','r') as f:
+def get_jobqueue(jq_type='local', basedir='jq', jobsdir='jobs', name =None, **jq_cfg2):
+	save_path = "{0}/{1}/{1}.jq".format(basedir,name)
+	if name is not None and os.path.isfile(save_path):
+		with open(save_path,'r') as f:
 			jq = cPickle.loads(f.read())
 	else:
 		tempstr = jq_type
@@ -29,26 +30,38 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 		temppath = '.'.join(templist[:-1])
 		tempclass = templist[-1]
 		_tempmod = import_module('.'+temppath,package=__name__)
-		jq = getattr(_tempmod,tempclass)(name=name, **jq_cfg2)
+		jq = getattr(_tempmod,tempclass)(name=name,basedir=basedir, jobsdir=jobsdir
+			, **jq_cfg2)
 	return jq
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False):
+	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False, basedir='jq', jobsdir='jobs'):
 		self.job_list = []
 		self.erase = erase
 		self.auto_update = auto_update
 		self.past_exec_time = 0
 		self.uuid = str(uuid.uuid1())
+
 		if name is None:
 			self.name = self.uuid
 		else:
 			self.name = name
+		
+		self.basedir = os.path.join(basedir,self.name)
+		self.jobsdir = os.path.join(self.basedir,jobsdir)
+
+		for dir_path in [self.basedir,self.jobsdir]:
+			if not os.path.exists(dir_path):
+				os.makedirs(dir_path)
+
 		self.deep_check = deep_check
 		self.executed_jobs = 0
 
 	def save(self):
-		with open('jobs/'+self.name+'.jq','w') as f:
+		save_path = "{0}/{1}.jq".format(self.basedir,self.name)
+		
+		with open(save_path,'w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def add_job(self, job, deep_check=None):

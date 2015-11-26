@@ -8,12 +8,12 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=100, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, max_jobs=100, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
-		self.basedir = basedir
-		if basedir[0] == '/':
+		
+		if self.basedir[0] == '/':
 			raise IOError('basedir must be relative path')
 		if username is not None:
 			self.ssh_cfg['username'] = username
