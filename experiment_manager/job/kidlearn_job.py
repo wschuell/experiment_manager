@@ -62,7 +62,7 @@ class KidlearnJob(IteratedJob):
         with open(os.path.join(self.path,"cost.json"),"r") as f:
             cost = json.loads(f.read())
 
-        jq_path = "jq_data/jq_{}/".format(self.descr)
+        jq_path = self.jq_path #"jq_data/jq_{}/".format(self.descr)
         all_cost_file_path = "{}all_cost_{}.json".format(jq_path,self.descr)
         if os.path.isfile(all_cost_file_path):
             with open(all_cost_file_path,"r") as f:
