@@ -17,7 +17,11 @@ class SSHSession(object):
         self.password = password
         self.port = port
         home = os.environ['HOME']
-        if os.path.isfile('{}/.ssh/{}/id_rsa'.format(home,key_file)):
+        if key_file is None:
+            self.key_file = '{}/.ssh/id_rsa'.format(home)
+        elif key_file[0] == '/':
+            self.key_file = key_file
+        elif os.path.isfile('{}/.ssh/{}/id_rsa'.format(home,key_file)):
             self.key_file = '{}/.ssh/{}/id_rsa'.format(home,key_file)
         elif os.path.isfile(key_file):
             self.key_file = key_file
@@ -25,6 +29,10 @@ class SSHSession(object):
             self.key_file = '{}/.ssh/id_rsa'.format(home)
 
         self.client = paramiko.SSHClient()
+        self.connect()
+
+    def connect(self):
+        home = os.environ['HOME']
         self.client.load_system_host_keys()
         try:
             self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
@@ -42,8 +50,6 @@ class SSHSession(object):
                         retry = False
             if not retry:
                 temp_password = getpass.getpass('SSH Password:')
-                if not self.key_file[0] == '/':
-                    self.key_file = '{}/.ssh/{}/id_rsa'.format(home,key_file)
                 self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
                 question = raw_input('Install SSH key? Y/N')
                 if question == 'Y' or question == 'y':
@@ -51,15 +57,18 @@ class SSHSession(object):
                     if where == 'default':
                         where = '{}/.ssh/id_rsa'.format(home)
                     elif where == 'key_file_name':
-                        where = '{}/.ssh/{}/id_rsa'.format(home,key_file)
+                        where = '{}/.ssh/{}/id_rsa'.format(home,self.key_file)
                     elif where == 'key_file':
-                        where = key_file
+                        where = self.key_file
                     self.key_file = where
                     self.install_ssh_key()
                     self.close()
                     self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         self.sftp = self.client.open_sftp()
 
+    def reconnect(self):
+        self.close()
+        self.connect()
 
     def path_exists(self, path):
         try:
@@ -131,9 +140,9 @@ class SSHSession(object):
         path = os.path.dirname(self.key_file)
         if not os.path.exists(path):
             os.makedirs(path)
-        key = RSA.generate(2048)
         if os.path.isfile(self.key_file) or os.path.isfile(self.key_file+'.pub'):
             raise Exception('Keys already exist!')
+        key = RSA.generate(2048)
         with open(self.key_file, 'w') as content_file:
             os.chmod(self.key_file, 0600)
             content_file.write(key.exportKey('PEM'))
