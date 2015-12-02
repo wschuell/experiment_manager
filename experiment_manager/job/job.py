@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs', erase=True, profiling=True, seeds=None):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs',jq_path="", erase=True, profiling=True, seeds=None):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -29,10 +29,13 @@ class Job(object):
 		self.init_time = 0.
 		self.exec_time = 0.
 		self.max_time = max_time
+		
 		if path[0] == '/':
 			raise IOError('path must be relative')
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
+		self.jq_path = jq_path
 		self.path = os.path.join(path,self.job_dir)
+		
 		self.estimated_time = estimated_time
 		self.profiling = profiling
 		self.memory_usage = []

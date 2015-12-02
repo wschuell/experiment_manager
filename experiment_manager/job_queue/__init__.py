@@ -65,6 +65,12 @@ class JobQueue(object):
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def add_job(self, job, deep_check=None):
+		if job.jq_path != self.basedir :
+			job.jq_path = self.basedir
+		
+		if self.jobsdir not in job.path :
+			job.path = os.path.join(self.jobsdir,job.job_dir)
+
 		if job.status == 'already done':
 			job.clean()
 			return []
