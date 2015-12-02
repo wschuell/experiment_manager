@@ -35,7 +35,7 @@ class Job(object):
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
 		self.jq_path = jq_path
 		self.path = os.path.join(path,self.job_dir)
-		
+
 		self.estimated_time = estimated_time
 		self.profiling = profiling
 		self.memory_usage = []
