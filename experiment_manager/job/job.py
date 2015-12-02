@@ -36,7 +36,7 @@ class Job(object):
 		self.estimated_time = estimated_time
 		self.profiling = profiling
 		self.memory_usage = []
-		self.mem_max = None
+		self.mem_max = 0.
 		self.deps = []
 		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
 		if seeds is not None:
@@ -202,6 +202,14 @@ class Job(object):
 
 	def gen_depend(self):
 		return []
+
+	def get_error(self):
+		with pathpy.Path(self.get_path()):
+			if os.path.isfile('error.txt'):
+				with open('error.txt','r') as f:
+					return f.read()
+			else:
+				'Error file doesnt exist or job queue not supporting error management'
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()

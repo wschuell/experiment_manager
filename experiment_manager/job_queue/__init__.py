@@ -129,6 +129,8 @@ class JobQueue(object):
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
 		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated", time.localtime())
+		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
+			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
 
 	def auto_finish_queue(self,t=60):
 		self.update_queue()
@@ -164,6 +166,12 @@ class JobQueue(object):
 		for j in self.job_list:
 			t += j.exec_time
 
+	def reinit_missubmited(self):
+		for j in self.job_list:
+			if j.status == 'missubmited':
+				j.update()
+				j.status = 'pending'
+
 	def submit_job(self, job):
 		pass
 
@@ -181,3 +189,11 @@ class JobQueue(object):
 
 	def avail_workers(self):
 		return 1
+
+	def get_errors(self):
+		errors = []
+		for j in self.job_list:
+			if j.status == 'missubmitted':
+				errors.append((j.job_dir,j.get_error()))
+		return errors
+

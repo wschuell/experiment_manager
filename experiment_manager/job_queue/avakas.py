@@ -13,6 +13,7 @@ class AvakasJobQueue(JobQueue):
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.basedir = basedir
+		self.update_needed = False
 		if basedir[0] == '/':
 			raise IOError('basedir must be relative path')
 		if username is not None:

@@ -81,6 +81,8 @@ class ExperimentDBJob(Job):
 			self.check_time()
 
 	def get_data(self):
+		print self.db
+		print self.__dict__
 		self.data = self.db.get_experiment(uuid=self.xp_uuid)
 
 	def save_data(self):
