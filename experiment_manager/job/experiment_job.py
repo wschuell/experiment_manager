@@ -47,7 +47,7 @@ class ExperimentJob(Job):
 class ExperimentDBJob(Job):
 
 	def __init__(self, tmax, exp=None, uuid=None, db=None, db_cfg={}, **kwargs):
-		super(ExperimentDBJob, self).__init__(**kwargs)
+		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False, **kwargs)
 		self.tmax = tmax
 		if exp is None:
 			xp_tmax = db.get_param(uuid=uuid,param='Tmax')
@@ -81,16 +81,16 @@ class ExperimentDBJob(Job):
 			self.check_time()
 
 	def get_data(self):
-		print self.db
-		print self.__dict__
 		self.data = self.db.get_experiment(uuid=self.xp_uuid)
 
 	def save_data(self):
 		self.db.commit(self.data)
 
 	def unpack_data(self):
-		self.data.db = self.origin_db
-		self.data.commit_to_db()
+		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid])
+		#self.data.db = self.origin_db
+		#self.data.commit_to_db()
 
 	def __eq__(self, other):
 		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
@@ -166,7 +166,7 @@ class GraphExpJob(ExperimentJob):
 class GraphExpDBJob(ExperimentDBJob):
 
 	def __init__(self, uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, **graph_cfg):
-		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env)
+		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env, get_data_at_unpack=False)
 		try:
 			if exp is None:
 				tmax_db = db.get_param(uuid=uuid, method=graph_cfg['method'], param='Time_max')
@@ -263,11 +263,13 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		if hasattr(self.data['exp'].db, 'dbpath'):
-			self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
-		self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
-		self.data['exp'].db = self.origin_db
-		self.data['exp'].commit_to_db()
+		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=[self.graph_cfg['method']], graph_only=True)
+		#if hasattr(self.data['exp'].db, 'dbpath'):
+		#	self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
+		#self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
+		#self.data['exp'].db = self.origin_db
+		#self.data['exp'].commit_to_db()
 
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(uuid=self.xp_uuid)

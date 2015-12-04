@@ -114,8 +114,9 @@ class JobQueue(object):
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
-				with path.Path(j.get_path()):
-					j.get_data()
+				if j.get_data_at_unpack:
+					with path.Path(j.get_path()):
+						j.get_data()
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time
@@ -128,15 +129,25 @@ class JobQueue(object):
 			elif j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
-		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated", time.localtime())
+		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
+
+	def __str__(self):
+		ans = {'total':0}
+		for j in job_list:
+			ans['total'] +=1
+			if not j.status in ans.keys():
+				ans[j.status] = 1
+			else:
+				ans[j.status] += 1
+		return '\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
 
 	def auto_finish_queue(self,t=60):
 		self.update_queue()
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
-			self.update_queue()
 			time.sleep(t)
+			self.update_queue()
 
 	def check_virtualenvs(self):
 		envs = {}
