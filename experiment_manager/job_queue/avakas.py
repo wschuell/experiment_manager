@@ -80,7 +80,6 @@ class AvakasJobQueue(JobQueue):
 	def submit_job(self, job):
 		if not job.status == 'pending':
 			print('Job {} already submitted'.format(job.uuid))
-			pass
 		job.status = 'missubmitted'
 		format_dict = self.format_dict(job)
 		#session = SSHSession(**self.ssh_cfg)
@@ -134,7 +133,7 @@ exit 0
 		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
-		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))
+		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
 		#session.close()
 
 		job.status = 'running'

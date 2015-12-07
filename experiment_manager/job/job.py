@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs', erase=True, profiling=True, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs', erase=False, profiling=True, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr

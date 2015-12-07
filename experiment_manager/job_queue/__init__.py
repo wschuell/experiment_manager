@@ -34,7 +34,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False):
+	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False):
 		self.job_list = []
 		self.erase = erase
 		self.auto_update = auto_update
@@ -122,7 +122,7 @@ class JobQueue(object):
 				self.past_exec_time += j.exec_time
 				self.executed_jobs += 1
 				self.job_list.remove(j)
-				if (not self.erase) and (not j.erase):
+				if self.erase:
 					j.clean()
 			elif j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
@@ -134,14 +134,15 @@ class JobQueue(object):
 			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
 
 	def __str__(self):
-		ans = {'total':0}
-		for j in job_list:
-			ans['total'] +=1
+		total = 0
+		ans = {}
+		for j in self.job_list:
+			total +=1
 			if not j.status in ans.keys():
 				ans[j.status] = 1
 			else:
 				ans[j.status] += 1
-		return '\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
+		return '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
 
 	def auto_finish_queue(self,t=60):
 		self.update_queue()
@@ -161,7 +162,7 @@ class JobQueue(object):
 			self.update_virtualenv(env, requirements=list(set(envs[env])))
 
 	def cancel_job(self, job, clean=False):
-		if clean:
+		if self.erase:
 			job.clean()
 		else:
 			job.status = 'canceled'
@@ -179,7 +180,7 @@ class JobQueue(object):
 
 	def reinit_missubmited(self):
 		for j in self.job_list:
-			if j.status == 'missubmited':
+			if j.status == 'missubmitted':
 				j.update()
 				j.status = 'pending'
 
