@@ -229,7 +229,7 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
 		if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
 			self.status = 'pending'
-		self.data = None
+		self.save(keep_data=False)
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
@@ -258,7 +258,10 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.graph_filename = self.data['graph'].filename
 
 	def save_data(self):
-		#self.db.commit(self.data['exp'])
+		if 'exp' in self.data.keys():
+			self.db.commit(self.data['exp'])
+		#else:
+		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		if 'graph' in self.data.keys():
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 

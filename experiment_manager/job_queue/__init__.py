@@ -34,9 +34,11 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False):
+	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False):
+		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
+		self.update_needed = False
 		self.auto_update = auto_update
 		self.past_exec_time = 0
 		self.uuid = str(uuid.uuid1())
@@ -78,7 +80,8 @@ class JobQueue(object):
 			job.save()
 			ans = [job.uuid]
 		else:
-			print 'Job already in queue!'
+			if self.verbose:
+				print 'Job already in queue!'
 			job.clean()
 			ans = [jj.uuid for jj in eq_filter]
 		self.save()
@@ -124,9 +127,9 @@ class JobQueue(object):
 				self.job_list.remove(j)
 				if self.erase:
 					j.clean()
-			elif j.status == 'missubmitted':
+			elif self.verbose and j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
-			elif j.status == 'dependencies not satisfied':
+			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
 		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
@@ -142,7 +145,24 @@ class JobQueue(object):
 				ans[j.status] = 1
 			else:
 				ans[j.status] += 1
-		return '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
+		exec_time = self.past_exec_time
+		exec_time_j = int(exec_time/86400)
+		exec_time -= exec_time_j * 86400
+		exec_time_h = int(exec_time/3600)
+		exec_time -= exec_time_h * 3600
+		exec_time_m = int(exec_time/60)
+		exec_time -= exec_time_m * 60
+		str_exec = ''
+		if exec_time_j:
+			str_exec += str(int(exec_time_j)) + ' days '
+		if exec_time_h:
+			str_exec += str(int(exec_time_h))+' h '
+		if exec_time_m:
+			str_exec += str(int(exec_time_m))+' min '
+		str_exec +=str(exec_time)+' s'
+		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
+		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)
+		return str_ans
 
 	def auto_finish_queue(self,t=60):
 		self.update_queue()

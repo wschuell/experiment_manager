@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=1200, max_time=48*3600, path = 'jobs', erase=False, profiling=True, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=True, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -132,9 +132,9 @@ class Job(object):
 			raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 		if self.exec_time > 0:
 			self.init_time = -self.exec_time
-			self.estimated_time = min(self.estimated_time*1.2, self.max_time)
-		else:
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
+		else:
+			self.estimated_time = min(self.estimated_time*4, self.max_time)
 		self.status = 'pending'
 
 	def save(self,chdir=True, keep_data=True):

@@ -8,7 +8,7 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=100, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=500, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
