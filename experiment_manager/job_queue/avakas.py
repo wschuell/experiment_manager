@@ -121,9 +121,27 @@ sys.exit(0)
 		with open("{local_job_dir}/epilogue.sh".format(**format_dict), "w") as epilogue_file:
 			epilogue_file.write(
 """#!/bin/bash
-echo "job finished, backing up files."
+echo "Job finished, backing up files."
 PBS_JOBID=$1
+cat {base_work_dir}$PBS_JOBID/output.txt >> {job_dir}/output.txt
+cat {base_work_dir}$PBS_JOBID/error.txt >> {job_dir}/error.txt
+rm {base_work_dir}$PBS_JOBID/output.txt
+rm {base_work_dir}$PBS_JOBID/error.txt
 cp -f -R {base_work_dir}$PBS_JOBID/* {job_dir}/
+echo "Backup done"
+echo"================================" 
+echo "EPILOGUE"
+echo"================================" 
+echo "Job ID: $1"
+echo "User ID: $2"
+echo "Group ID: $3"
+echo "Job Name: $4"
+echo "Session ID: $5"
+echo "Resource List: $6"
+echo "Resources Used: $7"
+echo "Queue Name: $8"
+echo "Account String: $9"
+echo"================================" 
 exit 0
 """.format(**format_dict))
 
