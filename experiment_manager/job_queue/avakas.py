@@ -123,15 +123,11 @@ sys.exit(0)
 """#!/bin/bash
 echo "Job finished, backing up files."
 PBS_JOBID=$1
-cat {base_work_dir}$PBS_JOBID/output.txt >> {job_dir}/output.txt
-cat {base_work_dir}$PBS_JOBID/error.txt >> {job_dir}/error.txt
-rm {base_work_dir}$PBS_JOBID/output.txt
-rm {base_work_dir}$PBS_JOBID/error.txt
 cp -f -R {base_work_dir}$PBS_JOBID/* {job_dir}/
 echo "Backup done"
-echo"================================" 
+echo "================================"
 echo "EPILOGUE"
-echo"================================" 
+echo "================================"
 echo "Job ID: $1"
 echo "User ID: $2"
 echo "Group ID: $3"
@@ -141,7 +137,7 @@ echo "Resource List: $6"
 echo "Resources Used: $7"
 echo "Queue Name: $8"
 echo "Account String: $9"
-echo"================================" 
+echo "================================"
 exit 0
 """.format(**format_dict))
 

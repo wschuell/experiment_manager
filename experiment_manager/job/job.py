@@ -39,7 +39,7 @@ class Job(object):
 		self.memory_usage = []
 		self.mem_max = 0.
 		self.deps = []
-		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, sys.maxint)}
+		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, 4294967295)}
 		if seeds is not None:
 			self.prg_seeds.update(seeds)
 		random.seed(self.prg_seeds['random'])
