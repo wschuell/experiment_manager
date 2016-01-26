@@ -228,12 +228,15 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.data = {}
 		#self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
 		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
+		old_path = self.db.dbpath
+		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if self.origin_db.id_in_db(uuid=self.xp_uuid):
 			T = self.origin_db.get_param(uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
 				if not (self.db.id_in_db(uuid=self.xp_uuid) and self.db.get_param(uuid=self.xp_uuid,param='Tmax')>=T):
 					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 				self.status = 'pending'
+		self.db.dbpath = old_path
 		self.save(keep_data=False)
 
 	def script(self):
