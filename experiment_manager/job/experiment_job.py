@@ -226,9 +226,14 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def re_init(self):
 		self.data = {}
-		self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
-		if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
-			self.status = 'pending'
+		#self.data['exp'] = self.origin_db.get_experiment(uuid=self.xp_uuid)
+		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
+		if self.origin_db.id_in_db(uuid=self.xp_uuid):
+			T = self.origin_db.get_param(uuid=self.xp_uuid,param='Tmax')
+			if T >= self.graph_cfg['tmax']:
+				if not (self.db.id_in_db(uuid=self.xp_uuid) and self.db.get_param(uuid=self.xp_uuid,param='Tmax')>=T):
+					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
+				self.status = 'pending'
 		self.save(keep_data=False)
 
 	def script(self):
@@ -258,10 +263,11 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.graph_filename = self.data['graph'].filename
 
 	def save_data(self):
-		if 'exp' in self.data.keys():
+		if 'exp' in self.data.keys() and not (self.db.id_in_db(uuid=self.xp_uuid) and self.db.get_param(uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
 			self.db.commit(self.data['exp'])
-		#else:
+		#elif not self.injobdir:
 		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
+		#else:
 		if 'graph' in self.data.keys():
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
