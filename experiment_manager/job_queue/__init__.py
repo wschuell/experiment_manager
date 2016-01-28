@@ -63,8 +63,8 @@ class JobQueue(object):
 				uuid_l = self.add_job(d)
 				job.deps += uuid_l
 		eq_filter = [j for j in self.job_list if (j == job)]
-		lt_filter = [j for j in eq_filter if eq_filter and (j < job)]
-		ge_filter = [j for j in eq_filter if eq_filter and (j >= job)]
+		lt_filter = [j for j in eq_filter if (j < job)]
+		ge_filter = [j for j in eq_filter if (j >= job)]
 		if not eq_filter:
 			self.job_list.append(job)
 			self.update_needed = True

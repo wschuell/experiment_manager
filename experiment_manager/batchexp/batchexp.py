@@ -2,7 +2,7 @@ import uuid
 import copy
 from ..job_queue import get_jobqueue
 from ..database import get_database
-from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob
+from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob, MultipleGraphExpDBJob
 
 
 class BatchExp(object):
@@ -41,35 +41,35 @@ class BatchExp(object):
 #		delattr(exp,'_batch_exp')
 #		delattr(exp,'originclass')
 
-	def get_experiment(self, uuid=None, force_new=False, blacklist=[], pattern=None, tmax=0, auto_job=True, **xp_cfg):
-		exp = self.db.get_experiment(uuid=uuid, force_new=force_new, blacklist=blacklist, pattern=pattern, tmax=tmax, **xp_cfg)
+	def get_experiment(self, xp_uuid=None, force_new=False, blacklist=[], pattern=None, tmax=0, auto_job=True, **xp_cfg):
+		exp = self.db.get_experiment(xp_uuid=xp_uuid, force_new=force_new, blacklist=blacklist, pattern=pattern, tmax=tmax, **xp_cfg)
 #		self.control_exp(exp)
 		if auto_job and exp._T[-1] < tmax:
-			self.add_exp_job(uuid=exp.uuid, tmax=tmax)
-			print 'added job for exp {}, from {} to {}'.format(uuid, exp._T[-1], tmax)
+			self.add_exp_job(xp_uuid=exp.uuid, tmax=tmax)
+			print 'added job for exp {}, from {} to {}'.format(xp_uuid, exp._T[-1], tmax)
 		return exp
 
-	def get_graph(self, uuid, method, tmin=0, tmax=None):
-		if self.db.data_exists(uuid=uuid, method=method):
-			graph = self.db.get_graph(uuid=uuid, method=method)
+	def get_graph(self, xp_uuid, method, tmin=0, tmax=None):
+		if self.db.data_exists(xp_uuid=xp_uuid, method=method):
+			graph = self.db.get_graph(xp_uuid=xp_uuid, method=method)
 			return graph
 #		self.control_exp(exp)
 		if self.auto_job and exp._T[-1] < tmax:
-			self.add_graph_job(uuid=exp.uuid, method=method, tmax=tmax)
-			print 'added graph job for exp {}, method {} to {}'.format(uuid, method, tmax)
+			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax)
+			print 'added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax)
 
-	def add_exp_job(self, tmax, uuid=None, xp_cfg={}):
-		exp = self.get_experiment(uuid=uuid, **xp_cfg)
+	def add_exp_job(self, tmax, xp_uuid=None, xp_cfg={}):
+		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if not exp._T[-1]>=tmax:
 			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 			self.jobqueue.add_job(job)
 
-	def add_graph_job(self, method, uuid=None, tmax=None, xp_cfg={}):
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, xp_cfg={}):
 		if uuid is None:
-			exp = self.get_experiment(uuid=uuid, **xp_cfg)
+			exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		else:
 			exp = None
-		job = GraphExpDBJob(uuid=uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
+		job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 		self.jobqueue.add_job(job)
 
 	def add_jobs(self, cfg_list):
@@ -94,11 +94,11 @@ class BatchExp(object):
 				uuid_l = [cfg['uuid']]
 			cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in cfg.keys())
 			if 'method' in cfg.keys():
-				for uuid in uuid_l:
-					self.add_graph_job(uuid=uuid,**cfg2)
+				for xp_uuid in uuid_l:
+					self.add_graph_job(xp_uuid=xp_uuid,**cfg2)
 			else:
-				for uuid in uuid_l:
-					self.add_exp_job(uuid=uuid,**cfg2)
+				for xp_uuid in uuid_l:
+					self.add_exp_job(xp_uuid=xp_uuid,**cfg2)
 
 	def update_queue(self):
 		self.jobqueue.update_queue()
