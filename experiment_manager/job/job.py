@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=True, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=True, checktime=False, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -31,6 +31,7 @@ class Job(object):
 		self.init_time = 0.
 		self.exec_time = 0.
 		self.max_time = max_time
+		self.checktime = checktime
 		if path[0] == '/':
 			raise IOError('path must be relative')
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
@@ -114,14 +115,15 @@ class Job(object):
 		self.exec_time = time.time() - self.init_time
 
 	def check_time(self, t=None):
-		if t is None:
-			t = self.estimated_time/10
-		self.update_exec_time()
-		if (self.exec_time + self.init_time) - self.lastsave_time > t:
-			self.check_mem()
-			self.save_prg_states()
-			self.save_profile()
-			self.save(chdir=False)
+		if self.checktime:
+			if t is None:
+				t = self.estimated_time/10
+			self.update_exec_time()
+			if (self.exec_time + self.init_time) - self.lastsave_time > t:
+				self.check_mem()
+				self.save_prg_states()
+				self.save_profile()
+				self.save(chdir=False)
 
 	def check_mem(self):
 		mem = memory_usage()

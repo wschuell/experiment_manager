@@ -71,8 +71,8 @@ class ExperimentDBJob(Job):
 				self.data.db = self.db
 				self.xp_uuid = self.data.uuid
 			db_path = self.db.dbpath
+			self.files.append(db_path)
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
-			self.files.append(self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 			self.db.dbpath = db_path
 		self.save(keep_data=False)
@@ -111,7 +111,8 @@ class ExperimentDBJob(Job):
 
 	def fix(self):
 		Job.fix(self)
-		self.files.remove(self.db.dbpath)
+		if self.db.dbpath in self.files:
+			self.files.remove(self.db.dbpath)
 
 class GraphExpJob(ExperimentJob):
 
@@ -346,6 +347,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.db.dbpath = db_path
+			self.files.append(db_path)
 		self.save(keep_data=False)
 
 	def __eq__(self, other):
@@ -446,7 +448,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def fix(self):
 		Job.fix(self)
-		self.files.remove(self.db.dbpath)
+		if self.db.dbpath in self.files:
+			self.files.remove(self.db.dbpath)
 
 
 #id list is list
