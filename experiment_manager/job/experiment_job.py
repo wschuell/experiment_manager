@@ -394,7 +394,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				graph_cfg['tmax'] += step
 				graph_cfg['tmin'] += step
 				self.check_time()
-		self.save()
+		self.save_data()
 		del self.data['exp']
 		self.db.delete(id_list=[self.xp_uuid],xp_only=True)
 
