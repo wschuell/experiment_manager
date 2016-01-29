@@ -17,6 +17,7 @@ class ExperimentJob(Job):
 		self.data = exp #copy.deepcopy(exp)
 		self.xp_uuid = self.data.uuid
 		self.tmax = tmax
+		self.files.append(self.xp_uuid+'.b')
 		self.save(keep_data=False)
 
 	def script(self):
@@ -71,6 +72,7 @@ class ExperimentDBJob(Job):
 				self.xp_uuid = self.data.uuid
 			db_path = self.db.dbpath
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+			self.files.append(self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 			self.db.dbpath = db_path
 		self.save(keep_data=False)
@@ -107,6 +109,9 @@ class ExperimentDBJob(Job):
 	def __ge__(self, other):
 		return self.__eq__(other) and self.tmax >= other.tmax
 
+	def fix(self):
+		Job.fix(self)
+		self.files.remove(self.db.dbpath)
 
 class GraphExpJob(ExperimentJob):
 
@@ -203,6 +208,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=[graph_cfg['method']])
 			self.db.dbpath = db_path
+			self.files.append(db_path)
 		self.save(keep_data=False)
 
 	def __eq__(self, other):
@@ -437,6 +443,10 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		j = ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)
 		self.dep_path = j.path
 		return[j]
+
+	def fix(self):
+		Job.fix(self)
+		self.files.remove(self.db.dbpath)
 
 
 #id list is list

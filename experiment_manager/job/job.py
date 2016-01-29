@@ -23,6 +23,7 @@ class Job(object):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
+		self.files = ['job.json','prg_states.b']
 		self.get_data_at_unpack = get_data_at_unpack
 		self.erase = erase
 		self.virtual_env = virtual_env

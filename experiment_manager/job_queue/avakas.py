@@ -144,7 +144,11 @@ exit 0
 
 		session.command('module load torque')
 		session.create_path("{job_dir}".format(**format_dict))
-		session.put_dir(format_dict['local_job_dir'], format_dict['job_dir'])
+		for f in ['pbs.py','epilogue.sh']:
+			if f not in job.files:
+				job.files.append(f)
+		for f in job.files:
+			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
