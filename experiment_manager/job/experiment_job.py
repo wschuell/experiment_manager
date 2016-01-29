@@ -348,7 +348,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			return True
 
 	def __lt__(self, other):
-		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] > other.graph_cfg['tmax'] 
+		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] > other.graph_cfg['tmax']
 
 	#def __le__(self, other):
 	#	return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] >= other.graph_cfg['tmax']
@@ -394,6 +394,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				graph_cfg['tmax'] += step
 				graph_cfg['tmin'] += step
 				self.check_time()
+		del self.data['exp']
+		self.db.delete(id_list=[self.xp_uuid],xp_only=True)
 
 	def get_data(self):
 		self.data = {}
@@ -411,7 +413,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		#else:
 		for method in self.methods:
 			if method in self.data.keys():
-				print self.data[method] 
+				print self.data[method]
 				print method
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
