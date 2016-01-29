@@ -394,6 +394,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				graph_cfg['tmax'] += step
 				graph_cfg['tmin'] += step
 				self.check_time()
+		self.save()
 		del self.data['exp']
 		self.db.delete(id_list=[self.xp_uuid],xp_only=True)
 
@@ -412,9 +413,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		#else:
 		for method in self.methods:
-			if method in self.data.keys():
-				print self.data[method]
-				print method
+			if method in self.data.keys() and 'exp' in self.data.keys():
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
 	def unpack_data(self):
