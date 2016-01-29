@@ -296,6 +296,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, **graph_cfg):
 		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env, get_data_at_unpack=False)
+		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):
 			methods = [methods]
@@ -369,7 +370,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
 				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
-				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)
+				if self.dep_path is None:
+					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)
 				self.status = 'pending'
 		self.db.dbpath = old_path
 		self.save(keep_data=False)
@@ -400,6 +402,10 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def get_data(self):
 		self.data = {}
+		if self.dep_path and not self.db.id_in_db(xp_uuid=self.xp_uuid):
+			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
+			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 		self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 		for method in self.methods:
 			if self.db.data_exists(xp_uuid=self.xp_uuid, method=method):
@@ -428,7 +434,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		return [ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)]
+		j = ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)
+		self.dep_path = j.path
+		return[j]
 
 
 #id list is list
