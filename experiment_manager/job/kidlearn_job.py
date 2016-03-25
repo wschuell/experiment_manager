@@ -22,6 +22,8 @@ class KidlearnJob(IteratedJob):
         nb_step = xp.nb_step
         for key, group in xp.groups.items():
             cost[key] = []
+            #print 'lengroup'
+            #print len(group)
             for subgroup in group:
                 yolo = copy.deepcopy(subgroup)
                 yolo.run(nb_step)
@@ -44,6 +46,8 @@ class KidlearnJob(IteratedJob):
         wkgs = {}
         for ref, confs in zpdes_confs.items():
             wkgs["zpdes_{}".format(ref)] = []
+            print 'lenconf'
+            print len(confs)
             for conf in confs:
                 zpdes = k_lib.seq_manager.ZpdesHssbg(params=conf)
 
