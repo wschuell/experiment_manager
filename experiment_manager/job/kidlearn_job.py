@@ -21,10 +21,12 @@ class KidlearnJob(IteratedJob):
         cost = {}
         nb_step = xp.nb_step
         for key, group in xp.groups.items():
-            yolo = copy.deepcopy(group)
-            yolo.run(nb_step)
-            cost[key] = copy.deepcopy(yolo[0].calcul_cost())
-            del yolo
+            cost[key] = []
+            for subgroup in group:
+                yolo = copy.deepcopy(subgroup)
+                yolo.run(nb_step)
+                cost[key].append(copy.deepcopy(yolo.calcul_cost()))
+                del yolo
         jstr = json.dumps(cost)
 
         with open("cost.json", "w") as f:
