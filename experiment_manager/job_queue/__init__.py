@@ -91,6 +91,7 @@ class JobQueue(object):
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
 			self.update_needed = False
+		self.check_running_jobs()
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
 				job_uuids = [jj.uuid for jj in self.job_list]
@@ -105,11 +106,10 @@ class JobQueue(object):
 				j.save()
 				self.submit_job(j)
 				j.save()
-			elif j.status == 'running':
-				if not self.check_job_running(j):
-					self.retrieve_job(j)
-					if j.status == 'pending':
-						j.status = 'missubmitted'
+			elif j.status == 'finished running':
+				self.retrieve_job(j)
+				if j.status == 'pending':
+					j.status = 'missubmitted'
 			#elif j.status == 'dependencies not satisfied':
 				#for dep in j.gen_depend():
 				#	print 'Adding dependency for job ' + j.job_dir
@@ -132,7 +132,10 @@ class JobQueue(object):
 			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
-		print time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
+		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
+		print status_str
+		with open('jobs/'+self.name+'.jq_status','a') as f_status:
+			f_status.write(status_str)
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
 
@@ -198,7 +201,7 @@ class JobQueue(object):
 		for j in self.job_list:
 			t += j.exec_time
 
-	def reinit_missubmited(self):
+	def reinit_missubmitted(self):
 		for j in self.job_list:
 			if j.status == 'missubmitted':
 				j.update()
@@ -207,7 +210,7 @@ class JobQueue(object):
 	def submit_job(self, job):
 		pass
 
-	def check_job_running(self, job):
+	def check_running_jobs(self):
 		pass
 
 	def set_virtualenv(self, virtual_env, requirements):

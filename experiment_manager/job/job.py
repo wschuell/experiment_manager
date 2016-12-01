@@ -117,7 +117,7 @@ class Job(object):
 	def check_time(self, t=None):
 		if self.checktime:
 			if t is None:
-				t = self.estimated_time/10
+				t = 9*self.estimated_time/10.
 			self.update_exec_time()
 			if (self.exec_time + self.init_time) - self.lastsave_time > t:
 				self.check_mem()

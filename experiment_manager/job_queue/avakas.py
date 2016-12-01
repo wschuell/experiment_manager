@@ -8,7 +8,7 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=500, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=1000, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
@@ -153,21 +153,18 @@ exit 0
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
 		#session.close()
-
-		job.status = 'running'
+		if job.PBS_JOBID:
+			job.status = 'running'
 		job.save()
 		#time.sleep(0.2)
 
-
-	def check_job_running(self, job):
-		#session = SSHSession(**self.ssh_cfg)
+	def check_running_jobs(self):
+		self.finished_running_jobs = []
 		session = self.ssh_session
-		test = session.command_output('qstat -f|grep {job_pbsjobid}'.format(**self.format_dict(job)))
-		#session.close()
-		if test:
-			return True
-		else:
-			return False
+		running_jobs_string = session.command_output('qstat -f|grep \'Job Id:\'')
+		for j in self.job_list:
+			if j.status == 'running' and running_jobs_string.find(j.PBS_JOBID) == -1:
+				j.status = 'finished running'
 
 	def retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
