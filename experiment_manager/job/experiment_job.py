@@ -7,6 +7,7 @@ import shutil
 import cPickle
 import copy
 import path
+import errno
 
 class ExperimentJob(Job):
 
@@ -75,6 +76,17 @@ class ExperimentDBJob(Job):
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 			self.db.dbpath = db_path
+			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
+			dst_file = os.path.join(self.get_path(),'/data/')
+			try:
+				os.makedirs(os.path.join(self.get_path(),'/data/'))
+			except OSError as exc:  # Python >2.5
+				if exc.errno == errno.EEXIST and os.path.isdir(path):
+					pass
+				else:
+					raise
+			shutil.copy(source_file, dst_file)
+			self.files.append('data/'+self.xp_uuid+'.db')
 		self.save(keep_data=False)
 
 	def script(self):
@@ -91,6 +103,9 @@ class ExperimentDBJob(Job):
 	def unpack_data(self):
 		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid])
+		dst_file = os.path.join(self.get_path(),'/data/',self.xp_uuid+'.db')
+		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data')
+		shutil.copy(source_file, dst_file)
 		#self.data.db = self.origin_db
 		#self.data.commit_to_db()
 
