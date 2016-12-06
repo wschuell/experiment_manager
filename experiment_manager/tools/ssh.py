@@ -91,6 +91,8 @@ class SSHSession(object):
         return std_out.read()
 
     def put(self,localfile,remotefile):
+        if not self.path_exists(os.path.dirname(remotefile)):
+            self.create_path(os.path.dirname(remotefile))
         self.sftp.put(localfile,remotefile)
 
     def put_dir(self,localdir,remotedir, max_depth=10):
