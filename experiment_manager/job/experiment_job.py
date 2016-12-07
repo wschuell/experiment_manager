@@ -9,6 +9,7 @@ import copy
 import path
 import errno
 
+
 class ExperimentJob(Job):
 
 	def __init__(self, exp, tmax, *args,**kwargs):
@@ -344,7 +345,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					tmax_db = min(tmax_db,db.get_param(xp_uuid=xp_uuid, method=mt, param='Time_max'))
 				else:
 					tmax_db = min(tmax_db,exp.db.get_param(xp_uuid=exp.uuid, method=mt, param='Time_max'))
-			except TypeError:
+			except TypeError:#when the entry doesnt exist in the database (iow Tmax is 0)
 				tmax_db = -1
 		if tmax_db >= graph_cfg['tmax']:
 			self.status = 'already done'

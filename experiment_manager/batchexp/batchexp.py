@@ -65,10 +65,14 @@ class BatchExp(object):
 			self.jobqueue.add_job(job)
 
 	def add_graph_job(self, method, xp_uuid=None, tmax=None, xp_cfg={}):
-		if uuid is None:
-			exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
+		if xp_uuid is None:
+			exp = self.get_experiment(**xp_cfg)
+			tmax_xp = exp._T[-1]
 		else:
 			exp = None
+			tmax_xp = self.db.get_param(xp_uuid=xp_uuid,param='Tmax')
+		if tmax is None:
+			tmax = tmax_xp
 		job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 		self.jobqueue.add_job(job)
 

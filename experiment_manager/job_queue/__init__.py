@@ -164,7 +164,7 @@ class JobQueue(object):
 			str_exec += str(int(exec_time_m))+' min '
 		str_exec +=str(exec_time)+' s'
 		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
-		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)
+		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n'
 		return str_ans
 
 	def auto_finish_queue(self,t=60):
