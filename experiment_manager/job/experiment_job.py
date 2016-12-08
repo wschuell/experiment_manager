@@ -8,6 +8,7 @@ import cPickle
 import copy
 import path
 import errno
+import math
 
 
 class ExperimentJob(Job):
@@ -153,11 +154,13 @@ class GraphExpJob(ExperimentJob):
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		graph_cfg['tmin'] = self.graph_cfg['tmin']-0.1 - self.data['exp']._time_step
+		graph_cfg['tmin'] = self.graph_cfg['tmin']-0.1 - self.data['exp'].stepfun(self.graph_cfg['tmin'],backwards=True)
 		graph_cfg['tmax'] = self.graph_cfg['tmin']-0.1
 		while graph_cfg['tmax']<self.graph_cfg['tmax']:
-			graph_cfg['tmax'] += self.data['exp']._time_step
-			graph_cfg['tmin'] += self.data['exp']._time_step
+			#graph_cfg['tmax'] += self.data['exp']._time_step
+			#graph_cfg['tmin'] += self.data['exp']._time_step
+			graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
+			graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			if 'graph' not in self.data.keys():
 				self.data['graph'] = self.data['exp'].graph(**graph_cfg)
 				self.graph_filename = self.data['graph'].filename
@@ -274,21 +277,20 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		step = self.data['exp']._time_step
 		if 'graph' in self.data.keys():
 			tmax = self.data['graph']._X[0][-1]
 		else:
-			tmax = -step
-		graph_cfg['tmin'] = max(tmax + step, self.graph_cfg['tmin']) - 0.1
-		graph_cfg['tmax'] = graph_cfg['tmin'] + step
-		while graph_cfg['tmax']<self.graph_cfg['tmax'] + step:
+			tmax = -self.data['exp'].stepfun(0,backwards=True)
+		graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
+		graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+		while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
 			if 'graph' not in self.data.keys():
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
 				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
-			graph_cfg['tmax'] += step
-			graph_cfg['tmin'] += step
+			graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
+			graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			self.check_time()
 
 	def get_data(self):
@@ -429,23 +431,22 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		step = self.data['exp']._time_step
 		for method in self.methods:
 			graph_cfg['method'] = method
 			if method in self.data.keys():
 				tmax = self.data[method]._X[0][-1]
 			else:
-				tmax = -step
-			graph_cfg['tmin'] = max(tmax + step, self.graph_cfg['tmin']) - 0.1
-			graph_cfg['tmax'] = graph_cfg['tmin'] + step
-			while graph_cfg['tmax']<self.graph_cfg['tmax'] + step:
+				tmax = -self.data['exp'].stepfun(0,backwards=True)
+			graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
+			graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+			while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
 				if method not in self.data.keys():
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
 					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
-				graph_cfg['tmax'] += step
-				graph_cfg['tmin'] += step
+				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
+				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 				self.check_time()
 		self.save_data()
 		del self.data['exp']
