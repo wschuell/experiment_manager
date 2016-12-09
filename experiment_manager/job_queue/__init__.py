@@ -134,6 +134,8 @@ class JobQueue(object):
 			self.save()
 		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
 		print status_str
+		if not os.path.isdir('jobs'):
+			os.makedirs('jobs')
 		with open('jobs/'+self.name+'.jq_status','a') as f_status:
 			f_status.write(status_str)
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:

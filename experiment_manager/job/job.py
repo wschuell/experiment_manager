@@ -46,8 +46,7 @@ class Job(object):
 			self.prg_seeds.update(seeds)
 		random.seed(self.prg_seeds['random'])
 		np.random.seed(self.prg_seeds['numpy'])
-		with pathpy.Path(self.get_path()):
-			self.save_prg_states()
+		self.prg_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
 		self.data = None
 		#self.save()
 		#self.data = None
@@ -64,8 +63,10 @@ class Job(object):
 			depth = len(os.path.normpath(self.path).split('/'))
 			return os.path.join(*(['..']*depth))
 
-	def save_prg_states(self):
+	def get_prg_states(self):
 		self.prg_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
+
+	def save_prg_states(self):
 		with open('prg_states.b','w') as f:
 			f.write(cPickle.dumps(self.prg_states, cPickle.HIGHEST_PROTOCOL))
 
@@ -84,7 +85,7 @@ class Job(object):
 			self.get_data()
 			self.load_prg_states()
 			self.script()
-			self.save_prg_states()
+			self.get_prg_states()
 			self.stop_profiler()
 			self.save_profile()
 			self.update_exec_time()
@@ -120,8 +121,8 @@ class Job(object):
 				t = 9*self.estimated_time/10.
 			self.update_exec_time()
 			if (self.exec_time + self.init_time) - self.lastsave_time > t:
+				self.get_prg_states()
 				self.check_mem()
-				self.save_prg_states()
 				self.save_profile()
 				self.save(chdir=False)
 
@@ -150,13 +151,14 @@ class Job(object):
 			data_exists = True
 			with pathpy.Path(j_path):
 				self.save_data()
-		self.prg_states = None
 		self.data = None
 			#if not os.path.exists(self.path):
 			#	os.makedirs(self.path)
 		#self.prg_states = {'random':random.getstate()}#, 'numpy':np.random.get_state()}
 		self.lastsave_time = time.time()
 		with pathpy.Path(j_path):
+			self.save_prg_states()
+			self.prg_states = None
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		if keep_data and data_exists:
