@@ -218,6 +218,7 @@ class Job(object):
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
+		out_dict['prg_states'] = None
 		if 'profiler' in out_dict.keys():
 			del out_dict['profiler']
 		return out_dict
