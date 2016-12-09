@@ -225,4 +225,5 @@ class Job(object):
 
 	def __setstate__(self, in_dict):
 		self.__dict__.update(in_dict)
+		self.load_prg_states()
 
