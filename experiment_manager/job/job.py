@@ -158,7 +158,6 @@ class Job(object):
 		self.lastsave_time = time.time()
 		with pathpy.Path(j_path):
 			self.save_prg_states()
-			self.prg_states = None
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
 		if keep_data and data_exists:
@@ -215,7 +214,7 @@ class Job(object):
 				with open('error.txt','r') as f:
 					return f.read()
 			else:
-				'Error file doesnt exist or job queue not supporting error management'
+				return 'Error file doesnt exist or job queue not supporting error management'
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
