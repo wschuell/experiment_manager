@@ -73,6 +73,8 @@ class Job(object):
 	def load_prg_states(self):
 		with open('prg_states.b','r') as f:
 			self.prg_states = cPickle.loads(f.read())
+
+	def set_prg_states(self):
 		random.setstate(self.prg_states['random'])
 		np.random.set_state(self.prg_states['numpy'])
 
@@ -83,7 +85,9 @@ class Job(object):
 			self.init_time += time.time()
 			self.start_profiler()
 			self.get_data()
-			self.load_prg_states()
+			if not hasattr(self, 'prg_states'):
+				self.load_prg_states()
+			self.set_prg_states()
 			self.script()
 			self.get_prg_states()
 			self.stop_profiler()
@@ -175,9 +179,10 @@ class Job(object):
 
 	def update(self):
 		if os.path.isfile(self.path + '/job.json'):
-			with open(self.path + '/job.json') as f:
-				out_job = jsonpickle.loads(f.read())
-			self.__dict__.update(out_job.__dict__)
+			with pathpy.Path(self.path):
+				with open('job.json') as f:
+					out_job = jsonpickle.loads(f.read())
+				self.__dict__.update(out_job.__dict__)
 		else:
 			self.save()
 
@@ -218,13 +223,12 @@ class Job(object):
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
-		out_dict['prg_states'] = None
+		del out_dict['prg_states']
 		if 'profiler' in out_dict.keys():
 			del out_dict['profiler']
 		return out_dict
 
 	def __setstate__(self, in_dict):
 		self.__dict__.update(in_dict)
-		with pathpy.Path(self.get_path()):
-			self.load_prg_states()
+		#self.load_prg_states() # jsonpickle.loads has to be executed in the jobdir, otherwise prg states file is not found.
 
