@@ -23,7 +23,7 @@ class AvakasJobQueue(JobQueue):
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
 			self.ssh_cfg['key_file'] = 'avakas'
 		self.ssh_session = SSHSession(**self.ssh_cfg)
-		self.waiting_to_submit = []
+		self.waiting_to_submit = {}
 
 
 	def format_dict(self, job):
