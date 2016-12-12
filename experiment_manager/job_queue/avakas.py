@@ -241,9 +241,6 @@ JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
 cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
 
-mv $MULTIJOBDIR/error.txt-$ARRAYID $JOBDIR/error.txt
-mv $MULTIJOBDIR/output.txt-$ARRAYID $JOBDIR/output.txt
-
 rm -R {base_work_dir}$PBS_JOBID
 
 
@@ -267,6 +264,7 @@ exit 0
 
 			for job in j_list:
 				format_dict_job = self.format_dict(job)
+				job.multijob_dir = format_dict['multijob_dir']
 				if not os.path.exists(format_dict_job['local_job_dir']):
 					os.makedirs(format_dict_job['local_job_dir'])
 				session.create_path("{job_dir}".format(**format_dict_job))
@@ -285,7 +283,6 @@ exit 0
 					job = j_list[i]
 					job.PBS_JOBID = PBS_JOBID.split('[')[0] + '[' + str(i+1) + ']' + PBS_JOBID.split(']')[1]
 					job.status = 'running'
-					job.multijob_dir = multijob_dir
 					job.array_id = i+1
 					job.save()
 			else:
