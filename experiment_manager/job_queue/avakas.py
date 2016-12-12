@@ -172,7 +172,7 @@ exit 0
 		for f in job.files:
 			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 		wt = format_dict['walltime']
-		if wt not in waiting_to_submit.keys():
+		if wt not in self.waiting_to_submit.keys():
 			self.waiting_to_submit[wt] = []
 		self.waiting_to_submit[wt].append(job)#consider walltime
 
