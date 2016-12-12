@@ -34,7 +34,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False, verbose=False,path='jobs/'):
+	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False,path='jobs/'):
 		self.path = path
 		self.verbose = verbose
 		self.job_list = []

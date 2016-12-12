@@ -164,13 +164,6 @@ exit 0
 			print('Job {} already submitted'.format(job.uuid))
 		job.status = 'missubmitted'
 		format_dict = self.format_dict(job)
-		#session = SSHSession(**self.ssh_cfg)
-		session = self.ssh_session
-		if not os.path.exists(format_dict['local_job_dir']):
-			os.makedirs(format_dict['local_job_dir'])
-		session.create_path("{job_dir}".format(**format_dict))
-		for f in job.files:
-			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 		wt = format_dict['walltime']
 		if wt not in self.waiting_to_submit.keys():
 			self.waiting_to_submit[wt] = []
@@ -222,6 +215,7 @@ jobdir_dict = {jobdir_dict}
 job_dir = jobdir_dict[int(PBS_ARRAYID)]
 work_dir = '{base_work_dir}'+PBS_JOBID
 
+
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
@@ -245,11 +239,12 @@ MULTIJOBDIR={multijob_dir}
 ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
 JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
-cp -f -R {base_work_dir}$PBS_JOBID/* $JOBDIR/
-mv MULTIJOBDIR/error.txt-$ARRAYID $JOBDIR/error.txt
-mv MULTIJOBDIR/output.txt-$ARRAYID $JOBDIR/output.txt
+cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
 
-rm -R {base_work_dir}$PBS_JOBID/*
+mv $MULTIJOBDIR/error.txt-$ARRAYID $JOBDIR/error.txt
+mv $MULTIJOBDIR/output.txt-$ARRAYID $JOBDIR/output.txt
+
+rm -R {base_work_dir}$PBS_JOBID
 
 
 
@@ -270,23 +265,39 @@ echo "================================"
 exit 0
 """.format(**format_dict))
 
+			for job in j_list:
+				format_dict_job = self.format_dict(job)
+				if not os.path.exists(format_dict_job['local_job_dir']):
+					os.makedirs(format_dict_job['local_job_dir'])
+				session.create_path("{job_dir}".format(**format_dict_job))
+				for f in job.files:
+					session.put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
+
+			for f in ['pbs.py','epilogue.sh']:
+				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 			session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			session.command_output('chmod u+x {multijob_dir}/pbs.py'.format(**format_dict))
+
 			PBS_JOBID = session.command_output("qsub -t 1-{Njobs} -l epilogue={multijob_dir}/epilogue.sh {multijob_dir}/pbs.py".format(**format_dict))[:-1]
 			#session.close()
-			if PBS_JOBID[-19:] == '.master.cm.cluster\n':
+			if PBS_JOBID:
 				for i in range(len(j_list)):
 					job = j_list[i]
-					job.PBS_JOBID = PBS_JOBID[:-21] + str(i+1) + PBS_JOBID[-20:-1]
+					job.PBS_JOBID = PBS_JOBID.split('[')[0] + '[' + str(i+1) + ']' + PBS_JOBID.split(']')[1]
 					job.status = 'running'
-			for job in j_list:
-				job.save()
+					job.multijob_dir = multijob_dir
+					job.array_id = i+1
+					job.save()
+			else:
+				for i in range(len(j_list)):
+					job = j_list[i]
+					job.save()
 		self.waiting_to_submit = {}
 
 	def check_running_jobs(self):
 		self.finished_running_jobs = []
 		session = self.ssh_session
-		running_jobs_string = session.command_output('qstat -f|grep \'Job Id:\'')
+		running_jobs_string = session.command_output('qstat -f -t|grep \'Job Id:\'')
 		for j in self.job_list:
 			if j.status == 'running' and running_jobs_string.find(j.PBS_JOBID) == -1:
 				j.status = 'finished running'
@@ -297,7 +308,11 @@ exit 0
 		session = self.ssh_session
 		job_dir = self.format_dict(job)['job_dir']
 		local_job_dir = self.format_dict(job)['local_job_dir']
+		if hasattr(job,'multijob_dir'):
+			for f in ['output.txt','error.txt']:
+				session.command_output('cp {multijob_dir}/{f}-{array_id} {job_dir}/{f}'.format(f=f,multijob_dir=job.multijob_dir,array_id=job.array_id,**self.format_dict(job)))
 		session.get_dir(job_dir, local_job_dir)
+
 		#session.close()
 		job.update()
 		job.path = path
