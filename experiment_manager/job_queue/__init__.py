@@ -34,7 +34,8 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False):
+	def __init__(self, erase=True, auto_update=True, name=None, deep_check=False, verbose=False,path='jobs/'):
+		self.path = path
 		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
@@ -132,6 +133,7 @@ class JobQueue(object):
 			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
 			self.save()
+		self.global_submit()
 		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
 		print status_str
 		if not os.path.isdir('jobs'):
@@ -210,6 +212,9 @@ class JobQueue(object):
 				j.status = 'pending'
 
 	def submit_job(self, job):
+		pass
+
+	def global_submit(self):
 		pass
 
 	def check_running_jobs(self):

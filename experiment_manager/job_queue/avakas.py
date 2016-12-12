@@ -23,6 +23,7 @@ class AvakasJobQueue(JobQueue):
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
 			self.ssh_cfg['key_file'] = 'avakas'
 		self.ssh_session = SSHSession(**self.ssh_cfg)
+		self.waiting_to_submit = []
 
 
 	def format_dict(self, job):
@@ -77,7 +78,7 @@ class AvakasJobQueue(JobQueue):
 		return format_dict
 
 
-	def submit_job(self, job):
+	def individual_submit_job(self, job):
 		if not job.status == 'pending':
 			print('Job {} already submitted'.format(job.uuid))
 		job.status = 'missubmitted'
@@ -158,6 +159,130 @@ exit 0
 		job.save()
 		#time.sleep(0.2)
 
+	def submit_job(self, job):
+		if not job.status == 'pending':
+			print('Job {} already submitted'.format(job.uuid))
+		job.status = 'missubmitted'
+		format_dict = self.format_dict(job)
+		#session = SSHSession(**self.ssh_cfg)
+		session = self.ssh_session
+		if not os.path.exists(format_dict['local_job_dir']):
+			os.makedirs(format_dict['local_job_dir'])
+		session.create_path("{job_dir}".format(**format_dict))
+		for f in job.files:
+			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
+		wt = format_dict['walltime']
+		if wt not in waiting_to_submit.keys():
+			self.waiting_to_submit[wt] = []
+		self.waiting_to_submit[wt].append(job)#consider walltime
+
+	def global_submit(self):
+		session = self.ssh_session
+		jobdir_dict = {}
+		for wt,j_list in self.waiting_to_submit.items():
+			jobdir_dict[wt] = {}
+			for i in range(len(j_list)):
+				jobdir_dict[wt][i+1] = self.format_dict(j_list[i])['job_dir']
+
+		for wt,j_list in self.waiting_to_submit.items():
+			format_dict = self.format_dict(j_list[0])
+			multijob_dir = self.name+'_'+self.uuid+'_'+j_list[0].uuid+'_'+time.strftime("%Y%m%d%H%M%S", time.localtime())
+			format_dict .update({
+				'jobdir_dict':str(jobdir_dict[wt]),
+				'multijob_dir':os.path.join(self.basedir,multijob_dir),
+				'local_multijob_dir':os.path.join(self.path,multijob_dir),
+				'multijob_name':multijob_dir,
+				'Njobs':len(j_list)
+			})
+
+			if not os.path.exists(format_dict['local_multijob_dir']):
+				os.makedirs(format_dict['local_multijob_dir'])
+			session.create_path("{multijob_dir}".format(**format_dict))
+			session.command('module load torque')
+			with open("{local_multijob_dir}/pbs.py".format(**format_dict), "w") as pbs_file:
+				pbs_file.write(
+"""#!{python_bin}
+#PBS -o {multijob_dir}/output.txt
+#PBS -e {multijob_dir}/error.txt
+#PBS -l walltime={walltime}
+#PBS -l nodes=1:ppn=1
+#PBS -N {multijob_name}
+
+
+import os
+import sys
+import shutil
+import jsonpickle
+
+PBS_JOBID = os.environ['PBS_JOBID']
+PBS_ARRAYID = os.environ['PBS_ARRAYID']
+
+jobdir_dict = {jobdir_dict}
+
+job_dir = jobdir_dict[int(PBS_ARRAYID)]
+work_dir = '{base_work_dir}'+PBS_JOBID
+
+shutil.copytree(job_dir, work_dir)
+os.chdir(work_dir)
+
+with open('job.json','r') as f:
+	job = jsonpickle.loads(f.read())
+
+job.path = '.'
+job.run()
+
+sys.exit(0)
+""".format(**format_dict))
+
+
+			with open("{local_multijob_dir}/epilogue.sh".format(**format_dict), "w") as epilogue_file:
+				epilogue_file.write(
+"""#!/bin/bash
+echo "Job finished, backing up files."
+PBS_JOBID=$1
+
+MULTIJOBDIR={multijob_dir}
+ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
+JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+
+cp -f -R {base_work_dir}$PBS_JOBID/* $JOBDIR/
+mv MULTIJOBDIR/error.txt-$ARRAYID $JOBDIR/error.txt
+mv MULTIJOBDIR/output.txt-$ARRAYID $JOBDIR/output.txt
+
+rm -R {base_work_dir}$PBS_JOBID/*
+
+
+
+echo "Backup done"
+echo "================================"
+echo "EPILOGUE"
+echo "================================"
+echo "Job ID: $1"
+echo "User ID: $2"
+echo "Group ID: $3"
+echo "Job Name: $4"
+echo "Session ID: $5"
+echo "Resource List: $6"
+echo "Resources Used: $7"
+echo "Queue Name: $8"
+echo "Account String: $9"
+echo "================================"
+exit 0
+""".format(**format_dict))
+
+			session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
+			session.command_output('chmod u+x {multijob_dir}/pbs.py'.format(**format_dict))
+			PBS_JOBID = session.command_output("qsub -t 1-{Njobs} -l epilogue={multijob_dir}/epilogue.sh {multijob_dir}/pbs.py".format(**format_dict))[:-1]
+			#session.close()
+			if PBS_JOBID[-19:] == '.master.cm.cluster\n':
+				for i in range(len(j_list)):
+					job = j_list[i]
+					job.PBS_JOBID = PBS_JOBID[:-21] + str(i+1) + PBS_JOBID[-20:-1]
+					job.status = 'running'
+			for job in j_list:
+				job.save()
+		self.waiting_to_submit = {}
+
 	def check_running_jobs(self):
 		self.finished_running_jobs = []
 		session = self.ssh_session
@@ -236,7 +361,7 @@ exit 0
 	def avail_workers(self):
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
-		qstat = session.command_output('qstat -u {}|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
+		qstat = session.command_output('qstat -u {} -t|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
 		return self.max_jobs - len(qstat.split('\n')) + 1
 		#session.close()
 

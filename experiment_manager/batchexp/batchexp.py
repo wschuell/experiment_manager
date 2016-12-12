@@ -1,5 +1,6 @@
 import uuid
 import copy
+import json
 from ..job_queue import get_jobqueue
 from ..database import get_database
 from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob, MultipleGraphExpDBJob
@@ -31,6 +32,7 @@ class BatchExp(object):
 		self.auto_job = auto_job
 		self.virtual_env = virtual_env
 		self.requirements = requirements
+		self.jobqueue.past_job_cfg = []
 #	def control_exp(self, exp):
 #		exp.originclass = copy.deepcopy(exp.__class__)
 #		exp.__class__ = Experiment
@@ -78,31 +80,34 @@ class BatchExp(object):
 
 	def add_jobs(self, cfg_list):
 		for cfg in cfg_list:
-			if 'uuid' in cfg.keys():
-				nb_iter = 1
-			elif 'nb_iter' not in cfg.keys():
-				nb_iter = 1
-			else:
-				nb_iter = cfg['nb_iter']
-			uuid_l = []
-			if 'uuid' not in cfg.keys():
-				uuid_l = self.db.get_id_list(**cfg['xp_cfg'])
-				if nb_iter > len(uuid_l):
-					for i in range(nb_iter-len(uuid_l)):
-						exp = self.db.get_experiment(blacklist=uuid_l, **cfg['xp_cfg'])
-						uuid1 = exp.uuid
-						uuid_l.append(uuid1)
+			cfg_str = json.dumps(cfg, sort_keys=True)
+			if cfg_str not in self.jobqueue.past_job_cfg:
+				self.jobqueue.past_job_cfg.append(cfg_str)
+				if 'uuid' in cfg.keys():
+					nb_iter = 1
+				elif 'nb_iter' not in cfg.keys():
+					nb_iter = 1
 				else:
-					uuid_l = uuid_l[:nb_iter]
-			else:
-				uuid_l = [cfg['uuid']]
-			cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in cfg.keys())
-			if 'method' in cfg.keys():
-				for xp_uuid in uuid_l:
-					self.add_graph_job(xp_uuid=xp_uuid,**cfg2)
-			else:
-				for xp_uuid in uuid_l:
-					self.add_exp_job(xp_uuid=xp_uuid,**cfg2)
+					nb_iter = cfg['nb_iter']
+				uuid_l = []
+				if 'uuid' not in cfg.keys():
+					uuid_l = self.db.get_id_list(**cfg['xp_cfg'])
+					if nb_iter > len(uuid_l):
+						for i in range(nb_iter-len(uuid_l)):
+							exp = self.db.get_experiment(blacklist=uuid_l, **cfg['xp_cfg'])
+							uuid1 = exp.uuid
+							uuid_l.append(uuid1)
+					else:
+						uuid_l = uuid_l[:nb_iter]
+				else:
+					uuid_l = [cfg['uuid']]
+				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in cfg.keys())
+				if 'method' in cfg.keys():
+					for xp_uuid in uuid_l:
+						self.add_graph_job(xp_uuid=xp_uuid,**cfg2)
+				else:
+					for xp_uuid in uuid_l:
+						self.add_exp_job(xp_uuid=xp_uuid,**cfg2)
 
 	def update_queue(self):
 		self.jobqueue.update_queue()
