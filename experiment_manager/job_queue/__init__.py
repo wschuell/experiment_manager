@@ -171,11 +171,18 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=60):
+	def auto_finish_queue(self,t=60,coeff=1):
 		self.update_queue()
+		step = t
+		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
-			time.sleep(t)
+			time.sleep(step)
 			self.update_queue()
+			if str(self) == state:
+				step *= coeff
+			else:
+				state = str(self)
+				step = t
 
 	def check_virtualenvs(self):
 		envs = {}

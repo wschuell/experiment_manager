@@ -19,7 +19,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=True, checktime=False, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.descr = descr
@@ -67,8 +67,9 @@ class Job(object):
 		self.prg_states = {'random':random.getstate(), 'numpy':np.random.get_state()}
 
 	def save_prg_states(self):
-		with open('prg_states.b','w') as f:
-			f.write(cPickle.dumps(self.prg_states, cPickle.HIGHEST_PROTOCOL))
+		if hasattr(self,'prg_states'):
+			with open('prg_states.b','w') as f:
+				f.write(cPickle.dumps(self.prg_states, cPickle.HIGHEST_PROTOCOL))
 
 	def load_prg_states(self):
 		with open('prg_states.b','r') as f:
