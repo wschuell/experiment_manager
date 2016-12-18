@@ -222,8 +222,6 @@ os.chdir(work_dir)
 with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
-print job
-
 job.path = '.'
 job.run()
 

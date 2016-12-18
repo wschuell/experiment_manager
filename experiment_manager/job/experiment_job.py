@@ -78,8 +78,8 @@ class ExperimentDBJob(Job):
 			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 			self.db.dbpath = db_path
-			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
-			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
+			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 			try:
 				os.makedirs(os.path.join(self.get_path(),'data/'))
 			except OSError as exc:  # Python >2.5
@@ -88,13 +88,14 @@ class ExperimentDBJob(Job):
 				else:
 					raise
 			shutil.copy(source_file, dst_file)
-			self.files.append('data/'+self.xp_uuid+'.db')
+			self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.save(keep_data=False)
 
 	def script(self):
-		 while self.data._T[-1]<self.tmax:
+		while self.data._T[-1]<self.tmax:
 			self.data.continue_exp(autocommit=False)
 			self.check_time()
+		self.data.compress()
 
 	def get_data(self):
 		self.data = self.db.get_experiment(xp_uuid=self.xp_uuid)
@@ -105,8 +106,8 @@ class ExperimentDBJob(Job):
 	def unpack_data(self):
 		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid])
-		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
-		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
+		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		shutil.copy(source_file, dst_file)
 		#self.data.db = self.origin_db
 		#self.data.commit_to_db()
@@ -130,6 +131,7 @@ class ExperimentDBJob(Job):
 		Job.fix(self)
 		if self.db.dbpath in self.files:
 			self.files.remove(self.db.dbpath)
+
 
 class GraphExpJob(ExperimentJob):
 
@@ -229,8 +231,8 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=[graph_cfg['method']])
 			self.db.dbpath = db_path
 			self.files.append(db_path)
-			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
-			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
+			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 			try:
 				os.makedirs(os.path.join(self.get_path(),'data/'))
 			except OSError as exc:  # Python >2.5
@@ -239,7 +241,7 @@ class GraphExpDBJob(ExperimentDBJob):
 				else:
 					raise
 			shutil.copy(source_file, dst_file)
-			self.files.append('data/'+self.xp_uuid+'.db')
+			self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.save(keep_data=False)
 
 	def __eq__(self, other):
@@ -312,9 +314,9 @@ class GraphExpDBJob(ExperimentDBJob):
 	def unpack_data(self):
 		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=[self.graph_cfg['method']], graph_only=True)
-		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
-		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
-		shutil.copy(source_file, dst_file)
+		#source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		#dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		#shutil.copy(source_file, dst_file)
 		#if hasattr(self.data['exp'].db, 'dbpath'):
 		#	self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
 		#self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
@@ -380,8 +382,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.db.dbpath = db_path
 			self.files.append(db_path)
-			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
-			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
+			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 			try:
 				os.makedirs(os.path.join(self.get_path(),'data/'))
 			except OSError as exc:  # Python >2.5
@@ -390,7 +392,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				else:
 					raise
 			shutil.copy(source_file, dst_file)
-			self.files.append('data/'+self.xp_uuid+'.db')
+			self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.save(keep_data=False)
 
 
@@ -477,9 +479,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def unpack_data(self):
 		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=self.methods, graph_only=True)
-		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db')
-		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db')
-		shutil.copy(source_file, dst_file)
+		#source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		#dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		#shutil.copy(source_file, dst_file)
 		#if hasattr(self.data['exp'].db, 'dbpath'):
 		#	self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
 		#self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
