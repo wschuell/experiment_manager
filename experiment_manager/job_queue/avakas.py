@@ -334,7 +334,7 @@ exit 0
 			for package in requirements:
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
-			print session.command_output(' && '.join(cmd))
+			out = session.command_output(' && '.join(cmd))
 		#session.close()
 
 	def update_virtualenv(self, virtual_env=None, requirements=[]):
@@ -359,7 +359,7 @@ exit 0
 					cmd.append('pip install '+option+' '.join(requirements))
 			if virtual_env is not None:
 				cmd.append('deactivate')
-			print session.command_output(' && '.join(cmd))
+			out = session.command_output(' && '.join(cmd))
 			#session.close()
 
 	def cancel_job(self, job, clean=False):

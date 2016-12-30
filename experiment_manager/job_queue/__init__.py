@@ -51,10 +51,12 @@ class JobQueue(object):
 		self.executed_jobs = 0
 
 	def save(self):
+		if not os.path.isdir('jobs'):
+			os.makedirs('jobs')
 		with open('jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
-	def add_job(self, job, deep_check=None):
+	def add_job(self, job, deep_check=None,save=True):
 		if job.status == 'already done':
 			job.clean()
 			return []
@@ -85,7 +87,8 @@ class JobQueue(object):
 				print 'Job already in queue!'
 			job.clean()
 			ans = [jj.uuid for jj in eq_filter]
-		self.save()
+		if save:
+			self.save()
 		return ans
 
 	def update_queue(self):
@@ -132,8 +135,8 @@ class JobQueue(object):
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
-			self.save()
 		self.global_submit()
+		self.save()
 		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
 		print status_str
 		if not os.path.isdir('jobs'):

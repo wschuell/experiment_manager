@@ -60,13 +60,13 @@ class BatchExp(object):
 			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax)
 			print 'added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax)
 
-	def add_exp_job(self, tmax, xp_uuid=None, xp_cfg={}):
+	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if not exp._T[-1]>=tmax:
 			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
-			self.jobqueue.add_job(job)
+			self.jobqueue.add_job(job,save=save)
 
-	def add_graph_job(self, method, xp_uuid=None, tmax=None, xp_cfg={}):
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}):
 		if xp_uuid is None:
 			exp = self.get_experiment(**xp_cfg)
 			tmax_xp = exp._T[-1]
@@ -76,13 +76,13 @@ class BatchExp(object):
 		if tmax is None:
 			tmax = tmax_xp
 		job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
-		self.jobqueue.add_job(job)
+		self.jobqueue.add_job(job,save=save)
 
-	def add_jobs(self, cfg_list):
-		for cfg in cfg_list:
-			cfg_str = json.dumps(cfg, sort_keys=True)
-			if cfg_str not in self.jobqueue.past_job_cfg:
-				self.jobqueue.past_job_cfg.append(cfg_str)
+	def add_jobs(self, cfg_list, save_jq=True):
+		cfg_str = json.dumps(cfg_list, sort_keys=True)
+		if cfg_str not in self.jobqueue.past_job_cfg:
+			self.jobqueue.past_job_cfg.append(cfg_str)
+			for cfg in cfg_list:
 				if 'uuid' in cfg.keys():
 					nb_iter = 1
 				elif 'nb_iter' not in cfg.keys():
@@ -104,10 +104,12 @@ class BatchExp(object):
 				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in cfg.keys())
 				if 'method' in cfg.keys():
 					for xp_uuid in uuid_l:
-						self.add_graph_job(xp_uuid=xp_uuid,**cfg2)
+						self.add_graph_job(xp_uuid=xp_uuid,save=False,**cfg2)
 				else:
 					for xp_uuid in uuid_l:
-						self.add_exp_job(xp_uuid=xp_uuid,**cfg2)
+						self.add_exp_job(xp_uuid=xp_uuid,save=False,**cfg2)
+		if save_jq:
+			self.jobqueue.save()
 
 	def update_queue(self):
 		self.jobqueue.update_queue()
