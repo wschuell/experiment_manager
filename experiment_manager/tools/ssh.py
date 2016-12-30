@@ -10,6 +10,7 @@ from Crypto.PublicKey import RSA
 import socket
 import time
 
+
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
         self.hostname = hostname
@@ -29,6 +30,10 @@ class SSHSession(object):
             self.key_file = '{}/.ssh/id_rsa'.format(home)
 
         self.client = paramiko.SSHClient()
+        self.transport = self.get_transport()
+        self.transport.window_size = 2147483647
+        self.transport.packetizer.REKEY_BYTES = pow(2, 40)
+        self.transport.packetizer.REKEY_PACKETS = pow(2, 40)
         self.connect()
 
     def connect(self):
