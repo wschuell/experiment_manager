@@ -9,7 +9,7 @@ import getpass
 from Crypto.PublicKey import RSA
 import socket
 import time
-
+#from scp import SCPClient
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -30,10 +30,6 @@ class SSHSession(object):
             self.key_file = '{}/.ssh/id_rsa'.format(home)
 
         self.client = paramiko.SSHClient()
-        self.transport = self.get_transport()
-        self.transport.window_size = 2147483647
-        self.transport.packetizer.REKEY_BYTES = pow(2, 40)
-        self.transport.packetizer.REKEY_PACKETS = pow(2, 40)
         self.connect()
 
     def connect(self):
@@ -69,6 +65,11 @@ class SSHSession(object):
                     self.install_ssh_key()
                     self.close()
                     self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
+        self.transport = self.client._transport
+        self.transport.window_size = 2147483647
+        self.transport.packetizer.REKEY_BYTES = pow(2, 40)
+        self.transport.packetizer.REKEY_PACKETS = pow(2, 40)
+        #self.scp = SCPClient(self.transport)
         self.sftp = self.client.open_sftp()
 
     def reconnect(self):
@@ -85,8 +86,20 @@ class SSHSession(object):
         else:
             return True
 
+    def mkdir_p(self, path):
+        if path in ['/','','.','~']:
+            return None
+        else:
+            try:
+                self.sftp.stat(path)
+            except IOError:
+                dirname, basename = os.path.split(path.rstrip('/'))
+                self.mkdir_p(dirname)
+                self.sftp.mkdir(path)
+
     def create_path(self, path):
-        self.command_output("mkdir -p {}".format(path))
+        self.mkdir_p(path)
+        #self.command_output("mkdir -p {}".format(path))
 
     def command(self,cmd):
         return self.client.exec_command(cmd)
@@ -96,9 +109,13 @@ class SSHSession(object):
         return std_out.read()
 
     def put(self,localfile,remotefile):
-        if not self.path_exists(os.path.dirname(remotefile)):
+        #if not self.path_exists(os.path.dirname(remotefile)):
+        #    self.create_path(os.path.dirname(remotefile))
+        try:
+            self.sftp.put(localfile,remotefile)
+        except IOError:
             self.create_path(os.path.dirname(remotefile))
-        self.sftp.put(localfile,remotefile)
+            self.sftp.put(localfile,remotefile)
 
     def put_dir(self,localdir,remotedir, max_depth=10):
         if max_depth<0:
@@ -106,12 +123,10 @@ class SSHSession(object):
         files = os.listdir(localdir)
         for f in files:
             if os.path.isfile(os.path.join(localdir,f)):
-                if not self.path_exists(remotedir):
-                    self.create_path(remotedir)
+                #if not self.path_exists(remotedir):
+                #    self.create_path(remotedir)
                 self.put(os.path.join(localdir,f),os.path.join(remotedir,f))
             else:
-                if not self.path_exists(os.path.join(remotedir,f)):
-                    self.create_path(os.path.join(remotedir,f))
                 self.put_dir(os.path.join(localdir,f),os.path.join(remotedir,f),max_depth=max_depth-1)
 
     def get(self,remotefile,localfile):
