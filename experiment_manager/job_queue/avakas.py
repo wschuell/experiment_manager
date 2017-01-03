@@ -8,11 +8,10 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self,username=None, ssh_cfg={}, basedir='jobs', max_jobs=1000, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, basedir=None, max_jobs=1000, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
-		self.basedir = basedir
 		self.update_needed = False
 		if basedir[0] == '/':
 			raise IOError('basedir must be relative path')
@@ -23,6 +22,10 @@ class AvakasJobQueue(JobQueue):
 		if 'key_file' not in self.ssh_cfg.keys() and 'password' not in self.ssh_cfg.keys():
 			self.ssh_cfg['key_file'] = 'avakas'
 		self.ssh_session = SSHSession(**self.ssh_cfg)
+		if basedir is None:
+			self.basedir = '/scratch/'+self.ssh_cfg['username']+'/jobs'
+		else:
+			self.basedir = basedir
 		self.waiting_to_submit = {}
 
 
