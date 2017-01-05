@@ -32,7 +32,8 @@ class BatchExp(object):
 		self.auto_job = auto_job
 		self.virtual_env = virtual_env
 		self.requirements = requirements
-		self.jobqueue.past_job_cfg = []
+		if not hasattr(self.jobqueue,'past_job_cfg'):
+			self.jobqueue.past_job_cfg = []
 #	def control_exp(self, exp):
 #		exp.originclass = copy.deepcopy(exp.__class__)
 #		exp.__class__ = Experiment
@@ -62,27 +63,32 @@ class BatchExp(object):
 
 	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
-		if not exp._T[-1]>=tmax:
+		if exp._T[-1] < tmax:
 			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
 			self.jobqueue.add_job(job,save=save)
 
 	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}):
 		if xp_uuid is None:
-			exp = self.get_experiment(**xp_cfg)
+			exp = self.get_experiment(**xp_cfg)#modify in order to get only uuid and not whole exp
 			tmax_xp = exp._T[-1]
 		else:
 			exp = None
 			tmax_xp = self.db.get_param(xp_uuid=xp_uuid,param='Tmax')
 		if tmax is None:
 			tmax = tmax_xp
-		job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
-		self.jobqueue.add_job(job,save=save)
+		try:
+			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
+			self.jobqueue.add_job(job,save=save)
+		except Exception as e:
+			if e.args[0] != 'Job already done':
+				raise
+
 
 	def add_jobs(self, cfg_list, save_jq=True):
-		cfg_str = json.dumps(cfg_list, sort_keys=True)
-		if cfg_str not in self.jobqueue.past_job_cfg:
-			self.jobqueue.past_job_cfg.append(cfg_str)
-			for cfg in cfg_list:
+		for cfg in cfg_list:
+			cfg_str = json.dumps(cfg, sort_keys=True)
+			if cfg_str not in self.jobqueue.past_job_cfg:
+				self.jobqueue.past_job_cfg.append(cfg_str)
 				if 'uuid' in cfg.keys():
 					nb_iter = 1
 				elif 'nb_iter' not in cfg.keys():

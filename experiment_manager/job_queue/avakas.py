@@ -13,7 +13,7 @@ class AvakasJobQueue(JobQueue):
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
-		if basedir[0] == '/':
+		if basedir is not None and basedir[0] == '/':
 			raise IOError('basedir must be relative path')
 		if username is not None:
 			self.ssh_cfg['username'] = username
@@ -362,8 +362,23 @@ exit 0
 					cmd.append('pip install '+option+' '.join(requirements))
 			if virtual_env is not None:
 				cmd.append('deactivate')
-			out = session.command_output(' && '.join(cmd))
+			#out = session.command_output(' && '.join(cmd))
+			out = self.command_output_qsub(' && '.join(cmd))
 			#session.close()
+
+	def command_output_qsub(self,cmd):
+		cmd_uuid = str(uuid.uuid1())
+		cmd_path = os.path.join([self.basedir,'tempcommand_'+cmd_uuid])
+		self.ssh_session.command_output('mkdir -p cmd_path')
+		file_path = os.path.join([cmd_path,'cmd.sh'])
+		output_path = os.path.join([cmd_path,'output.txt'])
+		self.ssh_session.command_output('echo \"'+cmd+'\" > '+file_path)
+		cmdjob_id = self.ssh_session.command_output('qsub -l walltime=00:30:00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+filepath)
+		while not self.ssh_session.path_exists(output_path):
+			time.sleep(5)
+		return self.command_output('cat '+output_path)
+		#self.ssh_session.command_output('rm -R '+cmd_path)
+
 
 	def cancel_job(self, job, clean=False):
 		if job.status == 'running':
