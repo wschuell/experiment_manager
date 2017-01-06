@@ -96,7 +96,7 @@ class Job(object):
 			self.update_exec_time()
 			self.save_data()
 		self.status = 'done'
-		self.save()
+		self.save(keep_data=False)
 
 	def start_profiler(self):
 		if self.profiling:
