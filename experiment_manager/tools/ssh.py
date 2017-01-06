@@ -9,13 +9,15 @@ import getpass
 from Crypto.PublicKey import RSA
 import socket
 import time
-#from scp import SCPClient
+from scp import SCPClient
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.put_wait = []
+        self.get_wait = []
         self.port = port
         home = os.environ['HOME']
         if key_file is None:
@@ -65,11 +67,12 @@ class SSHSession(object):
                     self.install_ssh_key()
                     self.close()
                     self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
-        self.transport = self.client._transport
-        self.transport.window_size = 2147483647
-        self.transport.packetizer.REKEY_BYTES = pow(2, 40)
-        self.transport.packetizer.REKEY_PACKETS = pow(2, 40)
-        #self.scp = SCPClient(self.transport)
+        #self.transport = self.client._transport
+        #self.transport.window_size = 2147483647
+        #self.transport.packetizer.REKEY_BYTES = pow(2, 40)
+        #self.transport.packetizer.REKEY_PACKETS = pow(2, 40)
+        #self.client._transport = self.transport
+        self.scp = SCPClient(self.client.get_transport())
         self.sftp = self.client.open_sftp()
 
     def reconnect(self):
@@ -113,9 +116,18 @@ class SSHSession(object):
         #    self.create_path(os.path.dirname(remotefile))
         try:
             self.sftp.put(localfile,remotefile)
+            #self.scp.put(localfile,remotefile)
         except IOError:
             self.create_path(os.path.dirname(remotefile))
             self.sftp.put(localfile,remotefile)
+            #self.scp.put(localfile,remotefile)
+
+    def batch_put(self,localfile,remotefile):
+        self.put_wait.append({'localname':os.path.basename(localfile),
+                              'localdir':os.path.dirname(localfile),
+                              'remotename':os.path.basename(remotefile),
+                              'remotedir':os.path.dirname(remotefile),
+                                })
 
     def put_dir(self,localdir,remotedir, max_depth=10):
         if max_depth<0:
@@ -131,6 +143,14 @@ class SSHSession(object):
 
     def get(self,remotefile,localfile):
         self.sftp.get(remotefile,localfile)
+        #self.scp.get(remotefile,localfile)
+
+    def batch_get(self,remotefile,localfile):
+        self.get_wait.append({'localname':os.path.basename(localfile),
+                              'localdir':os.path.dirname(localfile),
+                              'remotename':os.path.basename(remotefile),
+                              'remotedir':os.path.dirname(remotefile),
+                                })
 
     def get_dir(self,remotedir,localdir,max_depth=10):
         if max_depth<0:
@@ -145,6 +165,18 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
+    def batch_send(self):
+        if len(self.put_wait):
+            command = '{'
+            for f in self.put_wait:
+                command += os.path.join(f['localdir'],f['localname'])+','
+            command = command[:-1] + '}'
+            #open distant file through sftp/ssh/scp
+            #tar everything in this open file
+            #close file
+            #run distant command untar
+            #run distant command move (+option to create dir if not exists?)
+
     def rm(self, path):
         self.command('rm -R '+path)
 
@@ -156,6 +188,8 @@ class SSHSession(object):
         return False
 
     def close(self):
+        self.scp.close()
+        self.sftp.close()
         self.client.close()
 
     def install_ssh_key(self):

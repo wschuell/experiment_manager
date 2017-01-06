@@ -128,10 +128,10 @@ class JobQueue(object):
 				j.data = None
 				self.past_exec_time += j.exec_time
 				self.executed_jobs += 1
-				self.job_list.remove(j)
 				if self.erase:
 					j.status = 'to be cleaned'
 			elif j.status == 'to be cleaned':
+				self.job_list.remove(j)
 				j.clean()
 			elif self.verbose and j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))

@@ -376,7 +376,10 @@ exit 0
 		output_path = os.path.join(cmd_path,'output.txt')
 		self.ssh_session.command_output('echo \"'+cmd+'\" > '+file_path)
 		cmdjob_id = self.ssh_session.command_output('qsub -l walltime=00:30:00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+file_path)
+		t = time.time()
 		while not self.ssh_session.path_exists(output_path):
+			if time.time()-t > 1800:
+				raise Exception('Command is taking too long, might be blocked')
 			time.sleep(5)
 		return self.ssh_session.command_output('cat '+output_path)
 		#self.ssh_session.command_output('rm -R '+cmd_path)
