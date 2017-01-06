@@ -172,10 +172,12 @@ class SSHSession(object):
                 command += os.path.join(f['localdir'],f['localname'])+','
             command = command[:-1] + '}'
             #open distant file through sftp/ssh/scp
-            #tar everything in this open file
+            #tar everything in this open file (without compression, most files are already compressed)
             #close file
             #run distant command untar
+            #create move command
             #run distant command move (+option to create dir if not exists?)
+            #clean
 
     def rm(self, path):
         self.command('rm -R '+path)

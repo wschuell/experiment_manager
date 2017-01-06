@@ -98,7 +98,7 @@ class JobQueue(object):
 		self.check_running_jobs()
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
-				job_uuids = [jj.uuid for jj in self.job_list]
+				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']]
 				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
 					if dep_uuid not in job_uuids:
 						j.deps.remove(dep_uuid)
