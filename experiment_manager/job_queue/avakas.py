@@ -339,11 +339,13 @@ exit 0
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
-			out = self.command_output_qsub(' && '.join(cmd))
+			out = self.command_output_qsub(' && '.join(cmd),retry=True)
 		#session.close()
 
-	def update_virtualenv(self, virtual_env=None, requirements=[]):
+	def update_virtualenv(self, virtual_env=None, requirements=[],src_path=None):
 		cmd = []
+		if src_path is None:
+			src_path = '/scratch/'+self.ssh_cfg['username']+'/src_'+self.uuid
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		#session = SSHSession(**self.ssh_cfg)
@@ -360,26 +362,29 @@ exit 0
 			if requirements == ['all']:
 					cmd.append("pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U "+option)
 			else:
-					cmd.append('pip install --upgrade --no-deps '+option+' '.join(requirements))
-					cmd.append('pip install '+option+' '.join(requirements))
+					cmd.append('pip install --upgrade --no-deps --src '+src_path+' '+option+' '.join(requirements))
+					cmd.append('pip install --src '+src_path+' '+option+' '.join(requirements))
 			if virtual_env is not None:
 				cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
-			out = self.command_output_qsub(' && '.join(cmd))
+			out = self.command_output_qsub(' && '.join(cmd),retry=True)
 			#session.close()
 
-	def command_output_qsub(self,cmd):
+	def command_output_qsub(self,cmd,t_min=10,retry=False,retry_time=30):
 		cmd_uuid = str(uuid.uuid1())
 		cmd_path = os.path.join(self.basedir,'tempcommand_'+cmd_uuid)
 		out = self.ssh_session.command_output('mkdir -p '+cmd_path)
 		file_path = os.path.join(cmd_path,'cmd.sh')
 		output_path = os.path.join(cmd_path,'output.txt')
 		self.ssh_session.command_output('echo \"'+cmd+'\" > '+file_path)
-		cmdjob_id = self.ssh_session.command_output('qsub -l walltime=00:30:00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+file_path)
+		cmdjob_id = self.ssh_session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+file_path)
 		t = time.time()
 		while not self.ssh_session.path_exists(output_path):
-			if time.time()-t > 1800:
-				raise Exception('Command is taking too long, might be blocked')
+			if time.time()-t > 60*t_min:
+				if retry:
+					return self.command_output_qsub(cmd,t_min=retry_time,retry=False)
+				else:
+					raise Exception('Command is taking too long, might be blocked')
 			time.sleep(5)
 		return self.ssh_session.command_output('cat '+output_path)
 		#self.ssh_session.command_output('rm -R '+cmd_path)
