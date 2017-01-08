@@ -74,11 +74,11 @@ class ExperimentDBJob(Job):
 				self.db = self.data.db.__class__(**db_cfg)
 			self.data.db = self.db
 			self.xp_uuid = self.data.uuid
-		db_path = self.db.dbpath
+		#db_path = self.db.dbpath
 		self.files.append(db_path)
-		self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 		self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
-		self.db.dbpath = db_path
+		#self.db.dbpath = db_path
 		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 		try:
@@ -109,7 +109,7 @@ class ExperimentDBJob(Job):
 		self.db.commit(self.data)
 
 	def unpack_data(self):
-		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -237,10 +237,10 @@ class GraphExpDBJob(ExperimentDBJob):
 			with path.Path(self.get_path()):
 				new_db = self.origin_db.__class__(**self.db_cfg)
 			self.db = new_db
-			db_path = self.db.dbpath
-			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+			#db_path = self.db.dbpath
+			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=[graph_cfg['method']])
-			self.db.dbpath = db_path
+			#self.db.dbpath = db_path
 			self.files.append(db_path)
 			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -274,7 +274,7 @@ class GraphExpDBJob(ExperimentDBJob):
 		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] <= other.graph_cfg['tmax']
 
 	def re_init(self):
-		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -282,14 +282,14 @@ class GraphExpDBJob(ExperimentDBJob):
 		self.data = {}
 		#self.data['exp'] = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
-		old_path = self.db.dbpath
+		#old_path = self.db.dbpath
 		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
 				if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
 					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 				self.status = 'pending'
-		self.db.dbpath = old_path
+		#self.db.dbpath = old_path
 		self.save(keep_data=False)
 		self.origin_db.close()
 		self.db.close()
@@ -331,7 +331,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -402,10 +402,10 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			with path.Path(self.get_path()):
 				new_db = self.origin_db.__class__(**self.db_cfg)
 			self.db = new_db
-			db_path = self.db.dbpath
-			self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+			#db_path = self.db.dbpath
+			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
-			self.db.dbpath = db_path
+			#self.db.dbpath = db_path
 			self.files.append(db_path)
 			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -441,7 +441,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		return (self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] <= other.graph_cfg['tmax']) and set(other.methods) <= set(self.methods)
 
 	def re_init(self):
-		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -449,7 +449,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		self.data = {}
 		#self.data['exp'] = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
-		old_path = self.db.dbpath
+		#old_path = self.db.dbpath
 		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
@@ -457,7 +457,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				if self.dep_path is None:
 					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)
 				self.status = 'pending'
-		self.db.dbpath = old_path
+		#self.db.dbpath = old_path
 		self.save(keep_data=False)
 		self.origin_db.close()
 		self.db.close()
@@ -510,7 +510,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
 	def unpack_data(self):
-		self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
