@@ -214,6 +214,10 @@ class Job(object):
 	def gen_depend(self):
 		return []
 
+	def close_connections(self):
+		pass
+
+
 	def get_error(self):
 		with pathpy.Path(self.get_path()):
 			if os.path.isfile('error.txt'):

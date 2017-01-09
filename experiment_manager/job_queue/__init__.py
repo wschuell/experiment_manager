@@ -137,6 +137,7 @@ class JobQueue(object):
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
+			j.close_connections()
 		self.global_submit()
 		self.save()
 		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())

@@ -10,6 +10,10 @@ from Crypto.PublicKey import RSA
 import socket
 import time
 from scp import SCPClient
+#import shlex
+import subprocess
+import tarfile
+import StringIO
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -167,17 +171,43 @@ class SSHSession(object):
 
     def batch_send(self):
         if len(self.put_wait):
-            command = '{'
-            for f in self.put_wait:
-                command += os.path.join(f['localdir'],f['localname'])+','
-            command = command[:-1] + '}'
-            #open distant file through sftp/ssh/scp
-            #tar everything in this open file (without compression, most files are already compressed)
-            #close file
-            #run distant command untar
+            localtardir = ''
+            tar_name = 'temp_tar'
+            tar_name_ext = tar_name+'.tar'
+            remotetardir = ''
+            with tarfile.open(os.path.join(localtardir,tar_name_ext), 'w') as tar:
+                for i in range(len(self.put_wait)):
+                    f = self.put_wait[i]
+                    tar.add(os.path.join(f['localdir'],f['localname']),arcname=str(i))
+            self.put(os.path.join(localtardir,tar_name_ext),os.path.join(remotetardir,tar_name_ext))
+            self.command_output('tar xf '+os.path.join(localtardir,tar_name_ext))
+            self.command_output()
+
+            #command = ''#'{'
+            #for f in self.put_wait:
+            #    command += os.path.join(f['localdir'],f['localname'])+','
+            #command = command[:-1]# + '}'
+            #command = ['tar','cf','-',command]
+            ##chan = self.client.invoke_shell()
+            #buff = StringIO.StringIO()
+            #process = subprocess.Popen(command,
+            #           shell=False,
+            #           stdout=subprocess.PIPE,#self.client.exec_command("tar xf -")[0],#ssh_stdin,
+            #           stdin=subprocess.PIPE,
+            #           stderr=subprocess.PIPE)
+            #ssh_stdin, ssh_stdout, ssh_stderr = self.client.exec_command("tar xf - /scratch/wschueller/")
+            #ssh_stdin.write(process.stdout.read())
+            #ssh_stdin.flush()
+            #print ssh_stderr.read(),ssh_stdout.read()
+            #print process.stderr.read(),process.stdout.read()
+            #process.
+            #self.exec_command()
+
             #create move command
             #run distant command move (+option to create dir if not exists?)
             #clean
+        self.put_wait = {}
+            #remotetempdir? and use it
 
     def rm(self, path):
         self.command('rm -R '+path)

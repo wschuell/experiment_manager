@@ -75,6 +75,10 @@ class ExperimentDBJob(Job):
 			self.data.db = self.db
 			self.xp_uuid = self.data.uuid
 		#db_path = self.db.dbpath
+		if os.path.isfile(self.db.dbpath):
+			db_path = self.db.dbpath
+		else:
+			db_path = os.path.basename(self.db.dbpath)
 		self.files.append(db_path)
 		#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 		self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
@@ -109,7 +113,8 @@ class ExperimentDBJob(Job):
 		self.db.commit(self.data)
 
 	def unpack_data(self):
-		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
+			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -122,6 +127,11 @@ class ExperimentDBJob(Job):
 		self.origin_db.close()
 		#self.data.db = self.origin_db
 		#self.data.commit_to_db()
+
+
+	def close_connections(self):
+		self.db.close()
+		self.origin_db.close()
 
 	def __eq__(self, other):
 		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
@@ -241,6 +251,10 @@ class GraphExpDBJob(ExperimentDBJob):
 			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=[graph_cfg['method']])
 			#self.db.dbpath = db_path
+			if os.path.isfile(self.db.dbpath):
+				db_path = self.db.dbpath
+			else:
+				db_path = os.path.basename(self.db.dbpath)
 			self.files.append(db_path)
 			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -331,7 +345,8 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
+			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
@@ -406,6 +421,10 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			#self.db.dbpath = db_path
+			if os.path.isfile(self.db.dbpath):
+				db_path = self.db.dbpath
+			else:
+				db_path = os.path.basename(self.db.dbpath)
 			self.files.append(db_path)
 			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -510,7 +529,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
 	def unpack_data(self):
-		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
+			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
