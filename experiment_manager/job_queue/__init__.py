@@ -63,7 +63,7 @@ class JobQueue(object):
 		elif job.status == 'dependencies not satisfied':
 			deps = job.gen_depend()
 			for d in deps:
-				uuid_l = self.add_job(d)
+				uuid_l = self.add_job(d,save=False)
 				job.deps += uuid_l
 		eq_filter = [j for j in self.job_list if (j == job)]
 		lt_filter = [j for j in eq_filter if (j < job)]
@@ -89,6 +89,7 @@ class JobQueue(object):
 			ans = [jj.uuid for jj in eq_filter]
 		if save:
 			self.save()
+		job.close_connections()
 		return ans
 
 	def update_queue(self):

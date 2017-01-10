@@ -22,6 +22,7 @@ class ExperimentJob(Job):
 		self.tmax = tmax
 		self.files.append(self.xp_uuid+'.b')
 		self.save(keep_data=False)
+		self.close_connections()
 
 	def script(self):
 		 while self.data._T[-1]<self.tmax:
@@ -268,6 +269,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			shutil.copy(source_file, dst_file)
 			self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.save(keep_data=False)
+		self.close_connections()
 
 	def __eq__(self, other):
 		try:
@@ -438,6 +440,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			shutil.copy(source_file, dst_file)
 			self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.save(keep_data=False)
+		self.close_connections()
 
 
 
