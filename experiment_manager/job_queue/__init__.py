@@ -21,6 +21,8 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 	if name is not None and os.path.isfile('jobs/'+name+'.jq'):
 		with open('jobs/'+name+'.jq','r') as f:
 			jq = cPickle.loads(f.read())
+			if 'db' in jq_cfg2.keys():
+				jq.db = jq_cfg2['db']
 	else:
 		tempstr = jq_type
 		if tempstr in job_queue_class.keys():
