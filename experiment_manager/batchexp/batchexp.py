@@ -8,7 +8,7 @@ from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob, MultipleGraphEx
 
 class BatchExp(object):
 
-	def __init__(self, name=None, jq_cfg = None, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, virtual_env=None, requirements=[], **kwargs):
+	def __init__(self, name=None, jq_cfg = None, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, profiling=False, virtual_env=None, requirements=[], **kwargs):
 		self.uuid = str(uuid.uuid1())
 		if name is None:
 			self.name = self.uuid
@@ -32,6 +32,7 @@ class BatchExp(object):
 		self.auto_job = auto_job
 		self.virtual_env = virtual_env
 		self.requirements = requirements
+		self.profiling = profiling
 		if not hasattr(self.jobqueue,'past_job_cfg'):
 			self.jobqueue.past_job_cfg = []
 #	def control_exp(self, exp):
@@ -64,7 +65,7 @@ class BatchExp(object):
 	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if exp._T[-1] < tmax:
-			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
+			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling)
 			self.jobqueue.add_job(job,save=save)
 
 	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}):
@@ -77,7 +78,7 @@ class BatchExp(object):
 		if tmax is None:
 			tmax = tmax_xp
 		try:
-			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements)
+			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling)
 			self.jobqueue.add_job(job,save=save)
 		except Exception as e:
 			if e.args[0] != 'Job already done':
@@ -121,7 +122,8 @@ class BatchExp(object):
 		self.jobqueue.update_queue()
 
 	def auto_finish_queue(self,t=60,coeff=1.):
-		self.jobqueue.auto_finish_queue(t=t,coeff=coeff)
+		self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
+
 
 #class Experiment(object):
 #

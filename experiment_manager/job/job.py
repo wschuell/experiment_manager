@@ -170,9 +170,13 @@ class Job(object):
 				self.get_data()
 
 	def clean(self):
+		head, tail = os.path.split(self.path)
+		if os.path.exists(os.path.join(self.path,'profile.txt')):
+			if not os.path.exists(os.path.join(head,'profiles')):
+				os.mkdir(os.path.join(head,'profiles'))
+			shutil.move(os.path.join(self.path,'profile.txt'),os.path.join(head,'profiles',tail+'.txt'))
 		try:
 			shutil.rmtree(self.path)
-			head, tail = os.path.split(self.path)
 			if not os.listdir(head):
 				shutil.rmtree(head)
 		except OSError:

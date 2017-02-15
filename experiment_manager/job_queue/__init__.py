@@ -95,9 +95,11 @@ class JobQueue(object):
 		return ans
 
 	def update_queue(self):
+		self.save_status()
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
 			self.update_needed = False
+			self.save_status()
 		self.check_running_jobs()
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
@@ -143,14 +145,19 @@ class JobQueue(object):
 			j.close_connections()
 		self.global_submit()
 		self.save()
-		status_str = time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
-		print status_str
+		print self.get_status_string()
+		self.save_status()
+		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
+			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
+
+	def get_status_string(self):
+		return time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
+
+	def save_status(self):
 		if not os.path.isdir('jobs'):
 			os.makedirs('jobs')
 		with open('jobs/'+self.name+'.jq_status','a') as f_status:
-			f_status.write(status_str)
-		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
-			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
+			f_status.write(self.get_status_string())
 
 	def __str__(self):
 		total = 0
@@ -180,7 +187,7 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=60,coeff=1):
+	def auto_finish_queue(self,t=60,coeff=1,call_between=None):
 		self.update_queue()
 		step = t
 		state = str(self)
@@ -192,6 +199,8 @@ class JobQueue(object):
 			else:
 				state = str(self)
 				step = t
+			if call_between is not None:
+				call_between()
 
 	def check_virtualenvs(self):
 		envs = {}

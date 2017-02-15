@@ -213,8 +213,8 @@ class GraphExpJob(ExperimentJob):
 
 
 class GraphExpDBJob(ExperimentDBJob):
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, **graph_cfg):
-		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env)
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, profiling=False, **graph_cfg):
+		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env,profiling=profiling)
 		try:
 			if exp is None:
 				tmax_db = db.get_param(xp_uuid=xp_uuid, method=graph_cfg['method'], param='Time_max')
@@ -377,7 +377,7 @@ class GraphExpDBJob(ExperimentDBJob):
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, **graph_cfg):
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, profiling=False, **graph_cfg):
 		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):
@@ -395,7 +395,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if tmax_db >= graph_cfg['tmax']:
 			raise Exception('Job already done')
 		else:
-			super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env, get_data_at_unpack=False)
+			super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env, profiling=profiling, get_data_at_unpack=False)
 			self.data = {}
 			self.graph_cfg = graph_cfg
 			self.db_cfg = db_cfg

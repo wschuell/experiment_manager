@@ -160,6 +160,8 @@ exit 0
 		#session.close()
 		if job.PBS_JOBID:
 			job.status = 'running'
+		else:
+			raise Exception('No PBSJOBID returned on qsub command')
 		job.save()
 		#time.sleep(0.2)
 
@@ -290,9 +292,10 @@ exit 0
 					job.array_id = i+1
 					job.save()
 			else:
-				for i in range(len(j_list)):
-					job = j_list[i]
-					job.save()
+				raise Exception('No PBSJOBID returned by qsub, multijob '+str(format_dict['multijob_dir']))
+				#for i in range(len(j_list)):
+				#	job = j_list[i]
+				#	job.save()
 		self.waiting_to_submit = {}
 
 	def check_running_jobs(self):
@@ -401,8 +404,11 @@ exit 0
 	def avail_workers(self):
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
-		qstat = session.command_output('qstat -u {} -t|grep {}'.format(self.ssh_cfg['username'], self.ssh_cfg['username'][:8]))
-		return self.max_jobs - len(qstat.split('\n')) + 1
+		qstat = int(session.command_output('qstat -u {} -t|wc -l'.format(self.ssh_cfg['username'])))
+		if qstat > 0:
+			qstat -= 5
+		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
+		return self.max_jobs - int(qstat) - offset_waiting
 		#session.close()
 
 	def __getstate__(self):
