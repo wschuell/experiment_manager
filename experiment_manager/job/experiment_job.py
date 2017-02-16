@@ -95,6 +95,7 @@ class ExperimentDBJob(Job):
 				raise
 		shutil.copy(source_file, dst_file)
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
+		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
 
 		self.save(keep_data=False)
 		self.db.close()
@@ -111,6 +112,7 @@ class ExperimentDBJob(Job):
 		self.data = self.db.get_experiment(xp_uuid=self.xp_uuid)
 
 	def save_data(self):
+		self.data.compress(rm=False)
 		self.db.commit(self.data)
 
 	def unpack_data(self):
@@ -268,6 +270,7 @@ class GraphExpDBJob(ExperimentDBJob):
 					raise
 			shutil.copy(source_file, dst_file)
 			self.files.append('data/'+self.xp_uuid+'.db.xz')
+			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
 		self.save(keep_data=False)
 		self.close_connections()
 
@@ -439,6 +442,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					raise
 			shutil.copy(source_file, dst_file)
 			self.files.append('data/'+self.xp_uuid+'.db.xz')
+			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
 		self.save(keep_data=False)
 		self.close_connections()
 

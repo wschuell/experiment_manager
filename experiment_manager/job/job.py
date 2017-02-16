@@ -83,7 +83,7 @@ class Job(object):
 		self.lastsave_time = time.time()
 		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
-			self.init_time += time.time()
+			self.init_time = time.time() - self.exec_time
 			self.start_profiler()
 			self.get_data()
 			if not hasattr(self, 'prg_states'):
@@ -113,7 +113,8 @@ class Job(object):
 			sortby = 'cumulative'
 			ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
 			ps.print_stats()
-			with open('profile.txt','w') as f:
+			with open('profile.txt','a') as f:
+				f.write(time.strftime("[%Y %m %d %H:%M:%S]\n", time.localtime()))
 				f.write(s.getvalue())
 			s.close()
 

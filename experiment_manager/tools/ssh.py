@@ -93,6 +93,10 @@ class SSHSession(object):
         else:
             return True
 
+    def remove(self,remotefilepath):#TODO: add rmdir
+        if self.path_exists(remotefilepath):
+            self.sftp.remove(remotefilepath)
+
     def mkdir_p(self, path):
         if path in ['/','','.','~']:
             return None

@@ -65,7 +65,7 @@ class BatchExp(object):
 	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if exp._T[-1] < tmax:
-			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling)
+			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True)
 			self.jobqueue.add_job(job,save=save)
 
 	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}):
@@ -78,7 +78,7 @@ class BatchExp(object):
 		if tmax is None:
 			tmax = tmax_xp
 		try:
-			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling)
+			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True)
 			self.jobqueue.add_job(job,save=save)
 		except Exception as e:
 			if e.args[0] != 'Job already done':

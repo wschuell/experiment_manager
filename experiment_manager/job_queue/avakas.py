@@ -315,6 +315,9 @@ exit 0
 		if hasattr(job,'multijob_dir'):
 			for f in ['output.txt','error.txt']:
 				session.command_output('cp {multijob_dir}/{f}-{array_id} {job_dir}/{f}'.format(f=f,multijob_dir=job.multijob_dir,array_id=job.array_id,**self.format_dict(job)))
+		if hasattr('clean_at_retrieval',job):
+			for f in job.clean_at_retrieval:
+				session.remove(os.path.join(job_dir,f))
 		session.get_dir(job_dir, local_job_dir)
 
 		#session.close()
