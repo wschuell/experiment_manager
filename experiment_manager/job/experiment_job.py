@@ -104,7 +104,6 @@ class ExperimentDBJob(Job):
 		while self.data._T[-1]<self.tmax:
 			self.data.continue_exp(autocommit=False)
 			self.check_time()
-		self.data.compress()
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):

@@ -95,11 +95,11 @@ class JobQueue(object):
 		return ans
 
 	def update_queue(self):
-		self.save_status()
+		self.save_status(message='Starting queue udpate')
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
 			self.update_needed = False
-			self.save_status()
+			self.save_status(message='Requirements installed')
 		self.check_running_jobs()
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
@@ -150,14 +150,14 @@ class JobQueue(object):
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
 
-	def get_status_string(self):
-		return time.strftime("[%Y %m %d %H:%M:%S]: Queue updated\n"+str(self), time.localtime())
+	def get_status_string(self,message='Queue updated'):
+		return time.strftime("[%Y %m %d %H:%M:%S]: "+message+"\n"+str(self), time.localtime())
 
-	def save_status(self):
+	def save_status(self,message='Queue updated'):
 		if not os.path.isdir('jobs'):
 			os.makedirs('jobs')
 		with open('jobs/'+self.name+'.jq_status','a') as f_status:
-			f_status.write(self.get_status_string())
+			f_status.write(self.get_status_string(message=message))
 
 	def __str__(self):
 		total = 0
