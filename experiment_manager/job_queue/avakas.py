@@ -305,6 +305,7 @@ exit 0
 		for j in self.job_list:
 			if j.status == 'running' and running_jobs_string.find(j.PBS_JOBID) == -1:
 				j.status = 'finished running'
+		self.refresh_avail_workers()
 
 	def retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
@@ -406,12 +407,19 @@ exit 0
 
 	def avail_workers(self):
 		#session = SSHSession(**self.ssh_cfg)
+		if not hasattr(self,'available_workers'):
+			self.refresh_avail_workers()
+		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
+		return self.available_workers - offset_waiting
+		#session.close()
+
+	def refresh_avail_workers(self):
+		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
 		qstat = int(session.command_output('qstat -u {} -t|wc -l'.format(self.ssh_cfg['username'])))
 		if qstat > 0:
 			qstat -= 5
-		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
-		return self.max_jobs - int(qstat) - offset_waiting
+		self.available_workers = self.max_jobs - qstat
 		#session.close()
 
 	def __getstate__(self):

@@ -21,6 +21,9 @@ class BatchExp(object):
 		if 'name' not in self.jq_cfg.keys():
 			self.jq_cfg['name'] = self.name
 		self.jobqueue = get_jobqueue(**self.jq_cfg)
+		for j in self.jobqueue.job_list:
+			if j.status == 'missubmitted':
+				j.reinit_missubmitted()
 		if db is not None:
 			self.db = db
 		elif db_cfg is not None:
@@ -122,7 +125,10 @@ class BatchExp(object):
 		self.jobqueue.update_queue()
 
 	def auto_finish_queue(self,t=60,coeff=1.):
-		self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
+		try:
+			self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
+		finally:
+			self.db.commit_from_RAM()
 
 
 #class Experiment(object):

@@ -83,7 +83,7 @@ class Job(object):
 		self.lastsave_time = time.time()
 		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
-			self.init_time = time.time() - self.exec_time
+			self.init_time += time.time()
 			self.start_profiler()
 			self.get_data()
 			if not hasattr(self, 'prg_states'):

@@ -51,7 +51,7 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, **kwargs):
+	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			xp_tmax = db.get_param(xp_uuid=xp_uuid,param='Tmax')
@@ -62,7 +62,7 @@ class ExperimentDBJob(Job):
 			#self.status = 'already done'
 			#self.xp_uuid = None
 		#else:
-		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False, **kwargs)
+		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False,profiling=profiling, checktime=checktime, **kwargs)
 		if exp is None:
 			self.origin_db = db
 			with path.Path(self.get_path()):
