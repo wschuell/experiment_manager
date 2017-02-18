@@ -430,8 +430,6 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			else:
 				db_path = os.path.basename(self.db.dbpath)
 			self.files.append(db_path)
-			source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
-			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 			try:
 				os.makedirs(os.path.join(self.get_path(),'data/'))
 			except OSError as exc:  # Python >2.5
@@ -439,8 +437,11 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					pass
 				else:
 					raise
-			shutil.copy(source_file, dst_file)
-			self.files.append('data/'+self.xp_uuid+'.db.xz')
+			if not self.status == 'dependencies not satisfied':
+				source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+				dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+				shutil.copy(source_file, dst_file)
+				self.files.append('data/'+self.xp_uuid+'.db.xz')
 			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
 		self.save(keep_data=False)
 		self.close_connections()
@@ -479,10 +480,16 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
 				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
-				if self.dep_path is None:
-					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)
+				#if self.dep_path is None:
+				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
 				self.status = 'pending'
 		#self.db.dbpath = old_path
+
+		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		shutil.copy(source_file, dst_file)
+		self.files.append('data/'+self.xp_uuid+'.db.xz')
+
 		self.save(keep_data=False)
 		self.origin_db.close()
 		self.db.close()
@@ -518,6 +525,14 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
+
+		if not os.path.isfile(os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')):
+			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+			shutil.copy(source_file, dst_file)
+			#if 'data/'+self.xp_uuid+'.db.xz' not in self.files: #not needed, if file gotten from deps; will stay in place for later run of the same job;
+			#	self.files.append('data/'+self.xp_uuid+'.db.xz')
+
 		self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 		for method in self.methods:
 			if self.db.data_exists(xp_uuid=self.xp_uuid, method=method):
