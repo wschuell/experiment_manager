@@ -110,7 +110,7 @@ class Job(object):
 	def save_profile(self):
 		if self.profiling:
 			s = StringIO.StringIO()
-			sortby = 'cumulative'
+			sortby = 'tottime'#'cumulative'
 			ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
 			ps.print_stats()
 			with open('profile.txt','a') as f:

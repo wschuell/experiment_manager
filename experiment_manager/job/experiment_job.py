@@ -9,6 +9,7 @@ import copy
 import path
 import errno
 import math
+import path as pathpy
 
 
 class ExperimentJob(Job):
@@ -115,10 +116,11 @@ class ExperimentDBJob(Job):
 		self.db.commit(self.data)
 
 	def unpack_data(self):
-		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
-			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
-		if not hasattr(self.db,'connection'):
-			self.db.reconnect()
+		#if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
+		#	self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
 			self.origin_db.reconnect()#RAM_only=True)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid])
@@ -293,8 +295,9 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def re_init(self):
 		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
-		if not hasattr(self.db,'connection'):
-			self.db.reconnect()
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
 			self.origin_db.reconnect()#RAM_only=True)
 		self.data = {}
@@ -349,10 +352,9 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
-		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
-			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
-		if not hasattr(self.db,'connection'):
-			self.db.reconnect()
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
 			self.origin_db.reconnect()#RAM_only=True)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=[self.graph_cfg['method']], graph_only=True)
@@ -468,8 +470,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def re_init(self):
 		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
-		if not hasattr(self.db,'connection'):
-			self.db.reconnect()
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
 			self.origin_db.reconnect()#RAM_only=True)
 		self.data = {}
