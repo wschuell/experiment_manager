@@ -216,7 +216,7 @@ class GraphExpJob(ExperimentJob):
 
 
 class GraphExpDBJob(ExperimentDBJob):
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, profiling=False, checktime=True, **graph_cfg):
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, **graph_cfg):
 		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env,profiling=profiling, checktime=checktime)
 		try:
 			if exp is None:
@@ -372,7 +372,7 @@ class GraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		return [ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)]
+		return [ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)]
 
 
 #id list is list
@@ -381,7 +381,7 @@ class GraphExpDBJob(ExperimentDBJob):
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr='', requirements=[], virtual_env=None, profiling=False, checktime=True, **graph_cfg):
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, **graph_cfg):
 		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):
@@ -574,7 +574,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		j = ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr='dependency_of_'+self.descr, requirements=self.requirements, virtual_env=self.virtual_env)
+		j = ExperimentDBJob(tmax=tmax, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
 		self.dep_path = j.path
 		return[j]
 

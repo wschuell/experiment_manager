@@ -72,6 +72,7 @@ class AvakasJobQueue(JobQueue):
 			'python_bin': python_bin,
 			'job_name': job.job_dir,
 			'job_dir': os.path.join(self.basedir,job.job_dir),
+			'job_backup_dir': os.path.join(self.basedir,job.backup_dir,job.uuid),
 			'local_job_dir': job.path,
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
@@ -86,6 +87,7 @@ class AvakasJobQueue(JobQueue):
 		if not job.status == 'pending':
 			print('Job {} already submitted'.format(job.uuid))
 		job.status = 'missubmitted'
+		job.backup_dir = 'backup_dir'
 		format_dict = self.format_dict(job)
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
@@ -128,7 +130,10 @@ sys.exit(0)
 """#!/bin/bash
 echo "Job finished, backing up files."
 PBS_JOBID=$1
-cp -f -R {base_work_dir}$PBS_JOBID/* {job_dir}/
+cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
+rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
+cp -f -R {base_work_dir}\"$PBS_JOBID\"/* {job_dir}/
+rm -R {base_work_dir}$PBS_JOBID
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -169,6 +174,7 @@ exit 0
 		if not job.status == 'pending':
 			print('Job {} already submitted'.format(job.uuid))
 		job.status = 'missubmitted'
+		job.backup_dir = 'backup_dir'
 		format_dict = self.format_dict(job)
 		wt = format_dict['walltime']
 		if wt not in self.waiting_to_submit.keys():
@@ -245,8 +251,10 @@ MULTIJOBDIR={multijob_dir}
 ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
 JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
-cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
+cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
+rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
 
+cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
 rm -R {base_work_dir}$PBS_JOBID
 
 
@@ -307,15 +315,29 @@ exit 0
 				j.status = 'finished running'
 		self.refresh_avail_workers()
 
+	def check_backups(self):
+		self.backups_status = {'present':[],'locked':[]}
+		session = self.ssh_session
+		presentbackups = session.command_output('ls -l '+self.remote_backupdir)
+		lockedbackups = session.command_output('ls -l '+os.path.join(self.remote_backupdir,'backup_lock'))
+		for j in self.job_list:
+			if j.uuid in presentbackups:
+				self.backups_status['present'].append(j.uuid)
+				if j.uuid in lockedbackups:
+					self.backups_status['locked'].append(j.uuid)
+
 	def retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
-		job_dir = self.format_dict(job)['job_dir']
+		if job.uuid in self.backups_status['present'] and not job.uuid in self.backups_status['locked']:
+			job_dir = self.format_dict(job)['job_backup_dir']
+		else:
+			job_dir = self.format_dict(job)['job_dir']
 		local_job_dir = self.format_dict(job)['local_job_dir']
 		if hasattr(job,'multijob_dir'):
 			for f in ['output.txt','error.txt']:
-				session.command_output('cp {multijob_dir}/{f}-{array_id} {job_dir}/{f}'.format(f=f,multijob_dir=job.multijob_dir,array_id=job.array_id,**self.format_dict(job)))
+				session.command_output('cp {multijob_dir}/{f}-{array_id} {dir}/{f}'.format(f=f,dir=job_dir,multijob_dir=job.multijob_dir,array_id=job.array_id,**self.format_dict(job)))
 		if hasattr(job,'clean_at_retrieval'):
 			for f in job.clean_at_retrieval:
 				session.remove(os.path.join(job_dir,f))

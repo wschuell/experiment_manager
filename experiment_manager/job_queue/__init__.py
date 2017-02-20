@@ -58,6 +58,9 @@ class JobQueue(object):
 		with open('jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
+	def check_backups(self):
+		self.backups_status = {'present':[],'locked':[]}
+
 	def add_job(self, job, deep_check=None,save=True):
 		if job.status == 'already done':
 			job.clean()
@@ -101,6 +104,7 @@ class JobQueue(object):
 			self.update_needed = False
 			self.save_status(message='Requirements installed')
 		self.check_running_jobs()
+		self.check_backups()
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
 				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']]
@@ -201,6 +205,8 @@ class JobQueue(object):
 				step = t
 			if call_between is not None:
 				call_between()
+			if not [j for j in self.job_list if j.status != 'to be cleaned']:
+				self.update_queue()
 
 	def check_virtualenvs(self):
 		envs = {}

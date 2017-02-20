@@ -8,6 +8,7 @@ import sys
 import copy
 import shutil
 import jsonpickle
+import glob
 import cProfile, pstats, StringIO
 import path as pathpy
 from memory_profiler import memory_usage
@@ -19,10 +20,13 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr='', virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
-		self.descr = descr
+		if descr is None:
+			self.descr = self.__class__.__name__
+		else:
+			self.descr = descr
 		self.files = ['job.json','prg_states.b']
 		self.get_data_at_unpack = get_data_at_unpack
 		self.erase = erase
@@ -50,6 +54,7 @@ class Job(object):
 		self.data = None
 		#self.save()
 		#self.data = None
+		self.backup_dir = os.path.join('..','backup_dir')
 
 	def get_path(self):
 		if not os.path.exists(self.path):
@@ -84,6 +89,8 @@ class Job(object):
 		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
+			if os.path.isfile('profile.txt'):
+				os.remove('profile.txt')
 			self.start_profiler()
 			self.get_data()
 			if not hasattr(self, 'prg_states'):
@@ -97,6 +104,8 @@ class Job(object):
 			self.save_data()
 		self.status = 'done'
 		self.save(keep_data=False)
+		with pathpy.Path(self.get_path()):
+			self.clean_backup()
 
 	def start_profiler(self):
 		if self.profiling:
@@ -145,6 +154,13 @@ class Job(object):
 			self.estimated_time = min(self.estimated_time*2, self.max_time)
 		else:
 			self.estimated_time = min(self.estimated_time*4, self.max_time)
+		with pathpy.Path(self.get_path()):
+			for txtfile in glob.glob('*.txt'):
+				with open(txtfile,'r') as f_out:
+					with open(txtfile[:-4]+'_old.txt','a') as f_in:
+						f_in.write('\n=========================' + time.strftime("[%Y %m %d %H:%M:%S]", time.localtime()) + '=========================\n')
+						f_in.write(f_out.read())
+
 		self.status = 'pending'
 
 	def save(self,chdir=True, keep_data=True):
@@ -169,10 +185,42 @@ class Job(object):
 		if keep_data and data_exists:
 			with pathpy.Path(j_path):
 				self.get_data()
+		with pathpy.Path(j_path):
+			self.backup()
+
+	def backup(self):
+		backup_dir = self.backup_dir
+		own_backup_dir = os.path.join(self.backup_dir,self.uuid)
+		backup_lock_dir = os.path.join(self.backup_dir,'backup_lock')
+		backup_lock_file = os.path.join(backup_lock_dir,self.uuid)
+
+		if not os.path.isdir(backup_dir):
+			os.makedirs(backup_dir)
+		if not os.path.isdir(backup_lock_dir):
+			os.makedirs(backup_lock_dir)
+		with open(backup_lock_file) as f:
+			f.write('locked')
+
+		self.clean_backup()
+		shutil.copytree(self.path,own_backup_dir)
+		os.remove(backup_lock_file)
+
+	def clean_backup(self):
+		own_backup_dir = os.path.join(self.backup_dir,self.uuid)
+		shutil.rmtree(own_backup_dir,ignore_errors=True)
 
 	def clean(self):
+		self.clean_backup()
 		head, tail = os.path.split(self.path)
 		if os.path.exists(os.path.join(self.path,'profile.txt')):
+			if os.path.exists(os.path.join(self.path,'profile_old.txt')):
+				with pathpy.Path(self.get_path()):
+					with open('profile.txt','r') as f_out:
+						with open('profile_old.txt','a') as f_in:
+							f_in.write('\n=========================' + time.strftime("[%Y %m %d %H:%M:%S]", time.localtime()) + '=========================\n')
+							f_in.write(f_out.read())
+					os.remove('profile.txt')
+					shutil.move('profile_old.txt','profile.txt')
 			if not os.path.exists(os.path.join(head,'profiles')):
 				os.mkdir(os.path.join(head,'profiles'))
 			shutil.move(os.path.join(self.path,'profile.txt'),os.path.join(head,'profiles',tail+'.txt'))
