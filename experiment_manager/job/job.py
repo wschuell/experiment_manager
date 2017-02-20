@@ -202,7 +202,7 @@ class Job(object):
 			f.write('locked')
 
 		self.clean_backup()
-		shutil.copytree(self.path,own_backup_dir)
+		shutil.copytree('.',own_backup_dir)
 		os.remove(backup_lock_file)
 
 	def clean_backup(self):
