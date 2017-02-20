@@ -28,6 +28,7 @@ class AvakasJobQueue(JobQueue):
 		else:
 			self.basedir = basedir
 		self.waiting_to_submit = {}
+		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
 
 
 	def format_dict(self, job):
