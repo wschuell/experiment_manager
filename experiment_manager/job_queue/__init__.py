@@ -146,13 +146,15 @@ class JobQueue(object):
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 			elif self.verbose and j.status == 'dependencies not satisfied':
 				print('Dependencies not satisfied for job: '+j.job_dir)
+			elif self.verbose and j.status == 'script error':
+				print('Script error for job: '+j.job_dir)
 			j.close_connections()
 		self.global_submit()
 		self.save()
 		print self.get_status_string()
 		self.save_status()
-		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'dependencies not satisfied']]:
-			raise Exception('Queue blocked, only missubmitted jobs or waiting for dependencies jobs')
+		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
+			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
 
 	def get_status_string(self,message='Queue updated'):
 		return time.strftime("[%Y %m %d %H:%M:%S]: "+message+"\n"+str(self), time.localtime())

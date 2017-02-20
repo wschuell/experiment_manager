@@ -96,7 +96,14 @@ class Job(object):
 			if not hasattr(self, 'prg_states'):
 				self.load_prg_states()
 			self.set_prg_states()
-			self.script()
+			try:
+				self.script()
+			except KeyboardInterrupt:
+				raise
+			except Exception as e:
+				with open('scripterror_notifier','w') as f:
+					f.write(str(e))
+				raise
 			self.get_prg_states()
 			self.stop_profiler()
 			self.save_profile()
@@ -133,13 +140,13 @@ class Job(object):
 	def check_time(self, t=None):
 		if self.checktime:
 			if t is None:
-				t = 9*self.estimated_time/10.
+				t = 45*self.estimated_time/100.
 			self.update_exec_time()
 			if (self.exec_time + self.init_time) - self.lastsave_time > t:
 				self.get_prg_states()
 				self.check_mem()
 				self.save_profile()
-				self.save(chdir=False)
+				self.save(chdir=False,backup=True)
 
 	def check_mem(self):
 		mem = memory_usage()
@@ -147,23 +154,25 @@ class Job(object):
 		self.mem_max = max(mem,self.mem_max)
 
 	def fix(self):
-		if self.estimated_time >= self.max_time:
-			raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
-		if self.exec_time > 0:
-			self.init_time = -self.exec_time
-			self.estimated_time = min(self.estimated_time*2, self.max_time)
-		else:
-			self.estimated_time = min(self.estimated_time*4, self.max_time)
 		with pathpy.Path(self.get_path()):
-			for txtfile in glob.glob('*.txt'):
-				with open(txtfile,'r') as f_out:
-					with open(txtfile[:-4]+'_old.txt','a') as f_in:
-						f_in.write('\n=========================' + time.strftime("[%Y %m %d %H:%M:%S]", time.localtime()) + '=========================\n')
-						f_in.write(f_out.read())
+			if glob.glob('scripterror_notifier'):
+				self.status = 'script error'
+			else:
+				if self.estimated_time >= self.max_time:
+					raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
+				if self.exec_time > 0:
+					self.init_time = -self.exec_time
+					self.estimated_time = min(self.estimated_time*2, self.max_time)
+				else:
+					self.estimated_time = min(self.estimated_time*4, self.max_time)
+				for txtfile in glob.glob('*.txt'):
+					with open(txtfile,'r') as f_out:
+						with open(txtfile[:-4]+'_old.txt','a') as f_in:
+							f_in.write('\n=========================' + time.strftime("[%Y %m %d %H:%M:%S]", time.localtime()) + '=========================\n')
+							f_in.write(f_out.read())
+				self.status = 'pending'
 
-		self.status = 'pending'
-
-	def save(self,chdir=True, keep_data=True):
+	def save(self,chdir=True, keep_data=True, backup=False):
 		data_exists = False
 		if chdir:
 			j_path = self.get_path()
@@ -185,8 +194,9 @@ class Job(object):
 		if keep_data and data_exists:
 			with pathpy.Path(j_path):
 				self.get_data()
-		with pathpy.Path(j_path):
-			self.backup()
+		if backup:
+			with pathpy.Path(j_path):
+				self.backup()
 
 	def backup(self):
 		backup_dir = self.backup_dir
