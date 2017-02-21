@@ -14,6 +14,8 @@ from scp import SCPClient
 import subprocess
 import tarfile
 import StringIO
+import shutil
+import glob
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -173,20 +175,27 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self):
+    def batch_send(self,localtardir='',tar_name='temp_tar',remotetardir='',command_send_func=None):
         if len(self.put_wait):
-            localtardir = ''
-            tar_name = 'temp_tar'
             tar_name_ext = tar_name+'.tar'
-            remotetardir = ''
+            if not os.path.isdir(localtardir):
+                os.makedirs(localtardir)
             with tarfile.open(os.path.join(localtardir,tar_name_ext), 'w') as tar:
                 for i in range(len(self.put_wait)):
                     f = self.put_wait[i]
-                    tar.add(os.path.join(f['localdir'],f['localname']),arcname=str(i))
+                    tar.add(os.path.join(f['localdir'],f['localname']),arcname=str(i)) #if folder structure not respected, maybe add a with pathpy.Path and just tar add localname
             self.put(os.path.join(localtardir,tar_name_ext),os.path.join(remotetardir,tar_name_ext))
-            self.command_output('tar xf '+os.path.join(localtardir,tar_name_ext))
-            self.command_output()
-
+            mkdir_command = 'mkdir -p ' + os.path.join(remotetardir,tar_name)
+            tar_command = 'tar xf '+ os.path.join(remotetardir,tar_name_ext) +' -C '+os.path.join(remotetardir,tar_name)
+            cp_command = ' && '.join(['cp -R {remotetarpath_i} {path_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename'])) for i in range(len(self.put_wait))])
+            rm_command = 'rm -R ' + os.path.join(remotetardir,tar_name) + '*'
+            final_command = ' && '.join([mkdir_command,tar_command, cp_command, rm_command])
+            if command_send_func is None:
+                output = self.command_output(final_command)
+            else:
+                output = command_send_func(final_command)
+        self.put_wait = {}
+        return output
             #command = ''#'{'
             #for f in self.put_wait:
             #    command += os.path.join(f['localdir'],f['localname'])+','
@@ -210,8 +219,36 @@ class SSHSession(object):
             #create move command
             #run distant command move (+option to create dir if not exists?)
             #clean
-        self.put_wait = {}
             #remotetempdir? and use it
+
+    def batch_receive(self,localtardir='',tar_name='temp_tar',remotetardir='',command_send_func=None):
+        if len(self.get_wait):
+            tar_name_ext = tar_name+'.tar'
+            mkdir_command = 'mkdir -p '+os.path.join(remotetardir,tar_name)
+            cp_command = ' && '.join(['cp -R {path_i} {remotetarpath_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.get_wait[i]['remotedir'],self.get_wait[i]['remotename'])) for i in range(len(self.get_wait))])
+            tar_command = 'tar cf '+os.path.join(remotetardir, tar_name_ext)+' -C '+ os.path.join(remotetardir,tar_name) + ' ' +' '.join([str(i) for i in range(len(self.get_wait))])
+            rm_command = 'rm -R '+os.path.join(remotetardir,tar_name)
+            final_command = ' && '.join([mkdir_command, cp_command, tar_command, rm_command])
+            if command_send_func is None:
+                output = self.command_output(final_command)
+            else:
+                output = command_send_func(final_command)
+            if not os.path.isdir(localtardir):
+                os.makedirs(localtardir)
+            self.get(os.path.join(remotetardir,tar_name_ext),os.path.join(localtardir,tar_name_ext))
+            with tarfile.open(os.path.join(localtardir,tar_name_ext), 'r') as tar:
+                tar.extractall(path=os.path.join(localtardir,tar_name))
+            for i in range(len(self.get_wait)):
+                if os.path.isfile(os.path.join(localtardir,tar_name,str(i))):
+                    shutil.copy(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
+                else:
+                    shutil.copytree(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
+            shutil.rmtree(os.path.join(localtardir,tar_name))
+            os.remove(os.path.join(localtardir,tar_name_ext))
+            if not glob.glob(os.path.join(localtardir,'*')):
+                shutil.rmtree(localtardir)
+        self.get_wait = {}
+        return output
 
     def rm(self, path):
         self.command('rm -R '+path)

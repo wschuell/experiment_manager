@@ -160,6 +160,8 @@ exit 0
 				job.files.append(f)
 		for f in job.files:
 			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
+			session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
+		session.batch_send()
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
@@ -284,10 +286,13 @@ exit 0
 					os.makedirs(format_dict_job['local_job_dir'])
 				session.create_path("{job_dir}".format(**format_dict_job))
 				for f in job.files:
-					session.put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
+					#session.put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
+					session.batch_put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
 
 			for f in ['pbs.py','epilogue.sh']:
 				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
+				session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
+			session.batch_send()
 			session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			session.command_output('chmod u+x {multijob_dir}/pbs.py'.format(**format_dict))
 
@@ -342,6 +347,8 @@ exit 0
 		if hasattr(job,'clean_at_retrieval'):
 			for f in job.clean_at_retrieval:
 				session.remove(os.path.join(job_dir,f))
+		#session.batch_get(job_dir, local_job_dir)
+		#session.batch_receive()
 		session.get_dir(job_dir, local_job_dir)
 
 		#session.close()
