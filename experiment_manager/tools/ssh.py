@@ -16,6 +16,7 @@ import tarfile
 import StringIO
 import shutil
 import glob
+import uuid
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
@@ -175,8 +176,10 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self,localtardir='',tar_name='temp_tar',remotetardir='',command_send_func=None):
+    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None):
         if len(self.put_wait):
+            if tar_name is None:
+                tar_name = str(uuid.uuid1())
             tar_name_ext = tar_name+'.tar'
             if not os.path.isdir(localtardir):
                 os.makedirs(localtardir)
@@ -194,7 +197,7 @@ class SSHSession(object):
                 output = self.command_output(final_command)
             else:
                 output = command_send_func(final_command)
-        self.put_wait = {}
+        self.put_wait = []
         return output
             #command = ''#'{'
             #for f in self.put_wait:
@@ -221,8 +224,10 @@ class SSHSession(object):
             #clean
             #remotetempdir? and use it
 
-    def batch_receive(self,localtardir='',tar_name='temp_tar',remotetardir='',command_send_func=None):
+    def batch_receive(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None):
         if len(self.get_wait):
+            if tar_name is None:
+                tar_name = str(uuid.uuid1())
             tar_name_ext = tar_name+'.tar'
             mkdir_command = 'mkdir -p '+os.path.join(remotetardir,tar_name)
             cp_command = ' && '.join(['cp -R {path_i} {remotetarpath_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.get_wait[i]['remotedir'],self.get_wait[i]['remotename'])) for i in range(len(self.get_wait))])
@@ -247,7 +252,7 @@ class SSHSession(object):
             os.remove(os.path.join(localtardir,tar_name_ext))
             if not glob.glob(os.path.join(localtardir,'*')):
                 shutil.rmtree(localtardir)
-        self.get_wait = {}
+        self.get_wait = []
         return output
 
     def rm(self, path):

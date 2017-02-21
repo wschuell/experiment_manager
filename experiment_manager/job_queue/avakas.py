@@ -9,13 +9,13 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class AvakasJobQueue(JobQueue):
-	def __init__(self,username=None, ssh_cfg={}, basedir=None, max_jobs=1000, **kwargs):
+	def __init__(self,username=None, ssh_cfg={}, basedir=None, local_basedir=None, max_jobs=1000, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
-		if basedir is not None and basedir[0] == '/':
-			raise IOError('basedir must be relative path')
+		#if basedir is not None and basedir[0] == '/':
+		#	raise IOError('basedir must be relative path')
 		if username is not None:
 			self.ssh_cfg['username'] = username
 		if 'hostname' not in self.ssh_cfg.keys():
@@ -27,6 +27,10 @@ class AvakasJobQueue(JobQueue):
 			self.basedir = '/scratch/'+self.ssh_cfg['username']+'/jobs'
 		else:
 			self.basedir = basedir
+		if local_basedir is None:
+			self.local_basedir = 'jobs'
+		else:
+			self.local_basedir = local_basedir
 		self.waiting_to_submit = {}
 		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
 
@@ -161,7 +165,7 @@ exit 0
 		for f in job.files:
 			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 			session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
-		session.batch_send()
+		session.batch_send(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
@@ -292,7 +296,7 @@ exit 0
 			for f in ['pbs.py','epilogue.sh']:
 				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 				session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
-			session.batch_send()
+			session.batch_send(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
 			session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			session.command_output('chmod u+x {multijob_dir}/pbs.py'.format(**format_dict))
 
@@ -348,7 +352,7 @@ exit 0
 			for f in job.clean_at_retrieval:
 				session.remove(os.path.join(job_dir,f))
 		#session.batch_get(job_dir, local_job_dir)
-		#session.batch_receive()
+		#session.batch_receive(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub))
 		session.get_dir(job_dir, local_job_dir)
 
 		#session.close()
