@@ -165,7 +165,7 @@ exit 0
 		for f in job.files:
 			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 			session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
-		session.batch_send(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
+		session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
 		session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		session.command_output('chmod u+x {job_dir}/pbs.py'.format(**format_dict))
 		job.PBS_JOBID = session.command_output("qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/pbs.py".format(**format_dict))[:-1]
@@ -296,7 +296,7 @@ exit 0
 			for f in ['pbs.py','epilogue.sh']:
 				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 				session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
-			session.batch_send(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
+			session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
 			session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			session.command_output('chmod u+x {multijob_dir}/pbs.py'.format(**format_dict))
 
@@ -336,7 +336,7 @@ exit 0
 				if j.uuid in lockedbackups:
 					self.backups_status['locked'].append(j.uuid)
 
-	def retrieve_job(self, job):
+	def individual_retrieve_job(self, job):
 		path = copy.deepcopy(job.path)
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
@@ -351,13 +351,58 @@ exit 0
 		if hasattr(job,'clean_at_retrieval'):
 			for f in job.clean_at_retrieval:
 				session.remove(os.path.join(job_dir,f))
-		#session.batch_get(job_dir, local_job_dir)
-		#session.batch_receive(localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub))
-		session.get_dir(job_dir, local_job_dir)
+		session.batch_get(job_dir, local_job_dir)
+		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
+		#session.get_dir(job_dir, local_job_dir)
 
 		#session.close()
 		job.update()
 		job.path = path
+
+	def retrieve_job(self,job):
+		if not hasattr(self,'to_remove'):
+			self.to_remove = []
+		path = copy.deepcopy(job.path)
+		session = self.ssh_session
+		if job.uuid in self.backups_status['present'] and not job.uuid in self.backups_status['locked']:
+			job_dir = self.format_dict(job)['job_backup_dir']
+		else:
+			job_dir = self.format_dict(job)['job_dir']
+		local_job_dir = self.format_dict(job)['local_job_dir']
+		if hasattr(job,'clean_at_retrieval'):
+			for f in job.clean_at_retrieval:
+				self.to_remove.append(os.path.join(job_dir,f))
+		session.batch_get(job_dir, local_job_dir)
+		if hasattr(job,'multijob_dir'):
+			for f in ['output.txt','error.txt']:
+				remote_path = os.path.join(job.multijob_dir,f+'-'+str(job.array_id))
+				local_path = os.path.join(local_job_dir,f)
+				session.batch_get(remote_path,local_path)
+				#session.command_output('cp {multijob_dir}/{f}-{array_id} {dir}/{f}'.format(f=f,dir=job_dir,multijob_dir=job.multijob_dir,array_id=job.array_id,**self.format_dict(job)))
+		#session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
+		#session.get_dir(job_dir, local_job_dir)
+
+		#session.close()
+		job.status = 'retrieving'
+
+	def global_retrieval(self):
+		session = self.ssh_session
+		retrieving_list = [j for j in self.job_list if j.status == 'retrieving']
+		path_list = []
+		for j in retrieving_list:
+			path_list.append(copy.deepcopy(j.path))
+
+		if hasattr(self,'to_remove') and len(self.to_remove)>0:
+			rm_command = 'rm -R ' + ' '.join(self.to_remove)
+			session.command_output(rm_command)
+			self.to_remove = []
+		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_output_qsub)
+		for i in range(len(retrieving_list)):
+			j = retrieving_list[i]
+			jpath = path_list[i]
+			j.update()
+			j.path = jpath
+		return retrieving_list
 
 	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
 		#session = SSHSession(**self.ssh_cfg)
@@ -420,14 +465,20 @@ exit 0
 		self.ssh_session.command_output('echo \"'+cmd+'\" > '+file_path)
 		cmdjob_id = self.ssh_session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+file_path)
 		t = time.time()
-		while not self.ssh_session.path_exists(output_path):
-			if time.time()-t > 60*t_min:
-				if retry:
-					return self.command_output_qsub(cmd,t_min=retry_time,retry=False)
-				else:
-					raise Exception('Command is taking too long, might be blocked')
+		running_jobs_string = self.ssh_session.command_output('qstat -f -t|grep \'Job Id:\'')
+		#while not self.ssh_session.path_exists(output_path):
+		while running_jobs_string.find(cmdjob_id) != -1:
 			time.sleep(5)
-		return self.ssh_session.command_output('cat '+output_path)
+			#if time.time()-t > 60*t_min:
+			running_jobs_string = self.ssh_session.command_output('qstat -f -t|grep \'Job Id:\'')
+		output = self.ssh_session.command_output('cat '+output_path)
+		if 'PBS: job killed:' in output: 
+			if retry:
+				return self.command_output_qsub(cmd,t_min=retry_time,retry=False)
+			else:
+				raise Exception('Command is taking too long, might be blocked')
+		else:
+			return output
 		#self.ssh_session.command_output('rm -R '+cmd_path)
 
 

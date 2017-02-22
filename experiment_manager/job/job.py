@@ -98,8 +98,6 @@ class Job(object):
 			self.set_prg_states()
 			try:
 				self.script()
-			except KeyboardInterrupt:
-				raise
 			except Exception as e:
 				with open('scripterror_notifier','w') as f:
 					f.write(str(e))

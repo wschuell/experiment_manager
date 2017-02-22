@@ -108,6 +108,7 @@ class JobQueue(object):
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
 				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']]
+				print j.deps
 				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
 					if dep_uuid not in job_uuids:
 						j.deps.remove(dep_uuid)
@@ -121,12 +122,18 @@ class JobQueue(object):
 				j.save()
 			elif j.status == 'finished running':
 				self.retrieve_job(j)
-				if j.status == 'pending':
+				if j.status in ['pending','running']:
 					j.status = 'missubmitted'
 			#elif j.status == 'dependencies not satisfied':
 				#for dep in j.gen_depend():
 				#	print 'Adding dependency for job ' + j.job_dir
 				#	self.add_job(dep)
+			j.close_connections()
+		retrieved_list = self.global_retrieval()
+		for j in retrieved_list:
+			if j.status in ['pending','running']:
+					j.status = 'missubmitted'
+		for j in [x for x in self.job_list]:
 			if j.status == 'unfinished':
 				j.fix()
 			elif j.status == 'done':
@@ -262,13 +269,16 @@ class JobQueue(object):
 	def retrieve_job(self, job):
 		pass
 
+	def global_retrieval(self):
+		return []
+
 	def avail_workers(self):
 		return 1
 
 	def get_errors(self):
 		errors = []
 		for j in self.job_list:
-			if j.status == 'missubmitted':
+			if j.status in ['missubmitted','script error']:
 				errors.append((j.job_dir,j.get_error()))
 		return errors
 

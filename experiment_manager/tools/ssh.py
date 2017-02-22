@@ -176,27 +176,47 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None):
-        if len(self.put_wait):
-            if tar_name is None:
-                tar_name = str(uuid.uuid1())
-            tar_name_ext = tar_name+'.tar'
-            if not os.path.isdir(localtardir):
-                os.makedirs(localtardir)
-            with tarfile.open(os.path.join(localtardir,tar_name_ext), 'w') as tar:
-                for i in range(len(self.put_wait)):
-                    f = self.put_wait[i]
-                    tar.add(os.path.join(f['localdir'],f['localname']),arcname=str(i)) #if folder structure not respected, maybe add a with pathpy.Path and just tar add localname
-            self.put(os.path.join(localtardir,tar_name_ext),os.path.join(remotetardir,tar_name_ext))
-            mkdir_command = 'mkdir -p ' + os.path.join(remotetardir,tar_name)
-            tar_command = 'tar xf '+ os.path.join(remotetardir,tar_name_ext) +' -C '+os.path.join(remotetardir,tar_name)
-            cp_command = ' && '.join(['cp -R {remotetarpath_i} {path_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename'])) for i in range(len(self.put_wait))])
-            rm_command = 'rm -R ' + os.path.join(remotetardir,tar_name) + '*'
-            final_command = ' && '.join([mkdir_command,tar_command, cp_command, rm_command])
-            if command_send_func is None:
-                output = self.command_output(final_command)
+    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50):
+        output = ''
+        if len(untar_basedir)>1 and untar_basedir[-1] == '/':
+            untar_basedir = untar_basedir[:-1]
+        if len(self.put_wait)>0:
+            if len(self.put_wait) <limit_min:
+                for pw in self.put_wait:
+                    if os.path.isdir(os.path.join(pw['localdir'],pw['localname'])):
+                        self.put_dir(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
+                    else:                        
+                        self.put(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
             else:
-                output = command_send_func(final_command)
+                if tar_name is None:
+                    tar_name = str(uuid.uuid1())
+                tar_name_ext = tar_name+'.tar'
+                if not os.path.isdir(localtardir):
+                    os.makedirs(localtardir)
+                for pw in self.put_wait:
+                    untar_len = len(untar_basedir)
+                    rmt_dir = pw['remotedir']
+                    if len(rmt_dir)>=untar_len and rmt_dir[:untar_len] == untar_basedir:# and rmt_dir[0] == '/'
+                        pw['remotedir'] = rmt_dir[untar_len:]
+                    if len(pw['remotedir'])>0 and pw['remotedir'][0] == '/':
+                        pw['remotedir'] = pw['remotedir'][1:]
+                with tarfile.open(os.path.join(localtardir,tar_name_ext), 'w') as tar:
+                    for i in range(len(self.put_wait)):
+                        f = self.put_wait[i]
+                        tar.add(os.path.join(f['localdir'],f['localname']),arcname=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename']))#,arcname=str(i)) #if folder structure not respected, maybe add a with pathpy.Path and just tar add localname
+                self.put(os.path.join(localtardir,tar_name_ext),os.path.join(remotetardir,tar_name_ext))
+                #mkdir_command = 'mkdir -p ' + os.path.join(remotetardir,tar_name)
+                tar_command = 'tar xf '+ os.path.join(remotetardir,tar_name_ext) +' -C '+untar_basedir
+                #mkdir_command2 = 'mkdir -p ' + ' '.join([pw['remotedir'] for pw in self.put_wait])
+                #cp_command = '; '.join(['cp -R {remotetarpath_i} {path_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename'])) for i in range(len(self.put_wait))])
+                #rm_command = 'rm -R ' + os.path.join(remotetardir,tar_name)
+                rm_command2 = 'rm -R ' + os.path.join(remotetardir,tar_name_ext)
+                final_command = '; '.join([tar_command, rm_command2])
+                if command_send_func is None:
+                    output = self.command_output(final_command)
+                else:
+                    output = command_send_func(final_command)
+                os.remove(os.path.join(localtardir,tar_name_ext))
         self.put_wait = []
         return output
             #command = ''#'{'
@@ -224,36 +244,92 @@ class SSHSession(object):
             #clean
             #remotetempdir? and use it
 
-    def batch_receive(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None):
+    def batch_receive(self,untar_basedir='',localtardir='',tar_name=None,remotetardir='',command_send_func=None,limit_min=50):
+        output = ''
+        if len(untar_basedir)>1 and untar_basedir[-1] == '/':
+            untar_basedir = untar_basedir[:-1]
         if len(self.get_wait):
-            if tar_name is None:
-                tar_name = str(uuid.uuid1())
-            tar_name_ext = tar_name+'.tar'
-            mkdir_command = 'mkdir -p '+os.path.join(remotetardir,tar_name)
-            cp_command = ' && '.join(['cp -R {path_i} {remotetarpath_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.get_wait[i]['remotedir'],self.get_wait[i]['remotename'])) for i in range(len(self.get_wait))])
-            tar_command = 'tar cf '+os.path.join(remotetardir, tar_name_ext)+' -C '+ os.path.join(remotetardir,tar_name) + ' ' +' '.join([str(i) for i in range(len(self.get_wait))])
-            rm_command = 'rm -R '+os.path.join(remotetardir,tar_name)
-            final_command = ' && '.join([mkdir_command, cp_command, tar_command, rm_command])
-            if command_send_func is None:
-                output = self.command_output(final_command)
+            if len(self.get_wait) <limit_min:
+                for gw in self.get_wait:
+                    if self.isdir(os.path.join(gw['remotedir'],gw['remotename'])):
+                        self.get_dir(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
+                    else:
+                        self.get(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
             else:
-                output = command_send_func(final_command)
-            if not os.path.isdir(localtardir):
-                os.makedirs(localtardir)
-            self.get(os.path.join(remotetardir,tar_name_ext),os.path.join(localtardir,tar_name_ext))
-            with tarfile.open(os.path.join(localtardir,tar_name_ext), 'r') as tar:
-                tar.extractall(path=os.path.join(localtardir,tar_name))
-            for i in range(len(self.get_wait)):
-                if os.path.isfile(os.path.join(localtardir,tar_name,str(i))):
-                    shutil.copy(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
+                if tar_name is None:
+                    tar_name = str(uuid.uuid1())
+                tar_name_ext = tar_name+'.tar'
+                for gw in self.get_wait:
+                    untar_len = len(untar_basedir)
+                    lcl_dir = gw['localdir']
+                    if len(lcl_dir)>=untar_len and lcl_dir[:untar_len] == untar_basedir:
+                        gw['localdir'] = lcl_dir[untar_len:]
+                    if len(gw['localdir'])>0 and gw['localdir'][0] == '/':
+                        gw['localdir'] = gw['localdir'][1:]
+                gw_str = str(self.get_wait)
+                python_script = """import tarfile
+import os
+import sys
+
+remotetardir = "{remotetardir}"
+localtardir = "{localtardir}"
+get_wait = {gw_str}
+untar_basedir = "{untar_basedir}"
+tar_name_ext = "{tar_name_ext}"
+
+
+with tarfile.open(os.path.join(remotetardir,tar_name_ext), 'w') as tar:
+    for i in range(len(get_wait)):
+        f = get_wait[i]
+        tar.add(os.path.join(f['remotedir'],f['remotename']),arcname=os.path.join(get_wait[i]['localdir'],get_wait[i]['localname']))
+
+sys.exit(0)
+            """.format(remotetardir=remotetardir,localtardir=localtardir,gw_str=gw_str,untar_basedir=untar_basedir, tar_name_ext=tar_name_ext)
+                if not os.path.isdir(localtardir):
+                    os.makedirs(localtardir)
+                python_file = os.path.join(localtardir,tar_name+'.py')
+                remote_python_file = os.path.join(remotetardir,tar_name+'.py')
+                with open(python_file,'w') as f:
+                    f.write(python_script)
+                self.mkdir_p(remotetardir)
+                self.put(python_file,remote_python_file)
+                if command_send_func is None:
+                    self.command_output('python '+remote_python_file)
                 else:
-                    shutil.copytree(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
-            shutil.rmtree(os.path.join(localtardir,tar_name))
-            os.remove(os.path.join(localtardir,tar_name_ext))
-            if not glob.glob(os.path.join(localtardir,'*')):
-                shutil.rmtree(localtardir)
+                    command_send_func('python '+remote_python_file)
+                self.get(os.path.join(remotetardir,tar_name_ext),os.path.join(localtardir,tar_name_ext))
+                command = 'rm {pythonfile}; rm {tarfile}'.format(pythonfile=remote_python_file,tarfile=os.path.join(remotetardir,tar_name_ext))
+                self.command_output(command)
+                with tarfile.open(os.path.join(localtardir,tar_name_ext), 'r') as tar:
+                    tar.extractall(path=untar_basedir)
+                os.remove(os.path.join(localtardir,tar_name_ext))
+                os.remove(python_file)
         self.get_wait = []
         return output
+
+#            mkdir_command = 'mkdir -p '+os.path.join(remotetardir,tar_name)
+#            cp_command = '; '.join(['cp -R {path_i} {remotetarpath_i}'.format(remotetarpath_i=os.path.join(remotetardir,tar_name,str(i)),path_i=os.path.join(self.get_wait[i]['remotedir'],self.get_wait[i]['remotename'])) for i in range(len(self.get_wait))])
+#            tar_command = 'tar cf '+os.path.join(remotetardir, tar_name_ext)+' -C '+ os.path.join(remotetardir,tar_name) + ' ' +' '.join([str(i) for i in range(len(self.get_wait))])
+#            rm_command = 'rm -R '+os.path.join(remotetardir,tar_name)
+#            final_command = '; '.join([mkdir_command, cp_command, tar_command, rm_command])
+#            if command_send_func is None:
+#                output = self.command_output(final_command)
+#            else:
+#                output = command_send_func(final_command)
+#            if not os.path.isdir(localtardir):
+#                os.makedirs(localtardir)
+#            self.get(os.path.join(remotetardir,tar_name_ext),os.path.join(localtardir,tar_name_ext))
+#            with tarfile.open(os.path.join(localtardir,tar_name_ext), 'r') as tar:
+#                tar.extractall(path=os.path.join(localtardir,tar_name))
+#            for i in range(len(self.get_wait)):
+#                if os.path.isfile(os.path.join(localtardir,tar_name,str(i))):
+#                    shutil.copy(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
+#                else:
+#                    shutil.copytree(os.path.join(localtardir,tar_name,str(i)),os.path.join(self.get_wait[i]['localdir'],self.get_wait[i]['localname']))
+#            shutil.rmtree(os.path.join(localtardir,tar_name))
+#            os.remove(os.path.join(localtardir,tar_name_ext))
+#            if not glob.glob(os.path.join(localtardir,'*')):
+#                shutil.rmtree(localtardir)
 
     def rm(self, path):
         self.command('rm -R '+path)
