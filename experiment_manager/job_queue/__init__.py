@@ -105,22 +105,9 @@ class JobQueue(object):
 			self.save_status(message='Requirements installed')
 		self.check_running_jobs()
 		self.check_backups()
+
 		for j in [x for x in self.job_list]:
-			if j.status == 'dependencies not satisfied':
-				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']]
-				print j.deps
-				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
-					if dep_uuid not in job_uuids:
-						j.deps.remove(dep_uuid)
-				if not j.deps:
-					j.re_init()
-				#self.job_list.remove(j)
-				#self.add_job(j)
-			if j.status == 'pending' and self.avail_workers()>0:
-				j.save()
-				self.submit_job(j)
-				j.save()
-			elif j.status == 'finished running':
+			if j.status == 'finished running':
 				self.retrieve_job(j)
 				if j.status in ['pending','running']:
 					j.status = 'missubmitted'
@@ -129,10 +116,12 @@ class JobQueue(object):
 				#	print 'Adding dependency for job ' + j.job_dir
 				#	self.add_job(dep)
 			j.close_connections()
+			
 		retrieved_list = self.global_retrieval()
 		for j in retrieved_list:
 			if j.status in ['pending','running']:
 					j.status = 'missubmitted'
+
 		for j in [x for x in self.job_list]:
 			if j.status == 'unfinished':
 				j.fix()
@@ -146,7 +135,31 @@ class JobQueue(object):
 				self.executed_jobs += 1
 				if self.erase:
 					j.status = 'to be cleaned'
-			elif j.status == 'to be cleaned':
+			j.close_connections()
+					
+		for j in [x for x in self.job_list]:
+			if j.status == 'dependencies not satisfied':
+				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']] # maybe manage dependencies differently: stay in 'done' status , or 'unpacked', and clean only if deps do not need it anymore
+				for dep_uuid in [dep_uuid for dep_uuid in j.deps]:
+					if dep_uuid not in job_uuids:
+						j.deps.remove(dep_uuid)
+				if not j.deps:
+					j.re_init()
+				#self.job_list.remove(j)
+				#self.add_job(j)
+			j.close_connections()
+
+		for j in [x for x in self.job_list]:
+			if j.status == 'pending' and self.avail_workers()>0:
+				j.save()
+				self.submit_job(j)
+				j.save()
+			j.close_connections()
+
+		self.global_submit()
+
+		for j in [x for x in self.job_list]:
+			if j.status == 'to be cleaned':
 				self.job_list.remove(j)
 				j.clean()
 			elif self.verbose and j.status == 'missubmitted':
@@ -156,7 +169,7 @@ class JobQueue(object):
 			elif self.verbose and j.status == 'script error':
 				print('Script error for job: '+j.job_dir)
 			j.close_connections()
-		self.global_submit()
+
 		self.save()
 		print self.get_status_string()
 		self.save_status()
@@ -214,7 +227,7 @@ class JobQueue(object):
 				step = t
 			if call_between is not None:
 				call_between()
-			if not [j for j in self.job_list if j.status != 'to be cleaned']:
+			if self.job_list and not [j for j in self.job_list if j.status != 'to be cleaned']:
 				self.update_queue()
 
 	def check_virtualenvs(self):

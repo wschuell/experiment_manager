@@ -402,6 +402,7 @@ exit 0
 			jpath = path_list[i]
 			j.update()
 			j.path = jpath
+			j.close_connections()
 		return retrieving_list
 
 	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
