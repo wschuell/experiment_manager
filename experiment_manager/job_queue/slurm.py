@@ -11,15 +11,54 @@ class SlurmJobQueue(ClusterJobQueue):
 			return [('script.py',self.individual_script(format_dict=format_dict)),
 					('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
 
-	def individual_script(self, format_dict):
-		return """#!{python_bin}
+
+
+
+	def individual_launch_script(self, format_dict):
+		return """#!/usr/bin/bash
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --job-name="{job_name}"
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
-#SBATCH --epilog="epilogue.sh"
+
+./WHERE/script.py &
+PID=$!
+
+WAIT_TIME=$(({walltime_seconds}-120))
+sleep $WAIT_TIME && echo "Killing Job" && kill -9 $PID &
+PID2=$!
+
+wait $PID
+
+kill -9 $PID2
+
+echo "Job finished, backing up files."
+PBS_JOBID=$1
+cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
+rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
+cp -f -R {base_work_dir}\"$PBS_JOBID\"/* {job_dir}/
+rm -R {base_work_dir}$PBS_JOBID
+echo "Backup done"
+echo "================================"
+echo "EPILOGUE"
+echo "================================"
+echo "Job ID: $1"
+echo "User ID: $2"
+echo "Group ID: $3"
+echo "Job Name: $4"
+echo "Session ID: $5"
+echo "Resource List: $6"
+echo "Resources Used: $7"
+echo "Queue Name: $8"
+echo "Account String: $9"
+echo "================================"
+exit 0
+""".format(**format_dict)
+
+	def individual_script(self, format_dict):
+		return """#!{python_bin}
 
 import os
 import sys
@@ -69,13 +108,6 @@ exit 0
 
 	def multijob_script(self, format_dict):
 		return """#!{python_bin}
-#SBATCH --time={walltime}
-#SBATCH -N 1
-#SBATCH -n 1
-#SBATCH --job-name="{multijob_name}"
-#SBATCH --output={multijob_dir}/output.txt
-#SBATCH --error={multijob_dir}/error.txt
-#SBATCH --epilog="epilogue.sh"
 
 import os
 import sys
@@ -108,6 +140,61 @@ jobthread.join()
 
 
 sys.exit(0)
+""".format(**format_dict)
+
+
+
+
+	def multijob_launch_script(self, format_dict):
+		return """#!/usr/bin/bash
+#SBATCH --time={walltime}
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH --job-name="{multijob_name}"
+#SBATCH --output={multijob_dir}/output.txt
+#SBATCH --error={multijob_dir}/error.txt
+
+./WHERE/script.py &
+PID=$!
+
+WAIT_TIME=$(({walltime_seconds}-120))
+sleep $WAIT_TIME && echo "Killing Job" && kill -9 $PID &
+PID2=$!
+
+wait $PID
+
+kill -9 $PID2
+
+echo "Job finished, backing up files."
+PBS_JOBID=$1
+
+MULTIJOBDIR={multijob_dir}
+ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
+JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+
+cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
+rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
+
+cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
+rm -R {base_work_dir}$PBS_JOBID
+
+
+
+echo "Backup done"
+echo "================================"
+echo "EPILOGUE"
+echo "================================"
+echo "Job ID: $1"
+echo "User ID: $2"
+echo "Group ID: $3"
+echo "Job Name: $4"
+echo "Session ID: $5"
+echo "Resource List: $6"
+echo "Resources Used: $7"
+echo "Queue Name: $8"
+echo "Account String: $9"
+echo "================================"
+exit 0
 """.format(**format_dict)
 
 	def multijob_epilogue(self, format_dict):

@@ -74,6 +74,7 @@ class ClusterJobQueue(JobQueue):
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
 			'job_jobid': jobid,
+			'walltime_seconds': job.estimated_time,
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}
 
