@@ -14,7 +14,9 @@ job_queue_class={
 	'local':'local.LocalJobQueue',
 	'local_multiprocess':'local.MultiProcessJobQueue',
 	'avakas':'avakas.AvakasJobQueue',
-	'plafrim':'plafrim.PlafrimJobQueue'
+	'plafrim':'plafrim.PlafrimJobQueue',
+	'torque':'torque.TorqueJobQueue',
+	'slurm':'SlurmJobQueue'
 }
 
 def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
