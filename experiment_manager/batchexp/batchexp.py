@@ -21,9 +21,9 @@ class BatchExp(object):
 		if 'name' not in self.jq_cfg.keys():
 			self.jq_cfg['name'] = self.name
 		self.jobqueue = get_jobqueue(**self.jq_cfg)
-		for j in self.jobqueue.job_list:
-			if j.status == 'missubmitted':
-				j.reinit_missubmitted()
+		miss_list = [j for j in self.jobqueue.job_list if j.status in ['missubmitted','script error']]
+		if len(miss_list) == len(self.jobqueue.job_list):
+			self.jobqueue.reinit_missubmitted()
 		if db is not None:
 			self.db = db
 		elif db_cfg is not None:

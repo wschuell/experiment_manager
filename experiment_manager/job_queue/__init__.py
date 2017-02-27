@@ -103,6 +103,7 @@ class JobQueue(object):
 			self.check_virtualenvs()
 			self.update_needed = False
 			self.save_status(message='Requirements installed')
+			self.save()
 		self.check_running_jobs()
 		self.check_backups()
 
@@ -116,7 +117,7 @@ class JobQueue(object):
 				#	print 'Adding dependency for job ' + j.job_dir
 				#	self.add_job(dep)
 			j.close_connections()
-			
+
 		retrieved_list = self.global_retrieval()
 		for j in retrieved_list:
 			if j.status in ['pending','running']:
@@ -136,7 +137,7 @@ class JobQueue(object):
 				if self.erase:
 					j.status = 'to be cleaned'
 			j.close_connections()
-					
+
 		for j in [x for x in self.job_list]:
 			if j.status == 'dependencies not satisfied':
 				job_uuids = [jj.uuid for jj in self.job_list if jj.status not in ['done','to be cleaned']] # maybe manage dependencies differently: stay in 'done' status , or 'unpacked', and clean only if deps do not need it anymore

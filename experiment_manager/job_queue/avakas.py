@@ -8,7 +8,22 @@ import uuid
 from . import JobQueue
 from ..tools.ssh import SSHSession
 
-class AvakasJobQueue(JobQueue):
+from torque import TorqueJobQueue
+
+class AvakasJobQueue(TorqueJobQueue):
+	def __init__(self, username, basedir=None, local_basedir=None, base_work_dir='/tmp', max_jobs=1000, key_file='avakas', password=None, **kwargs):
+		ssh_cfg = {'username':username,
+					'hostname':'avakas.mcia.univ-bordeaux.fr',
+					'key_file':key_file,
+					'password':password
+					}
+		if basedir is None:
+			basedir = '/scratch/'+username+'/jobs'
+		if local_basedir is None:
+			local_basedir = 'jobs'
+		TorqueJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, **kwargs)
+
+class AvakasJobQueueOld(JobQueue):
 	def __init__(self,username=None, ssh_cfg={}, basedir=None, local_basedir=None, max_jobs=1000, **kwargs):
 		super(AvakasJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs

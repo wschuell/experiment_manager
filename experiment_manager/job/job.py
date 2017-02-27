@@ -99,7 +99,7 @@ class Job(object):
 			try:
 				self.script()
 			except Exception as e:
-				with open('scripterror_notifier','w') as f:
+				with open('scripterror_notifier','w') as f:#directly change job status and save, then raise?
 					f.write(str(e))
 				raise
 			self.get_prg_states()
@@ -245,6 +245,8 @@ class Job(object):
 				with open('job.json') as f:
 					out_job = jsonpickle.loads(f.read())
 				self.__dict__.update(out_job.__dict__)
+				if os.path.isfile('scripterror_notifier'):
+					self.status = 'script error'
 		else:
 			self.save()
 
