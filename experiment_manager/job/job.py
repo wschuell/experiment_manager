@@ -210,6 +210,7 @@ class Job(object):
 			f.write('locked')
 
 		self.clean_backup()
+		os.makedirs(own_backup_dir)
 		for f in self.files:
 			if not os.path.isdir(os.path.dirname(os.path.join(own_backup_dir,f))):
 				os.makedirs(os.path.dirname(os.path.join(own_backup_dir,f)))
