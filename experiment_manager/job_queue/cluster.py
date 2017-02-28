@@ -348,7 +348,7 @@ class ClusterJobQueue(JobQueue):
 			out = self.command_asjob_output(' && '.join(cmd),retry=True)
 			#session.close()
 
-	def command_asjob_output(self,cmd,t_min=10,retry=False,retry_time=30):
+	def command_asjob_output(self,cmd,t_min=10,retry=True,retry_time=30):
 		cmd_uuid = str(uuid.uuid1())
 		cmd_path = os.path.join(self.basedir,'tempcommand_'+cmd_uuid)
 		out = self.ssh_session.command_output('mkdir -p '+cmd_path)

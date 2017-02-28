@@ -210,7 +210,11 @@ class Job(object):
 			f.write('locked')
 
 		self.clean_backup()
-		shutil.copytree('.',own_backup_dir,ignore=shutil.ignore_patterns(own_backup_dir))
+		for f in self.files:
+			if not os.path.isdir(os.path.dirname(os.path.join(own_backup_dir,f))):
+				os.makedirs(os.path.dirname(os.path.join(own_backup_dir,f)))
+			shutil.copy(f,os.path.join(own_backup_dir,f))
+		#shutil.copytree('.',own_backup_dir,ignore=shutil.ignore_patterns(own_backup_dir))
 		os.remove(backup_lock_file)
 
 	def clean_backup(self):
