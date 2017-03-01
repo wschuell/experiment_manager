@@ -96,7 +96,7 @@ class Job(object):
 			if not hasattr(self, 'prg_states'):
 				self.load_prg_states()
 			self.set_prg_states()
-			self.checktime(force=True)
+			self.check_time(force=True)
 			try:
 				self.script()
 			except Exception as e:
