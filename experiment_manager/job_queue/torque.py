@@ -48,8 +48,10 @@ JOBID=$1
 
 if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+echo "Copying backup_dir"
 cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
+echo "Removing backup_dir"
 rm -R {base_work_dir}\"$JOBID\"/backup_dir
 fi
 
@@ -120,8 +122,10 @@ JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
 if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+echo "Copying backup_dir"
 cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
+echo "Removing backup_dir"
 rm -R {base_work_dir}\"$JOBID\"/backup_dir
 fi
 
