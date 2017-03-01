@@ -372,7 +372,7 @@ class GraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		return [ExperimentDBJob(tmax=tmax,  estimated_time=estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)]
+		return [ExperimentDBJob(tmax=tmax,  estimated_time=self.estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)]
 
 
 #id list is list
@@ -574,7 +574,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		j = ExperimentDBJob(tmax=tmax, estimated_time=estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
+		j = ExperimentDBJob(tmax=tmax, estimated_time=self.estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
 		self.dep_path = j.path
 		return[j]
 
