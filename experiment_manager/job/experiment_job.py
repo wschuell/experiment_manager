@@ -96,7 +96,7 @@ class ExperimentDBJob(Job):
 				raise
 		shutil.copy(source_file, dst_file)
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
-		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
+		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
 
 		self.save(keep_data=False)
 		self.db.close()
@@ -271,7 +271,7 @@ class GraphExpDBJob(ExperimentDBJob):
 					raise
 			shutil.copy(source_file, dst_file)
 			self.files.append('data/'+self.xp_uuid+'.db.xz')
-			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
+			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
 		self.save(keep_data=False)
 		self.close_connections()
 
@@ -444,7 +444,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 				shutil.copy(source_file, dst_file)
 				self.files.append('data/'+self.xp_uuid+'.db.xz')
-			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db']
+			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
 		self.save(keep_data=False)
 		self.close_connections()
 

@@ -96,6 +96,7 @@ class Job(object):
 			if not hasattr(self, 'prg_states'):
 				self.load_prg_states()
 			self.set_prg_states()
+			self.checktime(force=True)
 			try:
 				self.script()
 			except Exception as e:
@@ -135,12 +136,12 @@ class Job(object):
 	def update_exec_time(self):
 		self.exec_time = time.time() - self.init_time
 
-	def check_time(self, t=None):
+	def check_time(self, t=None, force=False):
 		if self.checktime:
 			if t is None:
 				t = 4*self.estimated_time/10.
 			self.update_exec_time()
-			if (self.exec_time + self.init_time) - self.lastsave_time > t:
+			if force or ((self.exec_time + self.init_time) - self.lastsave_time > t):
 				self.get_prg_states()
 				self.check_mem()
 				self.save_profile()
