@@ -52,7 +52,7 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, **kwargs):
+	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=3600, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			xp_tmax = db.get_param(xp_uuid=xp_uuid,param='Tmax')
@@ -63,7 +63,7 @@ class ExperimentDBJob(Job):
 			#self.status = 'already done'
 			#self.xp_uuid = None
 		#else:
-		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False,profiling=profiling, checktime=checktime, **kwargs)
+		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False,profiling=profiling, checktime=checktime, estimated_time=estimated_time, **kwargs)
 		if exp is None:
 			self.origin_db = db
 			with path.Path(self.get_path()):
@@ -216,8 +216,8 @@ class GraphExpJob(ExperimentJob):
 
 
 class GraphExpDBJob(ExperimentDBJob):
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, **graph_cfg):
-		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env,profiling=profiling, checktime=checktime)
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=3600, **graph_cfg):
+		super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env,profiling=profiling, checktime=checktime, estimated_time=estimated_time)
 		try:
 			if exp is None:
 				tmax_db = db.get_param(xp_uuid=xp_uuid, method=graph_cfg['method'], param='Time_max')
