@@ -176,10 +176,11 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50):
+    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50,limit_max=500):
         output = ''
         if len(untar_basedir)>1 and untar_basedir[-1] == '/':
             untar_basedir = untar_basedir[:-1]
+
         if len(self.put_wait)>0:
             if len(self.put_wait) <limit_min:
                 for pw in self.put_wait:
@@ -187,6 +188,12 @@ class SSHSession(object):
                         self.put_dir(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
                     else:                        
                         self.put(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
+            elif limit_max is not None and len(self.put_wait) > limit_max:
+                side_list = self.put_wait[limit_max:]
+                self.put_wait = self.put_wait[:limit_max]
+                output += self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
+                self.put_wait = side_list
+                return output + self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
             else:
                 if tar_name is None:
                     tar_name = str(uuid.uuid1())
@@ -244,7 +251,7 @@ class SSHSession(object):
             #clean
             #remotetempdir? and use it
 
-    def batch_receive(self,untar_basedir='',localtardir='',tar_name=None,remotetardir='',command_send_func=None,limit_min=50):
+    def batch_receive(self,untar_basedir='',localtardir='',tar_name=None,remotetardir='',command_send_func=None,limit_min=50,limit_max=500):
         output = ''
         if len(untar_basedir)>1 and untar_basedir[-1] == '/':
             untar_basedir = untar_basedir[:-1]
@@ -255,6 +262,12 @@ class SSHSession(object):
                         self.get_dir(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
                     else:
                         self.get(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
+            elif limit_max is not None and len(self.get_wait) > limit_max:
+                side_list = self.get_wait[limit_max:]
+                self.get_wait = self.get_wait[:limit_max]
+                output += self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
+                self.get_wait = side_list
+                return output + self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
             else:
                 if tar_name is None:
                     tar_name = str(uuid.uuid1())

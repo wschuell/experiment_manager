@@ -44,11 +44,18 @@ sys.exit(0)
 	def individual_epilogue(self, format_dict):
 		return """#!/bin/bash
 echo "Job finished, backing up files."
-PBS_JOBID=$1
-cp -R {base_work_dir}/\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}/\"$PBS_JOBID\"/backup_dir
-cp -f -R {base_work_dir}/\"$PBS_JOBID\"/* {job_dir}/
-rm -R {base_work_dir}/$PBS_JOBID
+JOBID=$1
+
+if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+fi
+rm -R {base_work_dir}\"$JOBID\"/backup_dir
+fi
+
+cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
+rm -R {base_work_dir}/$JOBID
+
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -104,17 +111,22 @@ sys.exit(0)
 	def multijob_epilogue(self, format_dict):
 		return """#!/bin/bash
 echo "Job finished, backing up files."
-PBS_JOBID=$1
+JOBID=$1
 
 MULTIJOBDIR={multijob_dir}
-ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
+ARRAYID=$(python -c "jobid='"$JOBID"'; print jobid.split('[')[1].split(']')[0]")
 JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
-cp -R {base_work_dir}/\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}/\"$PBS_JOBID\"/backup_dir
 
-cp -f -R {base_work_dir}/\"$PBS_JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}/$PBS_JOBID
+if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+fi
+rm -R {base_work_dir}\"$JOBID\"/backup_dir
+fi
+
+cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
+rm -R {base_work_dir}/$JOBID
 
 
 
@@ -138,7 +150,7 @@ exit 0
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
 		if cmd_type == 'simple':
-			return session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -j oe -o '+output_path+' '+file_path)[:-1]
+			return session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -p +1023 -j oe -o '+output_path+' '+file_path)[:-1]
 		elif cmd_type == 'single_job':
 			return session.command_output('qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/script.py'.format(**format_dict))[:-1]
 		elif cmd_type == 'multijob':

@@ -6,10 +6,10 @@ class SlurmJobQueue(ClusterJobQueue):
 	def gen_files(self, format_dict):
 		if 'multijob_dir' in format_dict.keys():
 			return [('script.py',self.multijob_script(format_dict=format_dict)),
-					('epilogue.sh',self.multijob_epilogue(format_dict=format_dict))]
+					('launch_script.sh',self.multijob_launch_script(format_dict=format_dict))]
 		else:
 			return [('script.py',self.individual_script(format_dict=format_dict)),
-					('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
+					('launch_script.sh',self.individual_launch_script(format_dict=format_dict))]
 
 
 
@@ -23,11 +23,11 @@ class SlurmJobQueue(ClusterJobQueue):
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
 
-./WHERE/script.py &
+cd {base_work_dir}/$SLURM_JOB_ID && ./script.py &
 PID=$!
 
 WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Killing Job" && kill -9 $PID &
+sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
 PID2=$!
 
 wait $PID
@@ -35,25 +35,33 @@ wait $PID
 kill -9 $PID2
 
 echo "Job finished, backing up files."
-PBS_JOBID=$1
-cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
-cp -f -R {base_work_dir}\"$PBS_JOBID\"/* {job_dir}/
-rm -R {base_work_dir}$PBS_JOBID
+
+JOBID=$SLURM_JOB_ID
+
+if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+fi
+rm -R {base_work_dir}\"$JOBID\"/backup_dir
+fi
+
+cp -f -R {base_work_dir}\"$JOBID\"/* {job_dir}/
+rm -R {base_work_dir}$JOBID
+
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
 echo "================================"
-echo "Job ID: $1"
-echo "User ID: $2"
-echo "Group ID: $3"
-echo "Job Name: $4"
-echo "Session ID: $5"
-echo "Resource List: $6"
-echo "Resources Used: $7"
-echo "Queue Name: $8"
-echo "Account String: $9"
+echo "Job ID: $SLURM_JOB_ID"
+echo "User ID: $SLURM_JOB_ACCOUNT"
+echo "Node List: $SLURM_JOB_NODE_LIST"
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Submit Dir: $SLURM_SUBMIT_DIR"
+echo "Submit Host: $SLURM_SUBMIT_HOST"
+echo "Node Name: $SLURMD_NODENAME"
 echo "================================"
+scontrol show job $SLURM_JOB_ID
+
 exit 0
 """.format(**format_dict)
 
@@ -79,31 +87,6 @@ job.path = '.'
 job.run()
 
 sys.exit(0)
-""".format(**format_dict)
-
-	def individual_epilogue(self, format_dict):
-		return """#!/bin/bash
-echo "Job finished, backing up files."
-PBS_JOBID=$1
-cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
-cp -f -R {base_work_dir}\"$PBS_JOBID\"/* {job_dir}/
-rm -R {base_work_dir}$PBS_JOBID
-echo "Backup done"
-echo "================================"
-echo "EPILOGUE"
-echo "================================"
-echo "Job ID: $1"
-echo "User ID: $2"
-echo "Group ID: $3"
-echo "Job Name: $4"
-echo "Session ID: $5"
-echo "Resource List: $6"
-echo "Resources Used: $7"
-echo "Queue Name: $8"
-echo "Account String: $9"
-echo "================================"
-exit 0
 """.format(**format_dict)
 
 	def multijob_script(self, format_dict):
@@ -154,11 +137,14 @@ sys.exit(0)
 #SBATCH --output={multijob_dir}/output.txt
 #SBATCH --error={multijob_dir}/error.txt
 
-./WHERE/script.py &
+ARRAYID=$SLURM_ARRAY_TASK_ID
+JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
+
+cd {base_work_dir}/$JOBID && ./script.py &
 PID=$!
 
 WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Killing Job" && kill -9 $PID &
+sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
 PID2=$!
 
 wait $PID
@@ -166,79 +152,56 @@ wait $PID
 kill -9 $PID2
 
 echo "Job finished, backing up files."
-PBS_JOBID=$1
+
 
 MULTIJOBDIR={multijob_dir}
-ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
 JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
-cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
 
-cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}$PBS_JOBID
+if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+fi
+rm -R {base_work_dir}\"$JOBID\"/backup_dir
+fi
 
+
+cp -f -R {base_work_dir}\"$JOBID\"/* $JOBDIR/
+rm -R {base_work_dir}$JOBID
 
 
 echo "Backup done"
 echo "================================"
-echo "EPILOGUE"
+echo "SLURM EPILOGUE"
 echo "================================"
-echo "Job ID: $1"
-echo "User ID: $2"
-echo "Group ID: $3"
-echo "Job Name: $4"
-echo "Session ID: $5"
-echo "Resource List: $6"
-echo "Resources Used: $7"
-echo "Queue Name: $8"
-echo "Account String: $9"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job Array ID: $SLURM_ARRAY_JOB_ID"
+echo "Job Array Task ID: $SLURM_ARRAY_TASK_ID"
+echo "User ID: $SLURM_JOB_ACCOUNT"
+echo "Node List: $SLURM_JOB_NODE_LIST"
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Submit Dir: $SLURM_SUBMIT_DIR"
+echo "Submit Host: $SLURM_SUBMIT_HOST"
+echo "Node Name: $SLURMD_NODENAME"
 echo "================================"
+scontrol show job $SLURM_JOB_ID
+
 exit 0
 """.format(**format_dict)
 
-	def multijob_epilogue(self, format_dict):
-		return """#!/bin/bash
-echo "Job finished, backing up files."
-PBS_JOBID=$1
-
-MULTIJOBDIR={multijob_dir}
-ARRAYID=$(python -c "jobid='"$PBS_JOBID"'; print jobid.split('[')[1].split(']')[0]")
-JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
-
-cp -R {base_work_dir}\"$PBS_JOBID\"/backup_dir/* {basedir}/backup_dir/
-rm -R {base_work_dir}\"$PBS_JOBID\"/backup_dir
-
-cp -f -R {base_work_dir}\"$PBS_JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}$PBS_JOBID
+#cp -R {base_work_dir}\"$JOBID\"/backup_dir/{job_uuid} {job_backup_dir}
+#rm -R {base_work_dir}\"$JOBID\"/backup_dir
 
 
-
-echo "Backup done"
-echo "================================"
-echo "EPILOGUE"
-echo "================================"
-echo "Job ID: $1"
-echo "User ID: $2"
-echo "Group ID: $3"
-echo "Job Name: $4"
-echo "Session ID: $5"
-echo "Resource List: $6"
-echo "Resources Used: $7"
-echo "Queue Name: $8"
-echo "Account String: $9"
-echo "================================"
-exit 0
-""".format(**format_dict)
 
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
 		if cmd_type == 'simple':
 			return session.command_output('sbatch --time='+str(t_min)+' -o '+output_path+' '+file_path)[:-1]
 		elif cmd_type == 'single_job':
-			return session.command_output('sbatch -l epilogue={job_dir}/epilogue.sh {job_dir}/script.py'.format(**format_dict))[:-1]
+			return session.command_output('sbatch {job_dir}/launch_script.sh'.format(**format_dict))[:-1]
 		elif cmd_type == 'multijob':
-			return session.command_output('sbatch --array=1-{Njobs} -l epilogue={multijob_dir}/epilogue.sh {multijob_dir}/script.py'.format(**format_dict))[:-1]
+			return session.command_output('sbatch --array=1-{Njobs} {multijob_dir}/launch_script.sh'.format(**format_dict))[:-1]
 
 	def array_jobid(self,jobid,jobN):
 		return jobid + '_' + str(jobN)

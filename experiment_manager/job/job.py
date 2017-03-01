@@ -138,7 +138,7 @@ class Job(object):
 	def check_time(self, t=None):
 		if self.checktime:
 			if t is None:
-				t = 45*self.estimated_time/100.
+				t = 4*self.estimated_time/10.
 			self.update_exec_time()
 			if (self.exec_time + self.init_time) - self.lastsave_time > t:
 				self.get_prg_states()
