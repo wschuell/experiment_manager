@@ -328,7 +328,7 @@ class GraphExpDBJob(ExperimentDBJob):
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
-				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
+				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
 			graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 			graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			self.check_time()
@@ -512,7 +512,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
-					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg))
+					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
 				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 				self.check_time()
@@ -529,9 +529,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 
-		if not os.path.isfile(os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')):
+		if not os.path.isfile(os.path.join('data',self.xp_uuid+'.db.xz')):#self.get_path(),'data',self.xp_uuid+'.db.xz')):
 			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
-			dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
 			shutil.copy(source_file, dst_file)
 			#if 'data/'+self.xp_uuid+'.db.xz' not in self.files: #not needed, if file gotten from deps; will stay in place for later run of the same job;
 			#	self.files.append('data/'+self.xp_uuid+'.db.xz')

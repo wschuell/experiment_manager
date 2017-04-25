@@ -123,13 +123,19 @@ class BatchExp(object):
 			self.jobqueue.save()
 
 	def update_queue(self):
-		self.jobqueue.update_queue()
+		try:
+			self.jobqueue.update_queue()
+		finally:
+			self.db.commit_from_RAM()
+		self.db.commit_from_RAM()
+
 
 	def auto_finish_queue(self,t=60,coeff=1.):
 		try:
 			self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
 		finally:
 			self.db.commit_from_RAM()
+		self.db.commit_from_RAM()
 
 
 #class Experiment(object):

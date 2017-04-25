@@ -1,6 +1,7 @@
 
 from . import JobQueue
 import pip
+import os
 import glob
 
 class LocalJobQueue(JobQueue):

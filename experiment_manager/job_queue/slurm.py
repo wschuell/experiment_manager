@@ -15,7 +15,7 @@ class SlurmJobQueue(ClusterJobQueue):
 
 
 	def individual_launch_script(self, format_dict):
-		return """#!/usr/bin/bash
+		return """#!/bin/bash
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1
@@ -23,7 +23,7 @@ class SlurmJobQueue(ClusterJobQueue):
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
 
-cd {base_work_dir}/$SLURM_JOB_ID && ./script.py &
+chmod u+x {job_dir}/script.py && {job_dir}/script.py &
 PID=$!
 
 WAIT_TIME=$(({walltime_seconds}-120))
@@ -32,21 +32,21 @@ PID2=$!
 
 wait $PID
 
-kill -9 $PID2
+kill -9 $PID2;
 
 echo "Job finished, backing up files."
 
-JOBID=$SLURM_JOB_ID
+JOBID=$SLURM_JOBID
 
-if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
-if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
-cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
-rm -R {base_work_dir}\"$JOBID\"/backup_dir
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir
 fi
 
-cp -f -R {base_work_dir}\"$JOBID\"/* {job_dir}/
-rm -R {base_work_dir}$JOBID
+#cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
+#rm -R {base_work_dir}/$JOBID
 
 echo "Backup done"
 echo "================================"
@@ -73,18 +73,24 @@ import sys
 import shutil
 import jsonpickle
 
-SLURM_JOBID = os.environ['SLURM_JOB_ID']
+print "hjiophjij"
+
+SLURM_JOBID = os.environ['SLURM_JOBID']
 job_dir = '{job_dir}'
-work_dir = '{base_work_dir}'+SLURM_JOBID
+work_dir = os.path.join('{base_work_dir}',SLURM_JOBID)
 
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
+
+print "blabla"
 
 with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
 job.run()
+
+print "hjiophjij"
 
 sys.exit(0)
 """.format(**format_dict)
@@ -97,7 +103,6 @@ import sys
 import shutil
 import jsonpickle
 
-import threading
 
 SLURM_JOBID = os.environ['SLURM_ARRAY_JOB_ID']+'_'+os.environ['SLURM_ARRAY_TASK_ID']
 SLURM_ARRAYID = os.environ['SLURM_ARRAY_TASK_ID']
@@ -105,7 +110,7 @@ SLURM_ARRAYID = os.environ['SLURM_ARRAY_TASK_ID']
 jobdir_dict = {jobdir_dict}
 
 job_dir = jobdir_dict[int(SLURM_ARRAYID)]
-work_dir = '{base_work_dir}'+SLURM_JOBID
+work_dir = os.path.join('{base_work_dir}',SLURM_JOBID)
 
 
 shutil.copytree(job_dir, work_dir)
@@ -116,11 +121,6 @@ with open('job.json','r') as f:
 
 job.path = '.'
 
-jobthread = threading.Thread(name='job', target=job.run)
-jobthread.setDaemon(True)
-jobthread.start()
-jobthread.join()
-
 
 sys.exit(0)
 """.format(**format_dict)
@@ -129,7 +129,7 @@ sys.exit(0)
 
 
 	def multijob_launch_script(self, format_dict):
-		return """#!/usr/bin/bash
+		return """#!/bin/bash
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1
@@ -140,7 +140,7 @@ sys.exit(0)
 ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
 
-cd {base_work_dir}/$JOBID && ./script.py &
+chmod u+x {multijob_dir}/script.py && {multijob_dir}/script.py &
 PID=$!
 
 WAIT_TIME=$(({walltime_seconds}-120))
@@ -158,16 +158,16 @@ MULTIJOBDIR={multijob_dir}
 JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
 
-if [ -d {base_work_dir}\"$JOBID\"/backup_dir ]; then
-if [ ! -f {base_work_dir}\"$JOBID\"/backup_dir/backup_lock/* ]; then
-cp -f -R {base_work_dir}\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
-rm -R {base_work_dir}\"$JOBID\"/backup_dir
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir
 fi
 
 
-cp -f -R {base_work_dir}\"$JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}$JOBID
+cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
+rm -R {base_work_dir}/$JOBID
 
 
 echo "Backup done"
@@ -222,3 +222,24 @@ exit 0
 
 	def output_killed_string(self):
 		return 'DUE TO TIME LIMIT:'
+
+	def jobid_from_submit_output(self,submit_output):
+		return submit_output.split(' ')[-1]
+
+
+
+
+
+class OldSlurmJobQueue(SlurmJobQueue):
+
+
+	def get_running_jobs_string(self):
+		session = self.ssh_session
+		return session.command_output('squeue -o %18i -u '+self.ssh_cfg['username'])
+
+
+	def submit_job(self, job):
+		self.individual_submit_job(job)
+
+	def global_submit(self):
+		pass

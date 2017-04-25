@@ -117,7 +117,8 @@ class ClusterJobQueue(JobQueue):
 		session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
 		#session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		#session.command_output('chmod u+x {job_dir}/script.py'.format(**format_dict))
-		job.JOBID = self.send_submit_command(cmd_type='single_job',format_dict=format_dict)
+		JOBID = self.send_submit_command(cmd_type='single_job',format_dict=format_dict)
+		job.JOBID = self.jobid_from_submit_output(JOBID)
 		#session.close()
 		if job.JOBID:
 			job.status = 'running'
@@ -187,11 +188,13 @@ class ClusterJobQueue(JobQueue):
 				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 				session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 			session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
+
 			#session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			#session.command_output('chmod u+x {multijob_dir}/script.py'.format(**format_dict))
 
 
 			JOBID = self.send_submit_command(cmd_type='multijob',format_dict=format_dict)
+			JOBID = self.jobid_from_submit_output(JOBID)
 			#session.close()
 			if JOBID:
 				for i in range(len(j_list)):
@@ -323,7 +326,7 @@ class ClusterJobQueue(JobQueue):
 	def update_virtualenv(self, virtual_env=None, requirements=[],src_path=None):
 		cmd = []
 		if src_path is None:
-			src_path = '/scratch/'+self.ssh_cfg['username']+'/src_'+self.uuid
+			src_path = self.basedir+'/src_'+self.uuid
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		#session = SSHSession(**self.ssh_cfg)
@@ -354,8 +357,9 @@ class ClusterJobQueue(JobQueue):
 		out = self.ssh_session.command_output('mkdir -p '+cmd_path)
 		file_path = os.path.join(cmd_path,'cmd.sh')
 		output_path = os.path.join(cmd_path,'output.txt')
-		self.ssh_session.command_output('echo \"'+cmd+'\" > '+file_path)
+		self.ssh_session.command_output('echo \"#!/bin/bash\n'+cmd+'\" > '+file_path+' && chmod u+x '+file_path)
 		cmdjob_id = self.send_submit_command(cmd_type='simple',t_min=t_min,output_path=output_path, file_path=file_path)
+		cmdjob_id = self.jobid_from_submit_output(cmdjob_id)
 		t = time.time()
 		running_jobs_string = self.get_running_jobs_string()
 		#while not self.ssh_session.path_exists(output_path):
@@ -427,3 +431,6 @@ class ClusterJobQueue(JobQueue):
 
 	def output_killed_string(self):
 		return 'Job killed'
+
+	def jobid_from_submit_output(self,submit_output):
+		return submit_output

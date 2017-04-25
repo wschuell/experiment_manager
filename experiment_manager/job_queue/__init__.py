@@ -17,6 +17,7 @@ job_queue_class={
 	'plafrim':'plafrim.PlafrimJobQueue',
 	'torque':'torque.TorqueJobQueue',
 	'slurm':'slurm.SlurmJobQueue',
+	'oldslurm':'slurm.OldSlurmJobQueue',
 	'anyone':'anyone.AnyoneJobQueue'
 }
 
