@@ -20,7 +20,7 @@ jsonpickle.set_encoder_options('json', indent=4)
 
 class Job(object):
 
-	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		if descr is None:
@@ -163,11 +163,13 @@ class Job(object):
 					self.estimated_time = min(self.estimated_time*2, self.max_time)
 				else:
 					self.estimated_time = min(self.estimated_time*4, self.max_time)
-				for txtfile in glob.glob('*.txt'):
+				filelist = [txtfile for txtfile in glob.glob('*.txt') if not (len(txtfile)>=8 and txtfile[-8:]!='_old.txt')]
+				for txtfile in filelist:
 					with open(txtfile,'r') as f_out:
 						with open(txtfile[:-4]+'_old.txt','a') as f_in:
 							f_in.write('\n=========================' + time.strftime("[%Y %m %d %H:%M:%S]", time.localtime()) + '=========================\n')
 							f_in.write(f_out.read())
+					os.remove(txtfile)
 				self.status = 'pending'
 
 	def save(self,chdir=True, keep_data=True, backup=False):

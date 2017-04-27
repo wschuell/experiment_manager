@@ -52,7 +52,7 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=3600, **kwargs):
+	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			xp_tmax = db.get_param(xp_uuid=xp_uuid,param='Tmax')
@@ -381,7 +381,7 @@ class GraphExpDBJob(ExperimentDBJob):
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
-	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=3600, **graph_cfg):
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=2*3600, **graph_cfg):
 		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):
@@ -524,15 +524,18 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		self.data = {}
-		if self.dep_path and not self.db.id_in_db(xp_uuid=self.xp_uuid):
+		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', nb_id=uuid))<self.graph_cfg['tmax']):
 			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
-
-		if not os.path.isfile(os.path.join('data',self.xp_uuid+'.db.xz')):#self.get_path(),'data',self.xp_uuid+'.db.xz')):
 			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
 			dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
 			shutil.copy(source_file, dst_file)
+
+		#if not os.path.isfile(os.path.join('data',self.xp_uuid+'.db.xz')):#self.get_path(),'data',self.xp_uuid+'.db.xz')):
+			#source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
+			#dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
+			#shutil.copy(source_file, dst_file)
 			#if 'data/'+self.xp_uuid+'.db.xz' not in self.files: #not needed, if file gotten from deps; will stay in place for later run of the same job;
 			#	self.files.append('data/'+self.xp_uuid+'.db.xz')
 

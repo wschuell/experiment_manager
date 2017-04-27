@@ -253,6 +253,8 @@ work_dir = '{base_work_dir}'+PBS_JOBID
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
+print "Starting Job"
+
 with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
@@ -488,7 +490,7 @@ exit 0
 			#if time.time()-t > 60*t_min:
 			running_jobs_string = self.ssh_session.command_output('qstat -f -t|grep \'Job Id:\'')
 		output = self.ssh_session.command_output('cat '+output_path)
-		if 'PBS: job killed:' in output: 
+		if 'PBS: job killed:' in output:
 			if retry:
 				return self.command_output_qsub(cmd,t_min=retry_time,retry=False)
 			else:
