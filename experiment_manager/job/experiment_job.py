@@ -524,7 +524,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		self.data = {}
-		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', nb_id=uuid))<self.graph_cfg['tmax']):
+		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', nb_id=self.xp_uuid))<self.graph_cfg['tmax']):
 			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)

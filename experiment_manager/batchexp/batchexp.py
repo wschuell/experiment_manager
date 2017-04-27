@@ -8,7 +8,7 @@ from ..job.experiment_job import ExperimentDBJob, GraphExpDBJob, MultipleGraphEx
 
 class BatchExp(object):
 
-	def __init__(self, name=None, jq_cfg = None, estimated_time=3600, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, profiling=False, virtual_env=None, requirements=[], **kwargs):
+	def __init__(self, name=None, jq_cfg = None, estimated_time=2*3600, db_cfg=None, db=None, other_dbs=[], other_dbs_lookup=True, auto_job=True, profiling=False, virtual_env=None, requirements=[], **kwargs):
 		self.uuid = str(uuid.uuid1())
 		if name is None:
 			self.name = self.uuid

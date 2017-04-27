@@ -19,6 +19,7 @@ class TorqueJobQueue(ClusterJobQueue):
 #PBS -l nodes=1:ppn=1
 #PBS -N {job_name}
 
+print "Preparing Job"
 
 import os
 import sys
@@ -36,27 +37,32 @@ with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
+
+print "Starting Job"
+
 job.run()
+
+print "Job finished"
 
 sys.exit(0)
 """.format(**format_dict)
 
 	def individual_epilogue(self, format_dict):
 		return """#!/bin/bash
-echo "Job finished, backing up files."
+echo "Job finished, backing up files.";
 JOBID=$1
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
-echo "Copying backup_dir"
-cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/
+echo "Copying backup_dir";
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
 fi
-echo "Removing backup_dir"
-rm -R {base_work_dir}/\"$JOBID\"/backup_dir
+echo "Removing backup_dir";
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
 fi
 
-cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
-rm -R {base_work_dir}/$JOBID
+cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/;
+rm -R {base_work_dir}/$JOBID;
 
 echo "Backup done"
 echo "================================"
@@ -83,6 +89,7 @@ exit 0
 #PBS -l nodes=1:ppn=1
 #PBS -N {multijob_name}
 
+print "Preparing Job"
 
 import os
 import sys
@@ -105,14 +112,19 @@ with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
+
+print "Starting Job"
+
 job.run()
+
+print "Job finished"
 
 sys.exit(0)
 """.format(**format_dict)
 
 	def multijob_epilogue(self, format_dict):
 		return """#!/bin/bash
-echo "Job finished, backing up files."
+echo "Job finished, backing up files.";
 JOBID=$1
 
 MULTIJOBDIR={multijob_dir}
@@ -122,11 +134,11 @@ JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
-echo "Copying backup_dir"
-cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/
+echo "Copying backup_dir";
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
 fi
-echo "Removing backup_dir"
-rm -R {base_work_dir}/\"$JOBID\"/backup_dir
+echo "Removing backup_dir";
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
 fi
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/

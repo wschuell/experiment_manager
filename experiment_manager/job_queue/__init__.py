@@ -138,8 +138,8 @@ class JobQueue(object):
 				j.data = None
 				self.past_exec_time += j.exec_time
 				self.executed_jobs += 1
-				if self.erase:
-					j.status = 'to be cleaned'
+				#if self.erase:
+				j.status = 'to be cleaned'
 			j.close_connections()
 
 		for j in [x for x in self.job_list]:
@@ -166,7 +166,8 @@ class JobQueue(object):
 		for j in [x for x in self.job_list]:
 			if j.status == 'to be cleaned':
 				self.job_list.remove(j)
-				j.clean()
+				if self.erase:
+					j.clean()
 			elif self.verbose and j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 			elif self.verbose and j.status == 'dependencies not satisfied':
