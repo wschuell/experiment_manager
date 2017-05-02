@@ -4,12 +4,20 @@ from .cluster import ClusterJobQueue
 class TorqueJobQueue(ClusterJobQueue):
 
 	def gen_files(self, format_dict):
-		if 'multijob_dir' in format_dict.keys():
-			return [('script.py',self.multijob_script(format_dict=format_dict)),
-					('epilogue.sh',self.multijob_epilogue(format_dict=format_dict))]
+		if not self.without_epilogue:
+			if 'multijob_dir' in format_dict.keys():
+				return [('script.py',self.multijob_script(format_dict=format_dict)),
+						('epilogue.sh',self.multijob_epilogue(format_dict=format_dict))]
+			else:
+				return [('script.py',self.individual_script(format_dict=format_dict)),
+						('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
 		else:
-			return [('script.py',self.individual_script(format_dict=format_dict)),
-					('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
+			if 'multijob_dir' in format_dict.keys():
+				return [('script.py',self.multijob_script(format_dict=format_dict)),
+						('launch_script.sh',self.multijob_launch_script(format_dict=format_dict))]
+			else:
+				return [('script.py',self.individual_script(format_dict=format_dict)),
+						('launch_script.sh',self.individual_launch_script(format_dict=format_dict))]
 
 	def individual_script(self, format_dict):
 		return """#!{python_bin}
@@ -80,6 +88,7 @@ echo "Account String: $9"
 echo "================================"
 exit 0
 """.format(**format_dict)
+
 
 	def multijob_script(self, format_dict):
 		return """#!{python_bin}
@@ -168,9 +177,15 @@ exit 0
 		if cmd_type == 'simple':
 			return session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -p +1023 -j oe -o '+output_path+' '+file_path)[:-1]
 		elif cmd_type == 'single_job':
-			return session.command_output('qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/script.py'.format(**format_dict))[:-1]
+			if not self.without_epilogue:
+				return session.command_output('qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/script.py'.format(**format_dict))[:-1]
+			else:
+				return session.command_output('qsub {job_dir}/launch_script.sh'.format(**format_dict))[:-1]
 		elif cmd_type == 'multijob':
-			return session.command_output('qsub -t 1-{Njobs} -l epilogue={multijob_dir}/epilogue.sh {multijob_dir}/script.py'.format(**format_dict))[:-1]
+			if not self.without_epilogue:
+				return session.command_output('qsub -t 1-{Njobs} -l epilogue={multijob_dir}/epilogue.sh {multijob_dir}/script.py'.format(**format_dict))[:-1]
+			else:
+				return session.command_output('qsub -t 1-{Njobs} {multijob_dir}/launch_script.sh'.format(**format_dict))[:-1]
 
 	def array_jobid(self,jobid,jobN):
 		return jobid.split('[')[0] + '[' + str(jobN) + ']' + jobid.split(']')[1]
@@ -191,3 +206,107 @@ exit 0
 
 	def output_killed_string(self):
 		return 'PBS: job killed:'
+
+
+	def individual_launch_script(self, format_dict):
+		return """#!/bin/bash
+#PBS -o {job_dir}/output.txt
+#PBS -e {job_dir}/error.txt
+#PBS -l walltime={walltime}
+#PBS -l nodes=1:ppn=1
+#PBS -N {job_name}
+
+echo "Preparing Job"
+
+JOBID=$PBS_JOBID
+
+
+chmod u+x {job_dir}/script.py && {job_dir}/script.py &
+PID=$!
+
+WAIT_TIME=$(({walltime_seconds}-120))
+sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+PID2=$!
+
+wait $PID
+
+kill -9 $PID2;
+
+echo "Job finished, backing up files."
+
+if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
+fi
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir
+fi
+
+#cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
+#rm -R {base_work_dir}/$JOBID
+
+echo "Backup done"
+echo "================================"
+echo "EPILOGUE"
+echo "================================"
+echo "Job ID: $PBS_JOBID"
+echo "================================"
+
+exit 0
+""".format(**format_dict)
+
+
+	def multijob_launch_script(self, format_dict):
+		return """#!/bin/bash
+#PBS -o {multijob_dir}/output.txt
+#PBS -e {multijob_dir}/error.txt
+#PBS -l walltime={walltime}
+#PBS -l nodes=1:ppn=1
+#PBS -N {multijob_name}
+
+JOBID=$PBS_JOBID
+ARRAYID=$PBS_ARRAYID
+
+chmod u+x {multijob_dir}/script.py && {multijob_dir}/script.py &
+PID=$!
+
+WAIT_TIME=$(({walltime_seconds}-120))
+sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+PID2=$!
+
+wait $PID
+
+kill -9 $PID2
+
+echo "Job finished, backing up files.";
+
+MULTIJOBDIR={multijob_dir}
+JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+
+
+if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
+if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+echo "Copying backup_dir";
+cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
+fi
+echo "Removing backup_dir";
+rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
+fi
+
+cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
+rm -R {base_work_dir}/$JOBID
+
+
+
+echo "Backup done"
+echo "================================"
+echo "EPILOGUE"
+echo "================================"
+echo "Job ID: $JOBID"
+echo "================================"
+
+exit 0
+""".format(**format_dict)
+
+#cp -R {base_work_dir}\"$JOBID\"/backup_dir/{job_uuid} {job_backup_dir}
+#rm -R {base_work_dir}\"$JOBID\"/backup_dir
+

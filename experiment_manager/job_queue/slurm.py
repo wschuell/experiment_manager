@@ -120,7 +120,7 @@ with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
-
+job.run()
 
 sys.exit(0)
 """.format(**format_dict)

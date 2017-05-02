@@ -10,7 +10,7 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, **kwargs):
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, **kwargs):
 		super(ClusterJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
@@ -20,6 +20,7 @@ class ClusterJobQueue(JobQueue):
 		self.basedir = basedir
 		self.local_basedir = local_basedir
 		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
+		self.without_epilogue = without_epilogue
 		if base_work_dir is None:
 			self.base_work_dir = self.basedir
 		else:
