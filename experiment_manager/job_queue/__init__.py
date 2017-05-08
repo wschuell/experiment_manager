@@ -40,8 +40,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False,path='jobs/'):
-		self.path = path
+	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0):
 		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
@@ -55,11 +54,14 @@ class JobQueue(object):
 			self.name = name
 		self.deep_check = deep_check
 		self.executed_jobs = 0
+		self.reinit_missubmitted_times = reinit_missubmitted_times
+		self.jobqueue_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.__class__.__name__, self.uuid])
+		self.path = os.path.join(path,self.jobqueue_dir)
 
 	def save(self):
-		if not os.path.isdir('jobs'):
-			os.makedirs('jobs')
-		with open('jobs/'+self.name+'.jq','w') as f:
+		if not os.path.isdir(self.path):#'jobs'):
+			os.makedirs(self.path)#'jobs')
+		with open(os.path.join(self.path,self.name+'.jq','w')) as f:#'jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def check_backups(self):
@@ -79,6 +81,8 @@ class JobQueue(object):
 		ge_filter = [j for j in eq_filter if (j >= job)]
 		if not eq_filter:
 			self.job_list.append(job)
+			job.move(new_path=self.path)
+			job.reinit_missubmitted_times = self.reinit_missubmitted_times
 			self.update_needed = True
 			#job.status = 'pending'
 			job.save()
@@ -86,6 +90,7 @@ class JobQueue(object):
 		elif lt_filter and not ge_filter:
 			job.status = 'dependencies not satisfied'
 			self.job_list.append(job)
+			job.move(new_path=self.path)
 			self.update_needed = True
 			job.deps += [jj.uuid for jj in lt_filter]
 			#job.status = 'pending'
@@ -127,9 +132,15 @@ class JobQueue(object):
 			if j.status in ['pending','running']:
 					j.status = 'missubmitted'
 
+		self.reinit_missubmitted()
+
 		for j in [x for x in self.job_list]:
 			if j.status == 'unfinished':
 				j.fix()
+				if hasattr(self, 'extended_jobs'):
+					self.extended_jobs += 1
+				else:
+					self.extended_jobs = 1
 			elif j.status == 'done':
 				if j.get_data_at_unpack:
 					with path.Path(j.get_path()):
@@ -186,9 +197,9 @@ class JobQueue(object):
 		return time.strftime("[%Y %m %d %H:%M:%S]: "+message+"\n"+str(self), time.localtime())
 
 	def save_status(self,message='Queue updated'):
-		if not os.path.isdir('jobs'):
-			os.makedirs('jobs')
-		with open('jobs/'+self.name+'.jq_status','a') as f_status:
+		if not os.path.isdir(self.path):#'jobs'):
+			os.makedirs(self.path)#'jobs')
+		with open(os.path.join(self.path,self.name+'.jq_status'),'a') as f_status:#'jobs/'+self.name+'.jq_status','a') as f_status:
 			f_status.write(self.get_status_string(message=message))
 
 	def __str__(self):
@@ -216,7 +227,11 @@ class JobQueue(object):
 			str_exec += str(int(exec_time_m))+' min '
 		str_exec +=str(exec_time)+' s'
 		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
-		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n'
+		if not hasattr(self,'restarted_jobs'):
+			self.restarted_jobs = 0
+		if not hasattr(self,'extended_jobs'):
+			self.extended_jobs = 0
+		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
 		return str_ans
 
 	def auto_finish_queue(self,t=60,coeff=1,call_between=None):
@@ -264,11 +279,23 @@ class JobQueue(object):
 		for j in self.job_list:
 			t += j.exec_time
 
-	def reinit_missubmitted(self):
-		for j in self.job_list:
+	def reinit_missubmitted(self,job=None, force=False):
+		if job is None:
+			jlist = self.job_list
+		else:
+			jlist = [job]
+		for j in jlist:
 			if j.status == 'missubmitted':
-				j.update()
-				j.status = 'pending'
+				if force or ( hasattr(j,'reinit_missubmitted_times') and j.reinit_missubmitted_times >0):
+					#j.update()
+					j.restart()
+					if hasattr(j,'reinit_missubmitted_times'):
+						j.reinit_missubmitted_times -= 1
+					j.status = 'pending'
+					if hasattr(self,'restarted_jobs'):
+						self.restarted_jobs += 1
+					else:
+						self.restarted_jobs = 1
 
 	def submit_job(self, job):
 		pass

@@ -18,9 +18,9 @@ class AvakasJobQueue(TorqueJobQueue):
 					'password':password
 					}
 		if basedir is None:
-			basedir = '/scratch/'+username+'/jobs'
+			basedir = '/scratch/'+username+'/job_queues'
 		if local_basedir is None:
-			local_basedir = 'jobs'
+			local_basedir = 'job_queues'
 		TorqueJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, without_epilogue=without_epilogue, **kwargs)
 
 #class AvakasJobQueueOld(JobQueue):

@@ -50,6 +50,7 @@ class ExperimentJob(Job):
 	def __ge__(self, other):
 		return self.__eq__(other) and self.tmax >= other.tmax
 
+
 class ExperimentDBJob(Job):
 
 	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
@@ -103,8 +104,8 @@ class ExperimentDBJob(Job):
 
 	def script(self):
 		while self.data._T[-1]<self.tmax:
-			self.data.continue_exp(autocommit=False)
 			self.check_time()
+			self.data.continue_exp(autocommit=False)
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):
@@ -157,6 +158,25 @@ class ExperimentDBJob(Job):
 		if self.db.dbpath in self.files:
 			self.files.remove(self.db.dbpath)
 
+	def restart(self):
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
+		if not hasattr(self.origin_db,'connection'):
+			self.origin_db.reconnect()#RAM_only=True)
+		self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
+		#self.db.dbpath = db_path
+		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		try:
+			os.makedirs(os.path.join(self.get_path(),'data/'))
+		except OSError as exc:  # Python >2.5
+			if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(self.get_path(),'data/')):
+				pass
+			else:
+				raise
+		shutil.copy(source_file, dst_file)
+		self.close_connections()
 
 class GraphExpJob(ExperimentJob):
 
@@ -496,6 +516,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		self.save(keep_data=False)
 		self.origin_db.close()
 		self.db.close()
+
+	def restart(self):
+		self.re_init()
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)

@@ -308,3 +308,12 @@ class Job(object):
 		self.__dict__.update(in_dict)
 		#self.load_prg_states() # jsonpickle.loads has to be executed in the jobdir, otherwise prg states file is not found.
 
+
+	def restart(self):
+		pass
+
+	def move(self, new_path):
+		complete_new_path = os.path.join(new_path,self.job_dir)
+		if os.path.exists(self.path):
+			shutil.move(self.path, os.path.join(new_path))
+		self.path = complete_new_path

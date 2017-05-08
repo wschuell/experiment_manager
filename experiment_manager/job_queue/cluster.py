@@ -17,8 +17,8 @@ class ClusterJobQueue(JobQueue):
 		self.update_needed = False
 		self.ssh_session = SSHSession(**self.ssh_cfg)
 		self.waiting_to_submit = {}
-		self.basedir = basedir
-		self.local_basedir = local_basedir
+		self.basedir = os.path.join(basedir,'job_queues',self.jobqueue_dir)#basedir #
+		self.local_basedir = os.path.join(local_basedir,'job_queues',self.jobqueue_dir)#local_basedir #
 		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
 		self.without_epilogue = without_epilogue
 		if base_work_dir is None:
