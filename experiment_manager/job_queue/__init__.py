@@ -61,7 +61,7 @@ class JobQueue(object):
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
 			os.makedirs(self.path)#'jobs')
-		with open(os.path.join(self.path,self.name+'.jq','w')) as f:#'jobs/'+self.name+'.jq','w') as f:
+		with open(os.path.join(self.path,self.name+'.jq'),'w') as f:#'jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
 
 	def check_backups(self):
