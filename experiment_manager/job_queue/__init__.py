@@ -8,7 +8,7 @@ from importlib import import_module
 from ..job import Job
 import copy
 import path
-
+import errno
 
 job_queue_class={
 	'local':'local.LocalJobQueue',
@@ -22,8 +22,8 @@ job_queue_class={
 }
 
 def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
-	if name is not None and os.path.isfile('jobs/'+name+'.jq'):
-		with open('jobs/'+name+'.jq','r') as f:
+	if name is not None and os.path.isfile('job_queues/'+name+'.jq'):
+		with open('job_queues/'+name+'.jq','r') as f:
 			jq = cPickle.loads(f.read())
 			if 'db' in jq_cfg2.keys():
 				jq.db = jq_cfg2['db']
@@ -57,12 +57,19 @@ class JobQueue(object):
 		self.reinit_missubmitted_times = reinit_missubmitted_times
 		self.jobqueue_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.__class__.__name__, self.uuid])
 		self.path = os.path.join(path,self.jobqueue_dir)
+		self.original_path = path
 
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
 			os.makedirs(self.path)#'jobs')
 		with open(os.path.join(self.path,self.name+'.jq'),'w') as f:#'jobs/'+self.name+'.jq','w') as f:
 			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
+		try:
+			os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq'),os.path.join(self.original_path,self.name+'.jq'))
+		except OSError, e:
+			if e.errno == errno.EEXIST:
+				os.remove(os.path.join(self.original_path,self.name+'.jq'))
+				os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq'),os.path.join(self.original_path,self.name+'.jq'))
 
 	def check_backups(self):
 		self.backups_status = {'present':[],'locked':[]}
@@ -201,6 +208,13 @@ class JobQueue(object):
 			os.makedirs(self.path)#'jobs')
 		with open(os.path.join(self.path,self.name+'.jq_status'),'a') as f_status:#'jobs/'+self.name+'.jq_status','a') as f_status:
 			f_status.write(self.get_status_string(message=message))
+
+		try:
+			os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq_status'),os.path.join(self.original_path,self.name+'.jq_status'))
+		except OSError, e:
+			if e.errno == errno.EEXIST:
+				os.remove(os.path.join(self.original_path,self.name+'.jq_status'))
+				os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq_status'),os.path.join(self.original_path,self.name+'.jq_status'))
 
 	def __str__(self):
 		total = 0
