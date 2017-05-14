@@ -103,9 +103,14 @@ class ExperimentDBJob(Job):
 		self.db.close()
 
 	def script(self):
-		while self.data._T[-1]<self.tmax:
+		if self.data._T:
+			T = self.data._T[-1]
+		else:
+			T = -1
+		while T < self.tmax:
 			self.check_time()
 			self.data.continue_exp(autocommit=False)
+			T = self.data._T[-1]
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):

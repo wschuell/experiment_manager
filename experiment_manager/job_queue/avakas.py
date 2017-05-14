@@ -11,16 +11,14 @@ from ..tools.ssh import SSHSession
 from torque import TorqueJobQueue
 
 class AvakasJobQueue(TorqueJobQueue):
-	def __init__(self, username, basedir=None, local_basedir=None, base_work_dir='/tmp', max_jobs=1000, key_file='avakas', password=None, without_epilogue=False, **kwargs):
+	def __init__(self, username, basedir=None, local_basedir='', base_work_dir='/tmp', max_jobs=1000, key_file='avakas', password=None, without_epilogue=False, **kwargs):
 		ssh_cfg = {'username':username,
 					'hostname':'avakas.mcia.univ-bordeaux.fr',
 					'key_file':key_file,
 					'password':password
 					}
 		if basedir is None:
-			basedir = '/scratch/'+username+'/job_queues'
-		if local_basedir is None:
-			local_basedir = 'job_queues'
+			basedir = '/scratch/'+username
 		TorqueJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, without_epilogue=without_epilogue, **kwargs)
 
 #class AvakasJobQueueOld(JobQueue):

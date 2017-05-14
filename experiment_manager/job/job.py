@@ -39,6 +39,7 @@ class Job(object):
 		if path[0] == '/':
 			raise IOError('path must be relative')
 		self.job_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.descr, self.uuid])
+		self.init_path = path
 		self.path = os.path.join(path,self.job_dir)
 		self.estimated_time = estimated_time
 		self.profiling = profiling
@@ -314,6 +315,9 @@ class Job(object):
 
 	def move(self, new_path):
 		complete_new_path = os.path.join(new_path,self.job_dir)
+		if not os.path.exists(new_path):
+			os.makedirs(new_path)
 		if os.path.exists(self.path):
 			shutil.move(self.path, os.path.join(new_path))
+		self.init_path = new_path
 		self.path = complete_new_path

@@ -88,7 +88,7 @@ class JobQueue(object):
 		ge_filter = [j for j in eq_filter if (j >= job)]
 		if not eq_filter:
 			self.job_list.append(job)
-			job.move(new_path=self.path)
+			self.move_job(job)
 			job.reinit_missubmitted_times = self.reinit_missubmitted_times
 			self.update_needed = True
 			#job.status = 'pending'
@@ -97,7 +97,7 @@ class JobQueue(object):
 		elif lt_filter and not ge_filter:
 			job.status = 'dependencies not satisfied'
 			self.job_list.append(job)
-			job.move(new_path=self.path)
+			self.move_job(job)
 			self.update_needed = True
 			job.deps += [jj.uuid for jj in lt_filter]
 			#job.status = 'pending'
@@ -113,8 +113,20 @@ class JobQueue(object):
 		job.close_connections()
 		return ans
 
+	def move_job(self,job):
+		if job.init_path in ['jobs','jobs/']:
+			rm = True
+		else:
+			rm = False
+		job.move(new_path=self.path)
+		if rm:
+			try:
+				os.rmdir('jobs')
+			except OSError:
+				pass
+
 	def update_queue(self):
-		self.save_status(message='Starting queue udpate')
+		self.save_status(message='Starting queue update')
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
 			self.update_needed = False
