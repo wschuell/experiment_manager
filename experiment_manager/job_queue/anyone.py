@@ -9,9 +9,9 @@ class AnyoneJobQueue(OldSlurmJobQueue):
 					'password':password
 					}
 		if basedir is None:
-			basedir = '/home/'+username+'/jobs'
+			basedir = '/home/'+username
 		if base_work_dir is None:
 			base_work_dir = '/home/'+username+'/work_dir' #'/data'
 		if local_basedir is None:
-			local_basedir = 'jobs'
+			local_basedir = ''
 		OldSlurmJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, **kwargs)

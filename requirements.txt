@@ -9,3 +9,5 @@ jsonpickle
 path.py
 memory_profiler
 psutil
+scp
+pycrypto
