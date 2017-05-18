@@ -15,7 +15,7 @@ class SlurmJobQueue(ClusterJobQueue):
 
 
 	def individual_launch_script(self, format_dict):
-		return """#!/bin/bash
+		return """#!/bin/bash -i
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1
@@ -73,7 +73,6 @@ import sys
 import shutil
 import jsonpickle
 
-print "hjiophjij"
 
 SLURM_JOBID = os.environ['SLURM_JOBID']
 job_dir = '{job_dir}'
@@ -82,15 +81,12 @@ work_dir = os.path.join('{base_work_dir}',SLURM_JOBID)
 shutil.copytree(job_dir, work_dir)
 os.chdir(work_dir)
 
-print "blabla"
-
 with open('job.json','r') as f:
 	job = jsonpickle.loads(f.read())
 
 job.path = '.'
 job.run()
 
-print "hjiophjij"
 
 sys.exit(0)
 """.format(**format_dict)
@@ -129,7 +125,7 @@ sys.exit(0)
 
 
 	def multijob_launch_script(self, format_dict):
-		return """#!/bin/bash
+		return """#!/bin/bash -i
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1

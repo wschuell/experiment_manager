@@ -126,7 +126,10 @@ class Job(object):
 		if self.profiling:
 			s = StringIO.StringIO()
 			sortby = 'tottime'#'cumulative'
-			ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
+			try:
+				ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
+			except:
+				ps = pstats.Stats(self.profiler, stream=s)
 			ps.print_stats()
 			with open('profile.txt','a') as f:
 				f.write(time.strftime("[%Y %m %d %H:%M:%S]\n", time.localtime()))

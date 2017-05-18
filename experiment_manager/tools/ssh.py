@@ -115,11 +115,13 @@ class SSHSession(object):
         self.mkdir_p(path)
         #self.command_output("mkdir -p {}".format(path))
 
-    def command(self,cmd):
+    def command(self,cmd,bashrc=True):
+        #if bashrc:
+         #   cmd = 'export BASH_ENV="~/.bashrc"; '+cmd
         return self.client.exec_command(cmd)
 
-    def command_output(self,cmd):
-        std_in, std_out, std_err = self.client.exec_command(cmd)
+    def command_output(self,cmd,bashrc=True):
+        std_in, std_out, std_err = self.command(cmd,bashrc=bashrc)
         return std_out.read()
 
     def put(self,localfile,remotefile):
