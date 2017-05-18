@@ -10,7 +10,7 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, **kwargs):
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, **kwargs):
 		super(ClusterJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
 		self.ssh_cfg = ssh_cfg
@@ -21,6 +21,7 @@ class ClusterJobQueue(JobQueue):
 		self.local_basedir = os.path.join(local_basedir,'job_queues',self.jobqueue_dir)#local_basedir #
 		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
 		self.without_epilogue = without_epilogue
+		self.install_as_job = install_as_job
 		if base_work_dir is None:
 			self.base_work_dir = self.basedir
 		else:
@@ -321,7 +322,10 @@ class ClusterJobQueue(JobQueue):
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
-			out = self.command_asjob_output(' && '.join(cmd),retry=True)
+			if install_as_job:
+				out = self.command_asjob_output(' && '.join(cmd),retry=True)
+			else:
+				out = self.command_output(' && '.join(cmd))
 		#session.close()
 
 	def update_virtualenv(self, virtual_env=None, requirements=[],src_path=None):
@@ -349,7 +353,10 @@ class ClusterJobQueue(JobQueue):
 			if virtual_env is not None:
 				cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
-			out = self.command_asjob_output(' && '.join(cmd),retry=True)
+			if self.install_as_job:
+				out = self.command_asjob_output(' && '.join(cmd),retry=True)
+			else:
+				out = self.command_output(' && '.join(cmd))
 			#session.close()
 
 	def command_asjob_output(self,cmd,t_min=10,retry=True,retry_time=30):
