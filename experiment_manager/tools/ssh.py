@@ -115,12 +115,23 @@ class SSHSession(object):
         self.mkdir_p(path)
         #self.command_output("mkdir -p {}".format(path))
 
-    def command(self,cmd,bashrc=True):
-        #if bashrc:
-         #   cmd = 'export BASH_ENV="~/.bashrc"; '+cmd
-        return self.client.exec_command(cmd)
+    def command(self,cmd,bashrc=False):
+        if bashrc:
+            cmd2 = 'mkdir -p ~/.tmp'
+            cmd2 += ' && '
+            command_file = '~/.tmp/'+str(uuid.uuid1())+'.sh'
+            cmd2 += 'echo "#!/bin/bash -i\n'+cmd+'" >> '+command_file
+            cmd2 += ' && '
+            cmd2 += ' chmod +x '+ command_file
+            cmd2 += ' && '
+            cmd2 += command_file
+            cmd2 += ' && '
+            cmd2 += ' rm '+command_file
+            return self.client.exec_command(cmd2)
+        else:
+            return self.client.exec_command(cmd)
 
-    def command_output(self,cmd,bashrc=True):
+    def command_output(self,cmd,bashrc=False):
         std_in, std_out, std_err = self.command(cmd,bashrc=bashrc)
         return std_out.read()
 

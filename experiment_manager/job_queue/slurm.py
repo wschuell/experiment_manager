@@ -15,13 +15,15 @@ class SlurmJobQueue(ClusterJobQueue):
 
 
 	def individual_launch_script(self, format_dict):
-		return """#!/bin/bash -i
+		return """#!/bin/bash
 #SBATCH --time={walltime}
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --job-name="{job_name}"
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
+
+echo "Starting Job"
 
 chmod u+x {job_dir}/script.py && {job_dir}/script.py &
 PID=$!
@@ -45,8 +47,11 @@ fi
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir
 fi
 
-#cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
-#rm -R {base_work_dir}/$JOBID
+rm {base_work_dir}/\"$JOBID\"/error.txt
+rm {base_work_dir}/\"$JOBID\"/output.txt
+
+cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
+rm -R {base_work_dir}/$JOBID
 
 echo "Backup done"
 echo "================================"
@@ -136,6 +141,8 @@ sys.exit(0)
 ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
 
+echo "Starting Job"
+
 chmod u+x {multijob_dir}/script.py && {multijob_dir}/script.py &
 PID=$!
 
@@ -193,11 +200,11 @@ exit 0
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
 		if cmd_type == 'simple':
-			return session.command_output('sbatch --time='+str(t_min)+' -o '+output_path+' '+file_path)[:-1]
+			return session.command_output('sbatch --time='+str(t_min)+' -o '+output_path+' '+file_path,bashrc=True)[:-1]
 		elif cmd_type == 'single_job':
-			return session.command_output('sbatch {job_dir}/launch_script.sh'.format(**format_dict))[:-1]
+			return session.command_output('sbatch {job_dir}/launch_script.sh'.format(**format_dict),bashrc=True)[:-1]
 		elif cmd_type == 'multijob':
-			return session.command_output('sbatch --array=1-{Njobs} {multijob_dir}/launch_script.sh'.format(**format_dict))[:-1]
+			return session.command_output('sbatch --array=1-{Njobs} {multijob_dir}/launch_script.sh'.format(**format_dict),bashrc=True)[:-1]
 
 	def array_jobid(self,jobid,jobN):
 		return jobid + '_' + str(jobN)
