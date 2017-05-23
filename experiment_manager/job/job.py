@@ -274,13 +274,13 @@ class Job(object):
 	def unpack_data(self):
 		pass
 
-	def save_data(self,data):
+	def save_data(self,data=None):
 		pass
 
 	def get_data(self):
 		pass
 
-	def script(self, data):
+	def script(self):
 		pass
 
 	def re_init(self):
