@@ -35,7 +35,6 @@ class CJob(Job):
 		#print subprocess.check_output(cmd.split(' '))
 		#print subprocess.check_output('make')
 		#print subprocess.check_output(['./categories'])
-		raise IOError
 
 #	def unpack_data(self):
 #		for f in self.out_files:
