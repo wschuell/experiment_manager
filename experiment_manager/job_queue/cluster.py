@@ -356,7 +356,7 @@ class ClusterJobQueue(JobQueue):
 			if self.install_as_job:
 				out = self.command_asjob_output(' && '.join(cmd),retry=True)
 			else:
-				out = self.command_output(' && '.join(cmd))
+				out = self.ssh_session.command_output(' && '.join(cmd))
 			#session.close()
 
 	def command_asjob_output(self,cmd,t_min=10,retry=True,retry_time=30):

@@ -189,7 +189,7 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50,limit_max=500):
+    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50,limit_max=500,limit_concurrent_processes=10):
         output = ''
         if len(untar_basedir)>1 and untar_basedir[-1] == '/':
             untar_basedir = untar_basedir[:-1]
@@ -199,7 +199,7 @@ class SSHSession(object):
                 for pw in self.put_wait:
                     if os.path.isdir(os.path.join(pw['localdir'],pw['localname'])):
                         self.put_dir(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
-                    else:                        
+                    else:
                         self.put(os.path.join(pw['localdir'],pw['localname']),os.path.join(pw['remotedir'],pw['remotename']))
             elif limit_max is not None and len(self.put_wait) > limit_max:
                 side_list = self.put_wait[limit_max:]
@@ -234,7 +234,16 @@ class SSHSession(object):
                 final_command = '; '.join([tar_command, rm_command2])
                 if command_send_func is None:
                     output = self.command_output(final_command)
+                    #move os remove cmd here
                 else:
+                    #queue command
+                    #modify counter
+                    #if limit>=counter or end of list
+                    # send batch of commands (threading?)
+                    # get outputs
+                    # concatenate outputs
+                    # rm files
+                    # empty queues, cmd list etc
                     output = command_send_func(final_command)
                 os.remove(os.path.join(localtardir,tar_name_ext))
         self.put_wait = []

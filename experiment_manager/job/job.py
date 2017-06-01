@@ -90,16 +90,17 @@ class Job(object):
 		with pathpy.Path(self.get_path()):
 			self.status = 'unfinished'
 			self.init_time += time.time()
+			self.save(chdir=False)
 			if os.path.isfile('profile.txt'):
 				os.remove('profile.txt')
 			self.start_profiler()
-			self.get_data()
 			if not hasattr(self, 'prg_states'):
 				self.load_prg_states()
 			self.set_prg_states()
-			self.save()
 			try:
+				self.get_data()
 				self.script()
+				self.save_data()
 			except Exception as e:
 				with open('scripterror_notifier','w') as f:#directly change job status and save, then raise?
 					f.write(str(e))
@@ -108,7 +109,6 @@ class Job(object):
 			self.stop_profiler()
 			self.save_profile()
 			self.update_exec_time()
-			self.save_data()
 		self.status = 'done'
 		self.save(keep_data=False)
 		with pathpy.Path(self.get_path()):

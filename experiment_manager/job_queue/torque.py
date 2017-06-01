@@ -175,7 +175,7 @@ exit 0
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
 		if cmd_type == 'simple':
-			return session.command_output('qsub -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -p +1023 -j oe -o '+output_path+' '+file_path)[:-1]
+			return session.command_output('qsub -p +1000 -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -p +1023 -j oe -o '+output_path+' '+file_path)[:-1]
 		elif cmd_type == 'single_job':
 			if not self.without_epilogue:
 				return session.command_output('qsub -l epilogue={job_dir}/epilogue.sh {job_dir}/script.py'.format(**format_dict))[:-1]
