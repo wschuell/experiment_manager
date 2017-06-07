@@ -276,6 +276,7 @@ class JobQueue(object):
 				call_between()
 			if self.job_list and not [j for j in self.job_list if j.status != 'to be cleaned']:
 				self.update_queue()
+		self.clean_jobqueue()
 
 	def check_virtualenvs(self):
 		envs = {}
@@ -339,6 +340,9 @@ class JobQueue(object):
 		pass
 
 	def retrieve_job(self, job):
+		pass
+
+	def clean_jobqueue(self):
 		pass
 
 	def global_retrieval(self):

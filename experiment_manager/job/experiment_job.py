@@ -95,7 +95,8 @@ class ExperimentDBJob(Job):
 				pass
 			else:
 				raise
-		shutil.copy(source_file, dst_file)
+		if os.path.isfile(source_file):
+			shutil.copy(source_file, dst_file)
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
 
@@ -132,7 +133,8 @@ class ExperimentDBJob(Job):
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid])
 		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
-		shutil.copy(source_file, dst_file)
+		if os.path.isfile(source_file):
+			shutil.copy(source_file, dst_file)
 		self.db.close()
 		self.origin_db.close()
 		#self.data.db = self.origin_db
@@ -547,6 +549,230 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			self.save_data()
 		del self.data['exp']
 		self.db.delete(id_list=[self.xp_uuid],xp_only=True)
+
+	def get_data(self):
+		if not hasattr(self.db,'connection'):
+			self.db.reconnect()
+		self.data = {}
+		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
+			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
+			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
+			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
+			dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
+			shutil.copy(source_file, dst_file)
+			dep_db.close()
+
+		#if not os.path.isfile(os.path.join('data',self.xp_uuid+'.db.xz')):#self.get_path(),'data',self.xp_uuid+'.db.xz')):
+			#source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
+			#dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
+			#shutil.copy(source_file, dst_file)
+			#if 'data/'+self.xp_uuid+'.db.xz' not in self.files: #not needed, if file gotten from deps; will stay in place for later run of the same job;
+			#	self.files.append('data/'+self.xp_uuid+'.db.xz')
+
+		self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
+		for method in self.methods:
+			if self.db.data_exists(xp_uuid=self.xp_uuid, method=method):
+				self.data[method] = self.db.get_graph(xp_uuid=self.xp_uuid,method=method)
+				self.graph_filename = self.data[method].filename
+
+	def save_data(self):
+		if 'exp' in self.data.keys() and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
+			self.db.commit(self.data['exp'])
+		#elif not self.injobdir:
+		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
+		#else:
+		for method in self.methods:
+			if method in self.data.keys() and 'exp' in self.data.keys():
+				self.data['exp'].commit_data_to_db(self.data[method], method)
+
+	def unpack_data(self):
+		if os.path.isfile(os.path.join(self.path, self.db.dbpath)):
+			self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		if not hasattr(self.db,'connection'):
+			self.db.reconnect()
+		if not hasattr(self.origin_db,'connection'):
+			self.origin_db.reconnect()#RAM_only=True)
+		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=self.methods, graph_only=True)
+		#source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		#dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		#shutil.copy(source_file, dst_file)
+		#if hasattr(self.data['exp'].db, 'dbpath'):
+		#	self.data['exp'].db.dbpath = os.path.join(self.path, self.data['exp'].db.dbpath)
+		#self.origin_db.merge(other_db=self.data['exp'].db, id_list=[self.xp_uuid], main_only=False)
+		#self.data['exp'].db = self.origin_db
+		#self.data['exp'].commit_to_db()
+		self.origin_db.close()
+		self.db.close()
+
+	def gen_depend(self):
+		#exp = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
+		tmax = self.graph_cfg['tmax']
+		j = ExperimentDBJob(tmax=tmax, estimated_time=self.estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
+		self.dep_path = j.path
+		return[j]
+
+	def fix(self):
+		Job.fix(self)
+		if self.db.dbpath in self.files:
+			self.files.remove(self.db.dbpath)
+
+
+#id list is list
+#save data graph???
+
+
+
+
+
+
+
+
+class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
+
+	def __init__(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=2*3600, **graph_cfg):
+		self.dep_path = None
+		methods = graph_cfg['method']
+		if not isinstance(methods, list):
+			methods = [methods]
+		self.methods = methods
+		tmax_db = graph_cfg['tmax']
+		for mt in self.methods:
+			try:
+				if exp is None:
+					tmax_db = min(tmax_db,db.get_param(xp_uuid=xp_uuid, method=mt, param='Time_max'))
+				else:
+					tmax_db = min(tmax_db,exp.db.get_param(xp_uuid=exp.uuid, method=mt, param='Time_max'))
+			except TypeError:#when the entry doesnt exist in the database (iow Tmax is 0)
+				tmax_db = -1
+		if tmax_db >= graph_cfg['tmax']:
+			raise Exception('Job already done')
+		else:
+			super(ExperimentDBJob, self).__init__(descr=descr, requirements=requirements, virtual_env=virtual_env, profiling=profiling, get_data_at_unpack=False,checktime=checktime, estimated_time=estimated_time)
+			self.data = {}
+			self.graph_cfg = graph_cfg
+			self.db_cfg = db_cfg
+			if exp is not None:
+				self.xp_uuid = exp.uuid
+				self.origin_db = exp.db
+				xp_tmax = exp._T[-1]
+			else:
+				self.xp_uuid = xp_uuid
+				self.origin_db = db
+				try:
+					xp_tmax = self.origin_db.get_param(xp_uuid=self.xp_uuid, param='Tmax')
+				except TypeError:
+					xp_tmax = -1
+			if 'tmax' not in graph_cfg:
+				self.graph_cfg['tmax'] = xp_tmax
+			if 'tmin' not in graph_cfg:
+				self.graph_cfg['tmin'] = 0
+			if xp_tmax<self.graph_cfg['tmax']:
+				self.status = 'dependencies not satisfied'
+			with path.Path(self.get_path()):
+				new_db = self.origin_db.__class__(**self.db_cfg)
+			self.db = new_db
+			#db_path = self.db.dbpath
+			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
+			#self.db.dbpath = db_path
+			if os.path.isfile(self.db.dbpath):
+				db_path = self.db.dbpath
+			else:
+				db_path = os.path.basename(self.db.dbpath)
+			self.files.append(db_path)
+			try:
+				os.makedirs(os.path.join(self.get_path(),'data/'))
+			except OSError as exc:  # Python >2.5
+				if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(self.get_path(),'data/')):
+					pass
+				else:
+					raise
+			if not self.status == 'dependencies not satisfied':
+				source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+				dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+				shutil.copy(source_file, dst_file)
+				self.files.append('data/'+self.xp_uuid+'.db.xz')
+			self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
+		self.save(keep_data=False)
+		self.close_connections()
+
+
+	def re_init(self):
+		#self.db.dbpath = os.path.join(self.path, self.db.dbpath)
+		with pathpy.Path(self.get_path()):
+			if not hasattr(self.db,'connection'):
+				self.db.reconnect()
+		if not hasattr(self.origin_db,'connection'):
+			self.origin_db.reconnect()#RAM_only=True)
+		self.data = {}
+		#self.data['exp'] = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
+		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
+		#old_path = self.db.dbpath
+		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
+			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
+			if T >= self.graph_cfg['tmax']:
+				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
+				#if self.dep_path is None:
+				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
+				self.status = 'pending'
+		#self.db.dbpath = old_path
+
+		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
+		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
+		shutil.copy(source_file, dst_file)
+		self.files.append('data/'+self.xp_uuid+'.db.xz')
+
+		self.save(keep_data=False)
+		self.origin_db.close()
+		self.db.close()
+
+
+	def script(self):
+		graph_cfg = copy.deepcopy(self.graph_cfg)
+		for method in self.methods:
+			graph_cfg['method'] = method
+			if method in self.data.keys():
+				tmax = self.data[method]._X[0][-1]
+			else:
+				tmax = -self.data['exp'].stepfun(0,backwards=True)
+			graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
+			graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+			while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
+				if method not in self.data.keys():
+					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
+					self.graph_filename = self.data[method].filename
+				else:
+					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
+				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+				self.check_time()
+			self.save_data()
+		del self.data['exp']
+		self.db.delete(id_list=[self.xp_uuid],xp_only=True)
+
+
+	def script(self):
+		if self.data['exp']._T:
+			T = self.data['exp']._T[-1]
+		else:
+			T = -1
+		while T < self.tmax:
+			self.check_time()
+			self.data['exp'].continue_exp(autocommit=False,no_storage=True)
+			graph_cfg = copy.deepcopy(self.graph_cfg)
+			for method in self.methods:
+				if method not in self.data.keys():
+					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
+					self.graph_filename = self.data[method].filename
+				else:
+					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+
+			T = self.data['exp']._T[-1]
+
+
+
+
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):

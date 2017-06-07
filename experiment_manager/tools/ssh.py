@@ -131,8 +131,11 @@ class SSHSession(object):
         else:
             return self.client.exec_command(cmd)
 
-    def command_output(self,cmd,bashrc=False):
+    def command_output(self,cmd,bashrc=False,check_exit_code=True):
         std_in, std_out, std_err = self.command(cmd,bashrc=bashrc)
+        exit_code = std_out.channel.recv_exit_status()
+        if check_exit_code and exit_code != 0:
+            raise ValueError('Non-zero exit code ('+str(exit_code)+') for cmd '+cmd+'\n\noutput:'+std_out.read()+'\nerror:'+std_err.read())
         return std_out.read()
 
     def put(self,localfile,remotefile):

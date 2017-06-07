@@ -18,6 +18,7 @@ class ClusterJobQueue(JobQueue):
 		self.ssh_session = SSHSession(**self.ssh_cfg)
 		self.waiting_to_submit = {}
 		self.basedir = os.path.join(basedir,'job_queues',self.jobqueue_dir)#basedir #
+		self.archivedir = os.path.join(basedir,'archive_job_queues',self.jobqueue_dir)
 		self.local_basedir = os.path.join(local_basedir,'job_queues',self.jobqueue_dir)#local_basedir #
 		self.remote_backupdir = os.path.join(self.basedir,'backup_dir')
 		self.without_epilogue = without_epilogue
@@ -224,8 +225,8 @@ class ClusterJobQueue(JobQueue):
 	def check_backups(self):
 		self.backups_status = {'present':[],'locked':[]}
 		session = self.ssh_session
-		presentbackups = session.command_output('ls -l '+self.remote_backupdir)
-		lockedbackups = session.command_output('ls -l '+os.path.join(self.remote_backupdir,'backup_lock'))
+		presentbackups = session.command_output('ls -l '+self.remote_backupdir,check_exit_code=False)
+		lockedbackups = session.command_output('ls -l '+os.path.join(self.remote_backupdir,'backup_lock'),check_exit_code=False)
 		for j in self.job_list:
 			if j.uuid in presentbackups:
 				self.backups_status['present'].append(j.uuid)
@@ -290,7 +291,7 @@ class ClusterJobQueue(JobQueue):
 
 		if hasattr(self,'to_remove') and len(self.to_remove)>0:
 			rm_command = 'rm -R ' + ' '.join(self.to_remove)
-			session.command_output(rm_command)
+			session.command_output(rm_command,check_exit_code=False)
 			self.to_remove = []
 		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
 		for i in range(len(retrieving_list)):
@@ -442,3 +443,9 @@ class ClusterJobQueue(JobQueue):
 
 	def jobid_from_submit_output(self,submit_output):
 		return submit_output
+
+	def clean_jobqueue(self):
+		session = self.ssh_session
+		if hasattr(self,'archivedir'):
+			cmd = 'mkdir -p ' + self.archivedir + ' && mv -f ' + self.basedir + '/* '+ self.archivedir + '/'
+			session.command_output(cmd)
