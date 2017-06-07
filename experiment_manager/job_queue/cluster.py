@@ -115,8 +115,9 @@ class ClusterJobQueue(JobQueue):
 			if f not in job.files:
 				job.files.append(f)
 		for f in job.files:
-			session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
-			session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
+			if os.path.exists(f):
+				#session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
+				session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 		session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
 		#session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		#session.command_output('chmod u+x {job_dir}/script.py'.format(**format_dict))
@@ -182,14 +183,16 @@ class ClusterJobQueue(JobQueue):
 				#	os.makedirs(format_dict_job['local_job_dir'])
 				#session.create_path("{job_dir}".format(**format_dict_job))
 				for f in job.files:
-					#session.put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
-					session.batch_put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
+					if os.path.exists(f):
+						#session.put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
+						session.batch_put(os.path.join(format_dict_job['local_job_dir'],f), os.path.join(format_dict_job['job_dir'],f))
 
 			for f,c in special_files:
 				st = os.stat(os.path.join(format_dict['local_multijob_dir'],f))
 				os.chmod(os.path.join(format_dict['local_multijob_dir'],f), st.st_mode | stat.S_IXUSR)
-				session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
-				session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
+				if os.path.exists(f):
+					#session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
+					session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 			session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
 
 			#session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
