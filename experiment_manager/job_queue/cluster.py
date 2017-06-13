@@ -335,7 +335,7 @@ class ClusterJobQueue(JobQueue):
 	def update_virtualenv(self, virtual_env=None, requirements=[],src_path=None):
 		cmd = []
 		if src_path is None:
-			src_path = self.basedir+'/src_'+self.uuid
+			src_path = self.basedir+'/src_'+self.uuid #maybe choose something else as jobqueue folder? (because may be used later by other job queues)
 		if not isinstance(requirements, (list, tuple)):
 			requirements = [requirements]
 		#session = SSHSession(**self.ssh_cfg)
@@ -451,4 +451,4 @@ class ClusterJobQueue(JobQueue):
 		session = self.ssh_session
 		if hasattr(self,'archivedir'):
 			cmd = 'mkdir -p ' + self.archivedir + ' && mv -f ' + self.basedir + '/* '+ self.archivedir + '/'
-			session.command_output(cmd)
+			session.command_output(cmd,check_exit_code=False)

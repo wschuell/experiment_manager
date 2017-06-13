@@ -88,13 +88,13 @@ class ExperimentDBJob(Job):
 		#self.db.dbpath = db_path
 		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
-		try:
-			os.makedirs(os.path.join(self.get_path(),'data/'))
-		except OSError as exc:  # Python >2.5
-			if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(self.get_path(),'data/')):
-				pass
-			else:
-				raise
+		#try:
+		#	os.makedirs(os.path.join(self.get_path(),'data/'))
+		#except OSError as exc:  # Python >2.5
+		#	if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(self.get_path(),'data/')):
+		#		pass
+		#	else:
+		#		raise
 		if os.path.exists(source_file):
 			shutil.copy(source_file, dst_file)
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
