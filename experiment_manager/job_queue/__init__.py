@@ -12,7 +12,7 @@ import errno
 
 job_queue_class={
 	'local':'local.LocalJobQueue',
-	'local_multiprocess':'local.MultiProcessJobQueue',
+	'local_multiprocess':'local.LocalMultiProcessJobQueue',
 	'avakas':'avakas.AvakasJobQueue',
 	'plafrim':'plafrim.PlafrimJobQueue',
 	'torque':'torque.TorqueJobQueue',

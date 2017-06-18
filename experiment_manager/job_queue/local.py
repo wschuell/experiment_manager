@@ -6,6 +6,8 @@ import glob
 
 import multiprocessing as mp
 
+from ..job import run_job_from_path
+
 class LocalJobQueue(JobQueue):
 	def __init__(self, **kwargs):
 		super(LocalJobQueue, self).__init__(**kwargs)
@@ -58,27 +60,57 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 			self.nb_process = mp.cpu_count()
 		else:
 			self.nb_process = nb_process
-		self.pool = mp.Pool(processes=self.nb_process)
+		self.running_processes = []
+		#self.pool = mp.Pool(processes=self.nb_process)
 		#backupdir?
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
-		del out_dict['pool']
+		del out_dict['running_processes']
+		#del out_dict['pool']
 		return out_dict
 
 	def __setstate__(self, in_dict):
 		self.__dict__.update(in_dict)
-		self.pool = mp.Pool(processes=self.nb_process)
+		self.running_processes = []
+		#self.pool = mp.Pool(processes=self.nb_process)
 
 
 	def submit_job(self, job):
-		pass
+		p = Process(run_job_from_path,(j.path,))
+		self.running_processes.append((p,job.uuid))
+		j.status = 'running'
+		p.start()
 
-	def check_job(self, job):
-		if job.status == 'running':
-			job.status = 'unfinished'
 
 	def global_submit(self):
-		waiting_list = [jj for jj in self.job_list if jj.status == 'pending']
-		##self.pool.add(waiting_list.run)
+		pass
 
+
+	def check_running_jobs(self):
+		self.finished_running_jobs = []
+		still_running_uuids = []
+		for p,j_uuid in list(self.running_processes):
+			if not p.is_alive():
+				p.join()
+				self.running_processes.remove((p,j_uuid))
+			else:
+				still_running_uuids.append(j_uuid)
+		for j in self.job_list:
+			if j.status == 'running' and j.uuid not in still_running_uuids:
+				j.status = 'finished running'
+
+	def avail_workers(self):
+		self.refresh_avail_workers()
+		if hasattr(self,'waiting_to_submit')
+			offset_waiting = len(self.waiting_to_submit)
+		else:
+			offset_waiting = 0
+		return self.available_workers - offset_waiting
+
+	def refresh_avail_workers(self):
+		Njobs = self.count_running_jobs()
+		self.available_workers = self.nb_process - Njobs
+
+	def count_running_jobs(self):
+		return len(self.running_processes)

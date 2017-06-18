@@ -96,6 +96,8 @@ class ExperimentDBJob(Job):
 		#	else:
 		#		raise
 		if os.path.exists(source_file):
+			if len(os.path.dirname(dst_file))>0 and not os.path.exists(os.path.dirname(dst_file)):
+				os.makedirs(os.path.dirname(dst_file))
 			shutil.copy(source_file, dst_file)
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
@@ -134,6 +136,8 @@ class ExperimentDBJob(Job):
 		source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		if os.path.exists(source_file):
+			if len(os.path.dirname(dst_file))>0 and not os.path.exists(os.path.dirname(dst_file)):
+				os.makedirs(os.path.dirname(dst_file))
 			shutil.copy(source_file, dst_file)
 		self.db.close()
 		self.origin_db.close()
