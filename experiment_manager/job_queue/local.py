@@ -3,6 +3,7 @@ from . import JobQueue
 import pip
 import os
 import glob
+import sys
 
 import multiprocessing as mp
 
@@ -50,7 +51,18 @@ class LocalJobQueue(JobQueue):
 		JobQueue.retrieve_job(self,job)
 
 
+class JobProcess(mp.Process):
+	def __init__(self, job_path, *vargs, **kwargs):
+		self.job_path = job_path
+		mp.Process.__init__(self,target=run_job_from_path,args=(self.job_path,), *vargs, **kwargs)
 
+	def run(self):
+		self.init_redirect()
+		mp.Process.run(self)
+
+	def init_redirect(self):
+		sys.stdout = open(os.path.join(self.job_path,"output.txt"), "a", buffering=0)
+		sys.stderr = open(os.path.join(self.job_path,"error.txt"), "a", buffering=0)
 
 
 class LocalMultiProcessJobQueue(LocalJobQueue):
@@ -77,9 +89,10 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 
 
 	def submit_job(self, job):
-		p = Process(run_job_from_path,(j.path,))
+		#p = mp.Process(target=run_job_from_path,args=(job.path,))
+		p = JobProcess(job_path=job.path)
 		self.running_processes.append((p,job.uuid))
-		j.status = 'running'
+		job.status = 'running'
 		p.start()
 
 
@@ -102,7 +115,7 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 
 	def avail_workers(self):
 		self.refresh_avail_workers()
-		if hasattr(self,'waiting_to_submit')
+		if hasattr(self,'waiting_to_submit'):
 			offset_waiting = len(self.waiting_to_submit)
 		else:
 			offset_waiting = 0
@@ -114,3 +127,7 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 
 	def count_running_jobs(self):
 		return len(self.running_processes)
+
+	def retrieve_job(self,job):
+		job.update()
+
