@@ -7,14 +7,16 @@ class TorqueJobQueue(ClusterJobQueue):
 		if not self.without_epilogue:
 			if 'multijob_dir' in format_dict.keys():
 				return [('script.py',self.multijob_script(format_dict=format_dict)),
-						('epilogue.sh',self.multijob_epilogue(format_dict=format_dict))]
+						('epilogue.sh',self.multijob_epilogue(format_dict=format_dict)),
+						('multijob.json',self.multijob_json(format_dict=format_dict))]
 			else:
 				return [('script.py',self.individual_script(format_dict=format_dict)),
 						('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
 		else:
 			if 'multijob_dir' in format_dict.keys():
 				return [('script.py',self.multijob_script(format_dict=format_dict)),
-						('launch_script.sh',self.multijob_launch_script(format_dict=format_dict))]
+						('launch_script.sh',self.multijob_launch_script(format_dict=format_dict)),
+						('multijob.json',self.multijob_json(format_dict=format_dict))]
 			else:
 				return [('script.py',self.individual_script(format_dict=format_dict)),
 						('launch_script.sh',self.individual_launch_script(format_dict=format_dict))]
@@ -138,7 +140,7 @@ JOBID=$1
 
 MULTIJOBDIR={multijob_dir}
 ARRAYID=$(python -c "jobid='"$JOBID"'; print jobid.split('[')[1].split(']')[0]")
-JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
 
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
@@ -280,7 +282,7 @@ kill -9 $PID2
 echo "Job finished, backing up files.";
 
 MULTIJOBDIR={multijob_dir}
-JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
 
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
@@ -310,3 +312,8 @@ exit 0
 #cp -R {base_work_dir}\"$JOBID\"/backup_dir/{job_uuid} {job_backup_dir}
 #rm -R {base_work_dir}\"$JOBID\"/backup_dir
 
+
+
+	def multijob_json(self, format_dict):
+		return """{jobdir_dict}
+		""".format(**format_dict)

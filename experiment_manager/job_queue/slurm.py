@@ -6,7 +6,8 @@ class SlurmJobQueue(ClusterJobQueue):
 	def gen_files(self, format_dict):
 		if 'multijob_dir' in format_dict.keys():
 			return [('script.py',self.multijob_script(format_dict=format_dict)),
-					('launch_script.sh',self.multijob_launch_script(format_dict=format_dict))]
+					('launch_script.sh',self.multijob_launch_script(format_dict=format_dict)),
+					('multijob.json',self.multijob_json(format_dict=format_dict))]
 		else:
 			return [('script.py',self.individual_script(format_dict=format_dict)),
 					('launch_script.sh',self.individual_launch_script(format_dict=format_dict))]
@@ -158,7 +159,8 @@ echo "Job finished, backing up files."
 
 
 MULTIJOBDIR={multijob_dir}
-JOBDIR=$(python -c "jobdir_dict = {jobdir_dict}; print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
+
 
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
@@ -230,6 +232,9 @@ exit 0
 		return submit_output.split(' ')[-1]
 
 
+	def multijob_json(self, format_dict):
+		return """{jobdir_dict}
+		""".format(**format_dict)
 
 
 

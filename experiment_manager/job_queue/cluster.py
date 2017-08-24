@@ -118,7 +118,7 @@ class ClusterJobQueue(JobQueue):
 			if os.path.exists(os.path.join(format_dict['local_job_dir'],f)):
 				#session.put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
 				session.batch_put(os.path.join(format_dict['local_job_dir'],f), os.path.join(format_dict['job_dir'],f))
-		session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
+		session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=None)#,command_send_func=self.command_asjob_output)
 		#session.command_output('chmod u+x {job_dir}/epilogue.sh'.format(**format_dict))
 		#session.command_output('chmod u+x {job_dir}/script.py'.format(**format_dict))
 		JOBID = self.send_submit_command(cmd_type='single_job',format_dict=format_dict)
@@ -193,7 +193,7 @@ class ClusterJobQueue(JobQueue):
 				if os.path.exists(os.path.join(format_dict['local_multijob_dir'],f)):
 					#session.put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
 					session.batch_put(os.path.join(format_dict['local_multijob_dir'],f), os.path.join(format_dict['multijob_dir'],f))
-			session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
+			session.batch_send(untar_basedir=self.basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=None)#,command_send_func=self.command_asjob_output)
 
 			#session.command_output('chmod u+x {multijob_dir}/epilogue.sh'.format(**format_dict))
 			#session.command_output('chmod u+x {multijob_dir}/script.py'.format(**format_dict))
@@ -252,7 +252,7 @@ class ClusterJobQueue(JobQueue):
 			for f in job.clean_at_retrieval:
 				session.remove(os.path.join(job_dir,f))
 		session.batch_get(job_dir, local_job_dir)
-		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
+		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=None)#,command_send_func=self.command_asjob_output)
 		#session.get_dir(job_dir, local_job_dir)
 
 		#session.close()
@@ -296,7 +296,7 @@ class ClusterJobQueue(JobQueue):
 			rm_command = 'rm -R ' + ' '.join(self.to_remove)
 			session.command_output(rm_command,check_exit_code=False)
 			self.to_remove = []
-		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=self.command_asjob_output)
+		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=None)#,command_send_func=self.command_asjob_output)
 		for i in range(len(retrieving_list)):
 			j = retrieving_list[i]
 			jpath = path_list[i]
