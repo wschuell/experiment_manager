@@ -1,6 +1,8 @@
 
 from .cluster import ClusterJobQueue
 
+import json
+
 class TorqueJobQueue(ClusterJobQueue):
 
 	def gen_files(self, format_dict):

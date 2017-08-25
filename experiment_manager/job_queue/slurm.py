@@ -1,6 +1,8 @@
 
 from .cluster import ClusterJobQueue
 
+import json
+
 class SlurmJobQueue(ClusterJobQueue):
 
 	def gen_files(self, format_dict):
