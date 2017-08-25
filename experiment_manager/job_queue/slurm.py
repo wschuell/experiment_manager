@@ -160,7 +160,7 @@ echo "Job finished, backing up files."
 
 
 MULTIJOBDIR={multijob_dir}
-JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict['"$ARRAYID"']")
 
 
 

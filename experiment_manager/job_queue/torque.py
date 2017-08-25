@@ -141,7 +141,7 @@ JOBID=$1
 
 MULTIJOBDIR={multijob_dir}
 ARRAYID=$(python -c "jobid='"$JOBID"'; print jobid.split('[')[1].split(']')[0]")
-JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict['"$ARRAYID"']")
 
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
@@ -283,7 +283,7 @@ kill -9 $PID2
 echo "Job finished, backing up files.";
 
 MULTIJOBDIR={multijob_dir}
-JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict["$ARRAYID"]")
+JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print jobdir_dict['"$ARRAYID"']")
 
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
