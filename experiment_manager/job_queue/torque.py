@@ -1,7 +1,6 @@
 
 from .cluster import ClusterJobQueue
 
-import json
 
 class TorqueJobQueue(ClusterJobQueue):
 
@@ -317,4 +316,4 @@ exit 0
 
 
 	def multijob_json(self, format_dict):
-		return json.dumps(format_dict['jobdir_dict'],sort_keys=True)
+		return format_dict['jobdir_dict_json']

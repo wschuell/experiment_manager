@@ -5,6 +5,7 @@ import time
 import copy
 import uuid
 import stat
+import json
 
 from . import JobQueue
 from ..tools.ssh import SSHSession
@@ -155,6 +156,7 @@ class ClusterJobQueue(JobQueue):
 			multijob_dir = self.name+'_'+self.uuid+'_'+j_list[0].uuid+'_'+time.strftime("%Y%m%d%H%M%S", time.localtime())
 			format_dict .update({
 				'jobdir_dict':str(jobdir_dict[wt]),
+				'jobdir_dict_json':json.dumps(jobdir_dict[wt],sort_keys=True),
 				'multijob_dir':os.path.join(self.basedir,multijob_dir),
 				'local_multijob_dir':os.path.join(self.path,multijob_dir),
 				'multijob_name':multijob_dir,
