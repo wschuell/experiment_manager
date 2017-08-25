@@ -233,8 +233,7 @@ exit 0
 
 
 	def multijob_json(self, format_dict):
-		return """{jobdir_dict}
-		""".format(**format_dict)
+		return json.dumps(format_dict['jobdir_dict'],sort_keys=True)
 
 
 
