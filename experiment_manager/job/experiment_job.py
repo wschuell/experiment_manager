@@ -68,13 +68,13 @@ class ExperimentDBJob(Job):
 		if exp is None:
 			self.origin_db = db
 			with path.Path(self.get_path()):
-				self.db = db.__class__(**db_cfg)
+				self.db = db.__class__(db_type="sqlite3",**db_cfg)
 			self.xp_uuid = xp_uuid
 		else:
 			self.data = exp #copy.deepcopy(exp)
 			self.origin_db = self.data.db #copy.deepcopy(self.data.db)
 			with path.Path(self.get_path()):
-				self.db = self.data.db.__class__(**db_cfg)
+				self.db = self.data.db.__class__(db_type="sqlite3",**db_cfg)
 			self.data.db = self.db
 			self.xp_uuid = self.data.uuid
 		#db_path = self.db.dbpath
@@ -283,7 +283,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			if xp_tmax<self.graph_cfg['tmax']:
 				self.status = 'dependencies not satisfied'
 			with path.Path(self.get_path()):
-				new_db = self.origin_db.__class__(**self.db_cfg)
+				new_db = self.origin_db.__class__(db_type="sqlite3",**self.db_cfg)
 			self.db = new_db
 			#db_path = self.db.dbpath
 			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
@@ -455,7 +455,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			if xp_tmax<self.graph_cfg['tmax']:
 				self.status = 'dependencies not satisfied'
 			with path.Path(self.get_path()):
-				new_db = self.origin_db.__class__(**self.db_cfg)
+				new_db = self.origin_db.__class__(db_type="sqlite3",**self.db_cfg)
 			self.db = new_db
 			#db_path = self.db.dbpath
 			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
@@ -562,7 +562,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			self.db.reconnect()
 		self.data = {}
 		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
-			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+			dep_db = self.db.__class__(db_type="sqlite3",path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
@@ -677,7 +677,7 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 			if xp_tmax<self.graph_cfg['tmax']:
 				self.status = 'dependencies not satisfied'
 			with path.Path(self.get_path()):
-				new_db = self.origin_db.__class__(**self.db_cfg)
+				new_db = self.origin_db.__class__(db_type="sqlite3",**self.db_cfg)
 			self.db = new_db
 			#db_path = self.db.dbpath
 			#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
@@ -786,7 +786,7 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 			self.db.reconnect()
 		self.data = {}
 		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
-			dep_db = self.db.__class__(path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+			dep_db = self.db.__class__(db_type="sqlite3",path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'),db_type="sqlite3")
 			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
