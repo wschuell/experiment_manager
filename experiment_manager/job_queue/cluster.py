@@ -296,7 +296,17 @@ class ClusterJobQueue(JobQueue):
 
 		if hasattr(self,'to_remove') and len(self.to_remove)>0:
 			rm_command = 'rm -R ' + ' '.join(self.to_remove)
-			session.command_output(rm_command,check_exit_code=False)
+			cmd_length = len(rm_command)
+			max_size_cmd = 100000
+			if cmd_length > max_size_cmd:
+				to_rm = copy.deepcopy(self.to_remove)
+				while to_rm:
+					new_cmd = 'rm -R'
+					while (len(new_cmd) < max_size_cmd) and to_rm:
+						new_cmd += ' ' + to_rm.pop()
+					session.command_output(new_cmd,check_exit_code=False)
+			else:
+				session.command_output(rm_command,check_exit_code=False)
 			self.to_remove = []
 		session.batch_receive(untar_basedir=self.local_basedir,localtardir=os.path.join(self.local_basedir,'tar_dir'),remotetardir=os.path.join(self.basedir,'tar_dir'),command_send_func=None)#,command_send_func=self.command_asjob_output)
 		for i in range(len(retrieving_list)):
