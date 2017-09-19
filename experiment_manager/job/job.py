@@ -103,7 +103,7 @@ class Job(object):
 				self.save_data()
 			except Exception as e:
 				with open('scripterror_notifier','w') as f:#directly change job status and save, then raise?
-					f.write(str(e))
+					f.write(str(e)+'\n')
 				raise
 			self.get_prg_states()
 			self.stop_profiler()
@@ -165,9 +165,9 @@ class Job(object):
 					raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 				if self.exec_time > 0:
 					self.init_time = -self.exec_time
-					self.estimated_time = min(self.estimated_time*2, self.max_time)
+					self.estimated_time = int(min(self.estimated_time*1.1, self.max_time))
 				else:
-					self.estimated_time = min(self.estimated_time*4, self.max_time)
+					self.estimated_time = int(min(self.estimated_time*2, self.max_time))
 				filelist = [txtfile for txtfile in glob.glob('*.txt') if not (len(txtfile)>=8 and txtfile[-8:]!='_old.txt')]
 				for txtfile in filelist:
 					with open(txtfile,'r') as f_out:

@@ -54,7 +54,7 @@ class ClusterJobQueue(JobQueue):
 		else:
 			walltime_m = str(walltime_m)
 
-		walltime_s = time
+		walltime_s = int(time)
 		if walltime_s<10:
 			walltime_s = '0'+str(walltime_s)
 		else:
