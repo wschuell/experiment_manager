@@ -19,10 +19,11 @@ import glob
 import uuid
 
 class SSHSession(object):
-    def __init__(self, hostname, username=None, port = 22, password=None, key_file=None):
+    def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False):
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.auto_accept = auto_accept
         self.put_wait = []
         self.get_wait = []
         self.port = port
@@ -44,36 +45,75 @@ class SSHSession(object):
     def connect(self):
         home = os.environ['HOME']
         self.client.load_system_host_keys()
-        try:
-            self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
-        except:
-            time.sleep(1)
-            retry = True
-            while retry:
-                try:
+        cfg = paramiko.config.SSHConfig()
+        sshconfigfile = '{}/.ssh/config'.format(home)
+        if os.path.isfile(sshconfigfile):
+            with open(sshconfigfile,'r') as f:
+                cfg.parse(f)
+        if self.hostname in cfg.get_hostnames():
+            final_cfg = {}
+            for k,v in cfg.lookup(self.hostname).iteritems():
+                if k == 'hostname':
+                    final_cfg['hostname'] = v
+                elif k == 'port':
+                    final_cfg['port'] = int(v)
+                elif k == 'forwardagent':
+                    if v.lower() == 'no':
+                        bool_val = False
+                    else:
+                        bool_val = True
+                    final_cfg['allow_agent'] = bool_val
+                elif k == 'user':
+                    final_cfg['username'] = v
+                elif k == 'identityfile':
+                    final_cfg['key_filename'] = v[0]
+                elif k == 'proxycommand':
+                    final_cfg['sock'] = paramiko.proxy.ProxyCommand(v)
+            #if 'sock' in final_cfg.keys():
+            #    final_cfg['hostname'] += ' (<no hostip for proxy command>)'
+            try:
+                self.client.connect(**final_cfg)
+            except paramiko.SSHException:
+                print "unknown host, if present in ECDSA, upgrade your version of paramiko"
+                if hasattr(self,'auto_accept') and self.auto_accept:
+                    if 'sock' in final_cfg.keys():
+                        final_cfg['sock'] = paramiko.proxy.ProxyCommand(cfg.lookup(self.hostname)['proxycommand'])
+                    self.client.set_missing_host_key_policy(paramiko.client.WarningPolicy())
+                    self.client.connect(**final_cfg)
+                    self.client.set_missing_host_key_policy(paramiko.client.RejectPolicy())
+                else:
+                    raise
+        else:
+            try:
                     self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
-                except:
-                    a = raw_input('Connection failed. Retry? Y/N/catch')
-                    if a == 'catch':
-                        raise
-                    elif a not in ['y','Y']:
-                        retry = False
-            if not retry:
-                temp_password = getpass.getpass('SSH Password:')
-                self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
-                question = raw_input('Install SSH key? Y/N')
-                if question == 'Y' or question == 'y':
-                    where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
-                    if where == 'default':
-                        where = '{}/.ssh/id_rsa'.format(home)
-                    elif where == 'key_file_name':
-                        where = '{}/.ssh/{}/id_rsa'.format(home,self.key_file)
-                    elif where == 'key_file':
-                        where = self.key_file
-                    self.key_file = where
-                    self.install_ssh_key()
-                    self.close()
-                    self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
+            except:
+                time.sleep(1)
+                retry = True
+                while retry:
+                    try:
+                        self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
+                    except:
+                        a = raw_input('Connection failed. Retry? Y/N/catch')
+                        if a == 'catch':
+                            raise
+                        elif a not in ['y','Y']:
+                            retry = False
+                if not retry:
+                    temp_password = getpass.getpass('SSH Password:')
+                    self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
+                    question = raw_input('Install SSH key? Y/N')
+                    if question == 'Y' or question == 'y':
+                        where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
+                        if where == 'default':
+                            where = '{}/.ssh/id_rsa'.format(home)
+                        elif where == 'key_file_name':
+                            where = '{}/.ssh/{}/id_rsa'.format(home,self.key_file)
+                        elif where == 'key_file':
+                            where = self.key_file
+                        self.key_file = where
+                        self.install_ssh_key()
+                        self.close()
+                        self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
         #self.transport = self.client._transport
         #self.transport.window_size = 2147483647
         #self.transport.packetizer.REKEY_BYTES = pow(2, 40)

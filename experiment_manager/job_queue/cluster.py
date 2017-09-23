@@ -11,9 +11,10 @@ from . import JobQueue
 from ..tools.ssh import SSHSession
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, **kwargs):
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, modules=[], **kwargs):
 		super(ClusterJobQueue,self).__init__(**kwargs)
 		self.max_jobs = max_jobs
+		self.modules = modules
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
 		self.ssh_session = SSHSession(**self.ssh_cfg)
@@ -78,6 +79,7 @@ class ClusterJobQueue(JobQueue):
 			'job_descr': job.descr,
 			'job_uuid': job.uuid,
 			'job_jobid': jobid,
+			#'modules_cluster': ' '.join(self.modules),
 			'walltime_seconds': job.estimated_time,
 			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
 		}

@@ -2,14 +2,13 @@
 from slurm import SlurmJobQueue
 
 class PlafrimJobQueue(SlurmJobQueue):
-	def __init__(self, username, basedir=None, local_basedir='', base_work_dir=None, max_jobs=256, key_file='plafrim', password=None, install_as_job=False,**kwargs):
+	def __init__(self, username,hostname='plafrim-ext', basedir=None, local_basedir='', base_work_dir=None, max_jobs=256, key_file='plafrim', password=None, install_as_job=False,**kwargs):
 		ssh_cfg = {'username':username,
-					'hostname':'anyone.phys.uniroma1.it',
-					'key_file':key_file,
-					'password':password
+					'hostname':hostname,
 					}
 		if basedir is None:
 			basedir = '/lustre/'+username
 		if base_work_dir is None:
 			base_work_dir = '/tmp/'+username
-		SlurmJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, install_as_job=install_as_job, **kwargs)
+		modules = ['slurm']
+		SlurmJobQueue.__init__(self,ssh_cfg=ssh_cfg,modules=modules,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, install_as_job=install_as_job, **kwargs)
