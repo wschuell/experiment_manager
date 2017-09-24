@@ -16,7 +16,7 @@ import numpy as np
 
 jsonpickle.set_preferred_backend('json')
 jsonpickle.set_encoder_options('json', indent=4)
-
+jsonpickle.enable_fallthrough(False)
 
 class Job(object):
 

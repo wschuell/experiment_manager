@@ -329,13 +329,16 @@ class SSHSession(object):
                     if self.isdir(os.path.join(gw['remotedir'],gw['remotename'])):
                         self.get_dir(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
                     else:
-                        self.get(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
+                        try:
+                            self.get(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
+                        except:
+                            raise IOError(os.path.join(gw['remotedir'],gw['remotename']),os.path.join(gw['localdir'],gw['localname']))
             elif limit_max is not None and len(self.get_wait) > limit_max:
                 side_list = self.get_wait[limit_max:]
                 self.get_wait = self.get_wait[:limit_max]
-                output += self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
+                output += self.batch_receive(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
                 self.get_wait = side_list
-                return output + self.batch_send(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
+                return output + self.batch_receive(localtardir=localtardir,tar_name=tar_name,remotetardir=remotetardir,command_send_func=command_send_func,untar_basedir=untar_basedir,limit_min=limit_min,limit_max=limit_max)
             else:
                 if tar_name is None:
                     tar_name = str(uuid.uuid1())

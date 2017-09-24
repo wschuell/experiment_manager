@@ -137,8 +137,8 @@ sys.exit(0)
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --job-name="{multijob_name}"
-#SBATCH --output={multijob_dir}/output.txt
-#SBATCH --error={multijob_dir}/error.txt
+#SBATCH --output={multijob_dir}/output.txt-%a
+#SBATCH --error={multijob_dir}/error.txt-%a
 
 ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
