@@ -202,6 +202,8 @@ exit 0
 
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		if cmd_type == 'simple':
 			return session.command_output('sbatch --time='+str(t_min)+' -o '+output_path+' '+file_path,bashrc=True)[:-1]
 		elif cmd_type == 'single_job':
@@ -214,10 +216,14 @@ exit 0
 
 	def get_running_jobs_string(self):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		return session.command_output('squeue -r -o %18i -u '+self.ssh_cfg['username'])
 
 	def count_running_jobs(self):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		count = int(session.command_output('squeue -u {} -r|wc -l'.format(self.ssh_cfg['username'])))
 		if count > 0:
 			count -= 1
@@ -243,6 +249,8 @@ class OldSlurmJobQueue(SlurmJobQueue):
 
 	def get_running_jobs_string(self):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		return session.command_output('squeue -o %18i -u '+self.ssh_cfg['username'])
 
 

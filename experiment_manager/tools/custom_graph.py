@@ -1,5 +1,11 @@
 #!/usr/bin/python
-
+import sys
+try:
+	import Tkinter
+except ImportError:
+	import matplotlib
+	matplotlib.use('Agg')
+	sys.stderr.write('Tkinter not installed, loading matplotlib and pyplot with Agg backend\n')
 import matplotlib.pyplot as plt
 import time
 import numpy as np

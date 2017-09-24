@@ -177,6 +177,8 @@ exit 0
 
 	def send_submit_command(self,cmd_type,format_dict=None,t_min=None,output_path=None,file_path=None):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		if cmd_type == 'simple':
 			return session.command_output('qsub -p +1000 -l walltime=00:'+str(t_min)+':00 -l nodes=1:ppn=1 -p +1023 -j oe -o '+output_path+' '+file_path)[:-1]
 		elif cmd_type == 'single_job':
@@ -195,10 +197,14 @@ exit 0
 
 	def get_running_jobs_string(self):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		return session.command_output('qstat -f -t|grep \'Job Id:\'')
 
 	def count_running_jobs(self):
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		qstat = int(session.command_output('qstat -u {} -t|wc -l'.format(self.ssh_cfg['username'])))
 		if qstat > 0:
 			qstat -= 5

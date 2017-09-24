@@ -19,11 +19,12 @@ import glob
 import uuid
 
 class SSHSession(object):
-    def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False):
+    def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False, prefix_command=None):
         self.hostname = hostname
         self.username = username
         self.password = password
         self.auto_accept = auto_accept
+        self.prefix_command = prefix_command
         self.put_wait = []
         self.get_wait = []
         self.port = port
@@ -156,6 +157,8 @@ class SSHSession(object):
         #self.command_output("mkdir -p {}".format(path))
 
     def command(self,cmd,bashrc=False):
+        if hasattr(self,'prefix_command') and self.prefix_command is not None:
+            cmd = self.prefix_command + cmd
         if bashrc:
             cmd2 = 'mkdir -p ~/.tmp'
             cmd2 += ' && '
