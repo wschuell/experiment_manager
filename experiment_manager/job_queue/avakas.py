@@ -6,7 +6,6 @@ import copy
 import uuid
 
 from . import JobQueue
-from ..tools.ssh import SSHSession
 
 from torque import TorqueJobQueue
 
