@@ -10,6 +10,7 @@ import path
 import errno
 import math
 import path as pathpy
+import naminggamesal as ngal
 
 
 class ExperimentJob(Job):
@@ -117,7 +118,10 @@ class ExperimentDBJob(Job):
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):
-			self.db.reconnect()
+			try:
+				self.db.reconnect()
+			except AttributeError:
+				raise AttributeError(str(ngal.ngdb.NamingGamesDB.instances))
 		self.data = self.db.get_experiment(xp_uuid=self.xp_uuid)
 
 	def save_data(self):

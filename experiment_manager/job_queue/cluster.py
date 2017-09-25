@@ -322,6 +322,8 @@ class ClusterJobQueue(JobQueue):
 	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		cmd = []
 		if sys_site_packages:
 			site_pack = '--system-site-packages '
@@ -354,6 +356,8 @@ class ClusterJobQueue(JobQueue):
 			requirements = [requirements]
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		if virtual_env is not None and not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
 			#session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
