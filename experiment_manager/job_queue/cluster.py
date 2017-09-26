@@ -342,7 +342,7 @@ class ClusterJobQueue(JobQueue):
 				cmd.append('pip install '+package)
 			cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
-			if install_as_job:
+			if self.install_as_job:
 				out = self.command_asjob_output(' && '.join(cmd),retry=True)
 			else:
 				out = self.command_output(' && '.join(cmd))

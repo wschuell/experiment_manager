@@ -11,6 +11,13 @@ class ExampleJob(Job):
 	def __init__(self,*args,**kwargs):
 		super(ExampleJob,self).__init__(*args,**kwargs)
 		if os.path.isfile(self.descr+'data.dat'):
+			try:
+				os.makedirs(self.path)
+			except OSError as exc:
+				if exc.errno == errno.EEXIST and os.path.isdir(self.path):
+					pass
+				else:
+					raise
 			shutil.copy(self.descr+'data.dat', self.path+'/'+self.descr+'data.dat')
 
 	def script(self):

@@ -260,7 +260,7 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=60,coeff=1,call_between=None):
+	def auto_finish_queue(self,t=10,coeff=1,call_between=None):
 		self.update_queue()
 		step = t
 		state = str(self)
@@ -287,7 +287,10 @@ class JobQueue(object):
 			else:
 				envs[env] += copy.deepcopy(j.requirements)
 		for env in envs.keys():
-			self.update_virtualenv(env, requirements=list(set(envs[env])))
+			if env == 'None':
+				self.update_virtualenv(None, requirements=list(set(envs[env])))
+			else:
+				self.update_virtualenv(env, requirements=list(set(envs[env])))
 
 	def cancel_job(self, job, clean=False):
 		if self.erase:
