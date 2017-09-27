@@ -447,3 +447,23 @@ sys.exit(0)
         self.command('echo -e "{}" >> /home/{}/.ssh/authorized_keys'.format(pubkey_string, self.username))
 
 
+def get_username_from_hostname(hostname):
+    home = os.environ['HOME']
+    cfg = paramiko.config.SSHConfig()
+    sshconfigfile = '{}/.ssh/config'.format(home)
+    if os.path.isfile(sshconfigfile):
+        with open(sshconfigfile,'r') as f:
+            cfg.parse(f)
+    if hostname in cfg.get_hostnames():
+        return cfg.lookup(hostname)['user']
+    else:
+        raise ValueError('Hostname '+hostname+' not found. Add it to your .ssh/config, or provide directly username.')
+
+def check_hostname(hostname):
+    home = os.environ['HOME']
+    cfg = paramiko.config.SSHConfig()
+    sshconfigfile = '{}/.ssh/config'.format(home)
+    if os.path.isfile(sshconfigfile):
+        with open(sshconfigfile,'r') as f:
+            cfg.parse(f)
+    return (hostname in cfg.get_hostnames())

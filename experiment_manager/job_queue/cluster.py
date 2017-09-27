@@ -8,11 +8,11 @@ import stat
 import json
 
 from . import JobQueue
-from ..tools.ssh import SSHSession
+from ..tools.ssh import SSHSession,get_username_from_hostname,check_hostname
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, modules=[], **kwargs):
-		super(ClusterJobQueue,self).__init__(**kwargs)
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, modules=[], **kwargs):
+		super(ClusterJobQueue,self).__init__(requirements=requirements,**kwargs)
 		self.max_jobs = max_jobs
 		self.modules = modules
 		self.ssh_cfg = ssh_cfg
@@ -324,6 +324,14 @@ class ClusterJobQueue(JobQueue):
 		session = self.ssh_session
 		if hasattr(self,'modules') and self.modules:
 			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
+		if len(session.command_output('command -v virtualenv')) > 1:
+			virtualenv_bin = 'virtualenv'
+		else:
+			session.command_output('pip install --user virtualenv')
+			mod_venv = session.command_output('python -c "import virtualenv; print virtualenv;"')
+			assert mod_venv[:27] == "<module 'virtualenv' from '"
+			mod_venv_clean = mod_venv[27:-4]
+			virtualenv_bin = "python " + mod_venv_clean
 		cmd = []
 		if sys_site_packages:
 			site_pack = '--system-site-packages '
@@ -336,7 +344,7 @@ class ClusterJobQueue(JobQueue):
 				session.command('pip install --user '+package)
 		else:
 			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_cfg['username'], virtual_env)):
-				cmd.append('virtualenv {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_cfg['username'], virtual_env))
+				cmd.append(virtualenv_bin + ' {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_cfg['username'], virtual_env))
 			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_cfg['username'], virtual_env))
 			for package in requirements:
 				cmd.append('pip install '+package)
@@ -470,3 +478,9 @@ class ClusterJobQueue(JobQueue):
 		if hasattr(self,'archivedir'):
 			cmd = 'mkdir -p ' + self.archivedir + ' && mv -f ' + self.basedir + '/* '+ self.archivedir + '/'
 			session.command_output(cmd,check_exit_code=False)
+
+	def get_username_from_hostname(self,hostname):
+		return get_username_from_hostname(hostname)
+
+	def check_hostname(self,hostname):
+		return check_hostname(hostname)

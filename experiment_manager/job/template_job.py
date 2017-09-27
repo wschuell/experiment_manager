@@ -25,7 +25,7 @@ class TemplateJob(Job):
 	def script(self): #runs in the folder local top the job / on cluster
 		""" do what you need to do. For checkpoints, you can call check_time as showed below
 		get_data will be called before, so anything you need in self.data will be there as specified in get_data"""
-		self.check_time() #doing a checkpoint; optional
+		self.check_time() #doing a checkpoint; optional. Checkpoints are not done every time the function is called, only when considered relevant, knowing the value of self.estimated_time
 
 	def get_data(self): #runs in the folder local top the job / on cluster
 		""" Just before running the job, how do you set up the data? Loading files for example. You should use a "data" attribute for the job object: self.data, with any type you want. For memory concerns, the data attribute is set to None when the job is serialized"""
@@ -45,7 +45,8 @@ class TemplateJob(Job):
 
 
 
-	#Attributes that can be interesting (set up as kwargs of the __init__ of Job, or modified in your part of the __init__)
+	#Attributes that can be interesting (set up as kwargs of the __init__ of Job, or modified in your part of the __init__). 
+	#It is not mandatory to set them, they all have default values
 	self.requirements = ['-e git+https://github.com/wschuell/experiment_manager.git@origin/develop#egg=experiment_manager'] #list of requirements to be installed before running the job, via pip
 	self.virtual_env = 'blabla' #virtualenv to be used for python, found in ~/virtualenvs/blabla . If you use for example ~/.venvs, make a link ln -s $HOME/.venvs $HOME/virtualenvs
 	self.estimated_time = 7200 # estimated runtilme for the job, by default 2hours

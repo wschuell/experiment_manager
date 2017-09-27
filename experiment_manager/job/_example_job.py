@@ -5,6 +5,7 @@ import time
 import json
 import os
 import shutil
+import random
 
 class ExampleJob(Job):
 
@@ -22,10 +23,11 @@ class ExampleJob(Job):
 
 	def script(self):
 		for i in range(0,6):
+			r = random.random()
 			for j in range(0,4):
 				self.data+=1
 				print self.data
-				time.sleep(1)
+				time.sleep(1+r)
 			self.check_time()
 
 	def get_data(self):

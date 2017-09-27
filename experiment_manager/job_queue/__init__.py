@@ -40,7 +40,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0):
+	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0):
 		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
@@ -58,6 +58,8 @@ class JobQueue(object):
 		self.jobqueue_dir = '_'.join([time.strftime('%Y-%m-%d_%H-%M-%S'), self.__class__.__name__, self.uuid])
 		self.path = os.path.join(path,self.jobqueue_dir)
 		self.original_path = path
+		self.virtual_env = virtual_env
+		self.requirements = requirements
 
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
@@ -87,18 +89,20 @@ class JobQueue(object):
 		lt_filter = [j for j in eq_filter if (j < job)]
 		ge_filter = [j for j in eq_filter if (j >= job)]
 		if not eq_filter:
-			self.job_list.append(job)
-			self.move_job(job)
-			job.reinit_missubmitted_times = self.reinit_missubmitted_times
-			self.update_needed = True
+			self.append_job(job)
+			#self.job_list.append(job)
+			#self.move_job(job)
+			#job.reinit_missubmitted_times = self.reinit_missubmitted_times
+			#self.update_needed = True
 			#job.status = 'pending'
 			job.save()
 			ans = [job.uuid]
 		elif lt_filter and not ge_filter:
 			job.status = 'dependencies not satisfied'
-			self.job_list.append(job)
-			self.move_job(job)
-			self.update_needed = True
+			self.append_job(job)
+			#self.job_list.append(job)
+			#self.move_job(job)
+			#self.update_needed = True
 			job.deps += [jj.uuid for jj in lt_filter]
 			#job.status = 'pending'
 			job.save()
@@ -112,6 +116,14 @@ class JobQueue(object):
 			self.save()
 		job.close_connections()
 		return ans
+
+	def append_job(self,job):
+		self.job_list.append(job)
+		self.move_job(job)
+		self.update_needed = True
+		job.reinit_missubmitted_times = self.reinit_missubmitted_times
+		if job.virtual_env is None and hasattr(self,'virtual_env'):
+			job.virtual_env = self.virtual_env
 
 	def move_job(self,job):
 		if job.init_path in ['jobs','jobs/']:
@@ -288,9 +300,9 @@ class JobQueue(object):
 				envs[env] += copy.deepcopy(j.requirements)
 		for env in envs.keys():
 			if env == 'None':
-				self.update_virtualenv(None, requirements=list(set(envs[env])))
+				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 			else:
-				self.update_virtualenv(env, requirements=list(set(envs[env])))
+				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
 
 	def cancel_job(self, job, clean=False):
 		if self.erase:
