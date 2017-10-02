@@ -2,7 +2,10 @@
 
 import os
 import time
-import cPickle
+try:
+	import cPickle
+except ImportError:
+	import pickle as cPickle
 import uuid
 from importlib import import_module
 from ..job import Job
@@ -109,7 +112,7 @@ class JobQueue(object):
 			ans = [job.uuid]
 		else:
 			if self.verbose:
-				print 'Job already in queue!'
+				print('Job already in queue!')
 			job.clean()
 			ans = [jj.uuid for jj in eq_filter]
 		if save:
@@ -154,7 +157,7 @@ class JobQueue(object):
 					j.status = 'missubmitted'
 			#elif j.status == 'dependencies not satisfied':
 				#for dep in j.gen_depend():
-				#	print 'Adding dependency for job ' + j.job_dir
+				#	print('Adding dependency for job ' + j.job_dir)
 				#	self.add_job(dep)
 			j.close_connections()
 
@@ -219,7 +222,7 @@ class JobQueue(object):
 			j.close_connections()
 
 		self.save()
-		print self.get_status_string()
+		print(self.get_status_string())
 		self.save_status()
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')

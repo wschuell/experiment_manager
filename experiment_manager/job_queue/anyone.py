@@ -8,7 +8,7 @@ class AnyoneJobQueue(OldSlurmJobQueue):
 		ssh_cfg = {'username':username,
 					'hostname':hostname}
 		if not self.check_hostname(hostname):
-			print 'Hostname '+hostname+' not in your .ssh/config'
+			print('Hostname '+hostname+' not in your .ssh/config')
 			ssh_cfg = {'username':username,
 					'hostname':'anyone.phys.uniroma1.it',
 					'key_file':key_file,

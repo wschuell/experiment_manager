@@ -75,7 +75,7 @@ class SSHSession(object):
             try:
                 self.client.connect(**final_cfg)
             except paramiko.SSHException:
-                print "unknown host, if present in ECDSA, upgrade your version of paramiko"
+                print("unknown host, if present in ECDSA, upgrade your version of paramiko")
                 if hasattr(self,'auto_accept') and self.auto_accept:
                     if 'sock' in final_cfg.keys():
                         final_cfg['sock'] = paramiko.proxy.ProxyCommand(cfg.lookup(self.hostname)['proxycommand'])
@@ -309,8 +309,8 @@ class SSHSession(object):
             #ssh_stdin, ssh_stdout, ssh_stderr = self.client.exec_command("tar xf - /scratch/wschueller/")
             #ssh_stdin.write(process.stdout.read())
             #ssh_stdin.flush()
-            #print ssh_stderr.read(),ssh_stdout.read()
-            #print process.stderr.read(),process.stdout.read()
+            #print(ssh_stderr.read(),ssh_stdout.read())
+            #print(process.stderr.read(),process.stdout.read())
             #process.
             #self.exec_command()
 

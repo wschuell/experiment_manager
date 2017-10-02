@@ -4,7 +4,10 @@ from. import Job
 import time
 import os
 import shutil
-import cPickle
+try:
+	import cPickle
+except ImportError:
+	import pickle as cPickle
 import copy
 import path
 import errno

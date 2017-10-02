@@ -328,7 +328,7 @@ class ClusterJobQueue(JobQueue):
 			virtualenv_bin = 'virtualenv'
 		else:
 			session.command_output('pip install --user virtualenv')
-			mod_venv = session.command_output('python -c "import virtualenv; print virtualenv;"')
+			mod_venv = session.command_output('python -c "import virtualenv; print(virtualenv);"')
 			assert mod_venv[:27] == "<module 'virtualenv' from '"
 			mod_venv_clean = mod_venv[27:-4]
 			virtualenv_bin = "python " + mod_venv_clean

@@ -27,14 +27,14 @@ class CJob(Job):
 		cmd = ' && '.join(cmd_tab)
 		p = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE,shell=True)
 		out, err = p.communicate()
-		print out
+		print(out)
 		sys.stderr.write(err+'\n')
 		exit_code = p.returncode
 		if exit_code != 0:
 			raise subprocess.CalledProcessError(exit_code,cmd,None)
-		#print subprocess.check_output(cmd.split(' '))
-		#print subprocess.check_output('make')
-		#print subprocess.check_output(['./categories'])
+		#print(subprocess.check_output(cmd.split(' ')))
+		#print(subprocess.check_output('make'))
+		#print(subprocess.check_output(['./categories']))
 
 #	def unpack_data(self):
 #		for f in self.out_files:

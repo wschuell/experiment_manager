@@ -54,7 +54,7 @@ class BatchExp(object):
 #		self.control_exp(exp)
 		if auto_job and exp._T[-1] < tmax:
 			self.add_exp_job(xp_uuid=exp.uuid, tmax=tmax)
-			print 'added job for exp {}, from {} to {}'.format(xp_uuid, exp._T[-1], tmax)
+			print('added job for exp {}, from {} to {}'.format(xp_uuid, exp._T[-1], tmax))
 		return exp
 
 	def get_graph(self, xp_uuid, method, tmin=0, tmax=None):
@@ -64,7 +64,7 @@ class BatchExp(object):
 #		self.control_exp(exp)
 		if self.auto_job and exp._T[-1] < tmax:
 			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax)
-			print 'added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax)
+			print('added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax))
 
 	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
