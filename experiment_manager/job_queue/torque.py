@@ -6,7 +6,7 @@ class TorqueJobQueue(ClusterJobQueue):
 
 	def gen_files(self, format_dict):
 		if not self.without_epilogue:
-			if 'multijob_dir' in format_dict.keys():
+			if 'multijob_dir' in list(format_dict.keys()):
 				return [('script.py',self.multijob_script(format_dict=format_dict)),
 						('epilogue.sh',self.multijob_epilogue(format_dict=format_dict)),
 						('multijob.json',self.multijob_json(format_dict=format_dict))]
@@ -14,7 +14,7 @@ class TorqueJobQueue(ClusterJobQueue):
 				return [('script.py',self.individual_script(format_dict=format_dict)),
 						('epilogue.sh',self.individual_epilogue(format_dict=format_dict))]
 		else:
-			if 'multijob_dir' in format_dict.keys():
+			if 'multijob_dir' in list(format_dict.keys()):
 				return [('script.py',self.multijob_script(format_dict=format_dict)),
 						('launch_script.sh',self.multijob_launch_script(format_dict=format_dict)),
 						('multijob.json',self.multijob_json(format_dict=format_dict))]

@@ -61,8 +61,8 @@ class JobProcess(mp.Process):
 		mp.Process.run(self)
 
 	def init_redirect(self):
-		sys.stdout = open(os.path.join(self.job_path,"output.txt"), "a", buffering=0)
-		sys.stderr = open(os.path.join(self.job_path,"error.txt"), "a", buffering=0)
+		sys.stdout = open(os.path.join(self.job_path,"output.txt"), "a", buffering=1)
+		sys.stderr = open(os.path.join(self.job_path,"error.txt"), "a", buffering=1)
 
 
 class LocalMultiProcessJobQueue(LocalJobQueue):

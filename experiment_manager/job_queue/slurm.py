@@ -5,7 +5,7 @@ from .cluster import ClusterJobQueue
 class SlurmJobQueue(ClusterJobQueue):
 
 	def gen_files(self, format_dict):
-		if 'multijob_dir' in format_dict.keys():
+		if 'multijob_dir' in list(format_dict.keys()):
 			return [('script.py',self.multijob_script(format_dict=format_dict)),
 					('launch_script.sh',self.multijob_launch_script(format_dict=format_dict)),
 					('multijob.json',self.multijob_json(format_dict=format_dict))]

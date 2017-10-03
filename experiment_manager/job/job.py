@@ -1,8 +1,8 @@
 import uuid
 try:
-	import cPickle
+	import cPickle as pickle
 except ImportError:
-	import pickle as cPickle
+	import pickle
 import bz2
 import time
 import random
@@ -12,7 +12,11 @@ import copy
 import shutil
 import jsonpickle
 import glob
-import cProfile, pstats, StringIO
+import cProfile, pstats
+try:
+	from StringIO import StringIO
+except ImportError:
+	from io import StringIO
 import path as pathpy
 from memory_profiler import memory_usage
 import numpy as np
@@ -49,7 +53,7 @@ class Job(object):
 		self.memory_usage = []
 		self.mem_max = 0.
 		self.deps = []
-		self.prg_seeds = {'random':random.randint(0, sys.maxint), 'numpy':random.randint(0, 4294967295)}
+		self.prg_seeds = {'random':random.randint(0, sys.maxsize), 'numpy':random.randint(0, 4294967295)}
 		if seeds is not None:
 			self.prg_seeds.update(seeds)
 		random.seed(self.prg_seeds['random'])
@@ -77,12 +81,12 @@ class Job(object):
 
 	def save_prg_states(self):
 		if hasattr(self,'prg_states'):
-			with open('prg_states.b','w') as f:
-				f.write(cPickle.dumps(self.prg_states, cPickle.HIGHEST_PROTOCOL))
+			with open('prg_states.b','wb') as f:
+				f.write(pickle.dumps(self.prg_states, pickle.HIGHEST_PROTOCOL))
 
 	def load_prg_states(self):
-		with open('prg_states.b','r') as f:
-			self.prg_states = cPickle.loads(f.read())
+		with open('prg_states.b','rb') as f:
+			self.prg_states = pickle.loads(f.read())
 
 	def set_prg_states(self):
 		random.setstate(self.prg_states['random'])
@@ -128,7 +132,7 @@ class Job(object):
 
 	def save_profile(self):
 		if self.profiling:
-			s = StringIO.StringIO()
+			s = StringIO()
 			sortby = 'tottime'#'cumulative'
 			try:
 				ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
@@ -198,7 +202,7 @@ class Job(object):
 		with pathpy.Path(j_path):
 			self.save_prg_states()
 			with open('job.json','w') as f:
-				f.write(jsonpickle.dumps(self))#,cPickle.HIGHEST_PROTOCOL))
+				f.write(jsonpickle.dumps(self))#,pickle.HIGHEST_PROTOCOL))
 		if keep_data and data_exists:
 			with pathpy.Path(j_path):
 				self.get_data()
@@ -307,9 +311,9 @@ class Job(object):
 
 	def __getstate__(self):
 		out_dict = self.__dict__.copy()
-		if 'prg_states' in out_dict.keys():
+		if 'prg_states' in list(out_dict.keys()):
 			del out_dict['prg_states']
-		if 'profiler' in out_dict.keys():
+		if 'profiler' in list(out_dict.keys()):
 			del out_dict['profiler']
 		return out_dict
 

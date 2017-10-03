@@ -141,19 +141,19 @@ class ClusterJobQueue(JobQueue):
 		job.backup_dir = 'backup_dir'
 		format_dict = self.format_dict(job)
 		wt = format_dict['walltime']
-		if wt not in self.waiting_to_submit.keys():
+		if wt not in list(self.waiting_to_submit.keys()):
 			self.waiting_to_submit[wt] = []
 		self.waiting_to_submit[wt].append(job)#consider walltime
 
 	def global_submit(self):
 		session = self.ssh_session
 		jobdir_dict = {}
-		for wt,j_list in self.waiting_to_submit.items():
+		for wt,j_list in list(self.waiting_to_submit.items()):
 			jobdir_dict[wt] = {}
 			for i in range(len(j_list)):
 				jobdir_dict[wt][i+1] = self.format_dict(j_list[i])['job_dir']
 
-		for wt,j_list in self.waiting_to_submit.items():
+		for wt,j_list in list(self.waiting_to_submit.items()):
 			format_dict = self.format_dict(j_list[0])
 			multijob_dir = self.name+'_'+self.uuid+'_'+j_list[0].uuid+'_'+time.strftime("%Y%m%d%H%M%S", time.localtime())
 			format_dict .update({
@@ -429,7 +429,7 @@ class ClusterJobQueue(JobQueue):
 		#session = SSHSession(**self.ssh_cfg)
 		if not hasattr(self,'available_workers'):
 			self.refresh_avail_workers()
-		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
+		offset_waiting = sum([len(j_list) for j_list in list(self.waiting_to_submit.values())])
 		return self.available_workers - offset_waiting
 		#session.close()
 

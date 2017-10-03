@@ -26,7 +26,7 @@ class ExampleJob(Job):
 			r = random.random()
 			for j in range(0,4):
 				self.data+=1
-				print self.data
+				print(self.data)
 				time.sleep(1+r)
 			self.check_time()
 

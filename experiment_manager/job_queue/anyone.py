@@ -1,5 +1,5 @@
 
-from slurm import OldSlurmJobQueue
+from .slurm import OldSlurmJobQueue
 
 class AnyoneJobQueue(OldSlurmJobQueue):
 	def __init__(self, username=None,hostname='anyone', basedir=None, local_basedir=None, base_work_dir=None, max_jobs=256, key_file='cluster_roma', password=None, **kwargs):
