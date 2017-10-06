@@ -1,4 +1,4 @@
-#from .batchexp import BatchExp
+from .batchexp import BatchExp
 
 #class BatchExp(object):
 #

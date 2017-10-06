@@ -16,7 +16,8 @@ import shutil
 import glob
 import uuid
 
-from builtins import input
+from builtins import input, bytes, chr
+
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False, prefix_command=None):
@@ -178,8 +179,8 @@ class SSHSession(object):
         std_in, std_out, std_err = self.command(cmd,bashrc=bashrc)
         exit_code = std_out.channel.recv_exit_status()
         if check_exit_code and exit_code != 0:
-            raise ValueError('Non-zero exit code ('+str(exit_code)+') for cmd '+cmd+'\n\noutput:'+std_out.read()+'\nerror:'+std_err.read())
-        return std_out.read()
+            raise ValueError('Non-zero exit code ('+str(exit_code)+') for cmd '+cmd+'\n\noutput:'+std_out.read().decode()+'\nerror:'+std_err.read().decode())
+        return std_out.read().decode()
 
     def put(self,localfile,remotefile):
         #if not self.path_exists(os.path.dirname(remotefile)):

@@ -141,6 +141,8 @@ class JobQueue(object):
 				pass
 
 	def update_queue(self):
+		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
+			time.sleep(1)
 		self.save_status(message='Starting queue update')
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
@@ -226,6 +228,7 @@ class JobQueue(object):
 		self.save_status()
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
+		self.last_update = time.time()
 
 	def get_status_string(self,message='Queue updated'):
 		return time.strftime("[%Y %m %d %H:%M:%S]: "+message+"\n"+str(self), time.localtime())

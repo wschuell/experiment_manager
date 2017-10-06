@@ -25,25 +25,38 @@ class SlurmJobQueue(ClusterJobQueue):
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
 
+date
 echo "Starting Job"
 
-chmod u+x {job_dir}/script.py && {job_dir}/script.py &
+chmod u+x {job_dir}/script.py
+{job_dir}/script.py &
 PID=$!
 
-WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+date
+echo "Job PID:$PID"
+date
+echo "Starting timer"
+
+WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
+(sleep $WAIT_TIME ; echo "Reaching time limit: Killing Job" ; kill -9 $PID ) &
 PID2=$!
+
+date
+echo "Timer PID:$PID2"
 
 wait $PID
 
 kill -9 $PID2;
 
-echo "Job finished, backing up files."
+date
+echo "Job finished"
 
 JOBID=$SLURM_JOBID
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+date
+echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir
@@ -52,9 +65,13 @@ fi
 rm {base_work_dir}/\"$JOBID\"/error.txt
 rm {base_work_dir}/\"$JOBID\"/output.txt
 
+date
+echo "Backing up files"
+
 cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
 rm -R {base_work_dir}/$JOBID
 
+date
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -130,7 +147,6 @@ sys.exit(0)
 
 
 
-
 	def multijob_launch_script(self, format_dict):
 		return """#!/bin/bash -i
 #SBATCH --time={walltime}
@@ -143,20 +159,38 @@ sys.exit(0)
 ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
 
+scontrol show job $JOBID
+
+date
 echo "Starting Job"
 
-chmod u+x {multijob_dir}/script.py && {multijob_dir}/script.py &
+chmod u+x {multijob_dir}/script.py
+srun --overcommit {multijob_dir}/script.py &
 PID=$!
 
-WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+date
+echo "Job PID:$PID"
+date
+echo "Starting timer"
+
+WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
+echo "#"\!"/bin/bash
+sleep $WAIT_TIME; echo 'Reaching time limit: Killing Job' && kill -9 $PID" >> {multijob_dir}/timer_$JOBID
+chmod u+x {multijob_dir}/timer_$JOBID
+srun --overcommit {multijob_dir}/timer_$JOBID &
 PID2=$!
+
+date
+echo "Timer PID:$PID2"
+
+ps aux
 
 wait $PID
 
 kill -9 $PID2
 
-echo "Job finished, backing up files."
+date
+echo "Job finished"
 
 
 MULTIJOBDIR={multijob_dir}
@@ -166,16 +200,21 @@ JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jo
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+date
+echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir
 fi
 
+date
+echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
 rm -R {base_work_dir}/$JOBID
 
 
+date
 echo "Backup done"
 echo "================================"
 echo "SLURM EPILOGUE"
@@ -190,7 +229,7 @@ echo "Submit Dir: $SLURM_SUBMIT_DIR"
 echo "Submit Host: $SLURM_SUBMIT_HOST"
 echo "Node Name: $SLURMD_NODENAME"
 echo "================================"
-scontrol show job $SLURM_JOB_ID
+scontrol show job $JOBID
 
 exit 0
 """.format(**format_dict)

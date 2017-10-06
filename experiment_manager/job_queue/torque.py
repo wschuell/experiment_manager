@@ -60,14 +60,17 @@ sys.exit(0)
 
 	def individual_epilogue(self, format_dict):
 		return """#!/bin/bash
+date
 echo "Job finished, backing up files.";
 JOBID=$1
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
-echo "Copying backup_dir";
+date
+echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
 fi
+date
 echo "Removing backup_dir";
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
 fi
@@ -75,6 +78,7 @@ fi
 cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/;
 rm -R {base_work_dir}/$JOBID;
 
+date
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -136,6 +140,7 @@ sys.exit(0)
 
 	def multijob_epilogue(self, format_dict):
 		return """#!/bin/bash
+date
 echo "Job finished, backing up files.";
 JOBID=$1
 
@@ -146,9 +151,11 @@ JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jo
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
+date
 echo "Copying backup_dir";
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
 fi
+date
 echo "Removing backup_dir";
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
 fi
@@ -158,6 +165,7 @@ rm -R {base_work_dir}/$JOBID
 
 
 
+date
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -225,23 +233,35 @@ exit 0
 #PBS -l nodes=1:ppn=1
 #PBS -N {job_name}
 
-echo "Preparing Job"
+
 
 JOBID=$PBS_JOBID
 
+date
+echo "Starting Job"
 
-chmod u+x {job_dir}/script.py && {job_dir}/script.py &
+chmod u+x {job_dir}/script.py
+{job_dir}/script.py &
 PID=$!
 
-WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+date
+echo "Job PID:$PID"
+date
+echo "Starting timer"
+
+WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
+(sleep $WAIT_TIME ; echo "Reaching time limit: Killing Job" ; kill -9 $PID ) &
 PID2=$!
+
+date
+echo "Timer PID:$PID2"
 
 wait $PID
 
 kill -9 $PID2;
 
-echo "Job finished, backing up files."
+date
+echo "Job finished"
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
@@ -250,9 +270,13 @@ fi
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir
 fi
 
+date
+echo "Backing up files"
+
 #cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
 #rm -R {base_work_dir}/$JOBID
 
+date
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"
@@ -275,18 +299,31 @@ exit 0
 JOBID=$PBS_JOBID
 ARRAYID=$PBS_ARRAYID
 
-chmod u+x {multijob_dir}/script.py && {multijob_dir}/script.py &
+date
+echo "Starting Job"
+
+chmod u+x {multijob_dir}/script.py
+{multijob_dir}/script.py &
 PID=$!
 
-WAIT_TIME=$(({walltime_seconds}-120))
-sleep $WAIT_TIME && echo "Reaching time limit: Killing Job" && kill -9 $PID &
+date
+echo "Job PID:$PID"
+date
+echo "Starting timer"
+
+WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
+(sleep $WAIT_TIME ; echo "Reaching time limit: Killing Job" ; kill -9 $PID ) &
 PID2=$!
+
+date
+echo "Timer PID:$PID2"
 
 wait $PID
 
 kill -9 $PID2
 
-echo "Job finished, backing up files.";
+date
+echo "Job finished"
 
 MULTIJOBDIR={multijob_dir}
 JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jobdir_dict = json.loads(f.read()); f.close(); print(jobdir_dict['"$ARRAYID"'])")
@@ -294,18 +331,24 @@ JOBDIR=$(python -c "import json; f = open('{multijob_dir}/multijob.json','r');jo
 
 if [ -d {base_work_dir}/\"$JOBID\"/backup_dir ]; then
 if [ ! -f {base_work_dir}/\"$JOBID\"/backup_dir/backup_lock/* ]; then
-echo "Copying backup_dir";
+date
+echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}/\"$JOBID\"/;
 fi
+date
 echo "Removing backup_dir";
 rm -R {base_work_dir}/\"$JOBID\"/backup_dir;
 fi
+
+date
+echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
 rm -R {base_work_dir}/$JOBID
 
 
 
+date
 echo "Backup done"
 echo "================================"
 echo "EPILOGUE"

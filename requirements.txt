@@ -10,3 +10,4 @@ memory_profiler
 psutil
 scp
 pycrypto
+future

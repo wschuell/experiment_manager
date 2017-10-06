@@ -2,7 +2,7 @@
 from .slurm import SlurmJobQueue,OldSlurmJobQueue
 
 class PlafrimJobQueue(SlurmJobQueue):
-	def __init__(self, username=None,hostname='plafrim-ext', basedir=None, local_basedir='', base_work_dir=None, max_jobs=256, key_file='plafrim', password=None, install_as_job=False, modules = [], **kwargs):
+	def __init__(self, username=None,hostname='plafrim-ext', basedir=None, local_basedir='', base_work_dir=None, max_jobs=100, key_file='plafrim', password=None, install_as_job=False, modules = [], **kwargs):
 		if username is None:
 			username = self.get_username_from_hostname(hostname)
 		ssh_cfg = {'username':username,
