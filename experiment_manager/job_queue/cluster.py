@@ -32,39 +32,46 @@ class ClusterJobQueue(JobQueue):
 		if len(self.base_work_dir)>1 and self.base_work_dir[-1] == '/':
 			self.base_work_dir = self.base_work_dir[:-1]
 
+
+	def get_walltime(self,walltime_seconds):
+		wtime = walltime_seconds
+		walltime_h = int(wtime/3600)
+		wtime -= 3600*walltime_h
+		if walltime_h<10:
+			walltime_h = '0'+str(walltime_h)
+		else:
+			walltime_h = str(walltime_h)
+
+		walltime_m = int(wtime/60)
+		wtime -= 60*walltime_m
+		if walltime_m<10:
+			walltime_m = '0'+str(walltime_m)
+		else:
+			walltime_m = str(walltime_m)
+
+		walltime_s = int(wtime)
+		if walltime_s<10:
+			walltime_s = '0'+str(walltime_s)
+		else:
+			walltime_s = str(walltime_s)
+		walltime = ':'.join([walltime_h, walltime_m, walltime_s])
+		return walltime
+
+
 	def format_dict(self, job):
+
+		if hasattr(job,'JOBID'):
+			jobid = job.JOBID
+		else:
+			jobid = 'NO_JOBID'
 
 		if job.virtual_env is None:
 			python_bin = '/usr/bin/env python'
 		else:
 			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_cfg['username'], job.virtual_env)
 
-		time = job.estimated_time
+		walltime = self.get_walltime(job.estimated_time)
 
-		walltime_h = int(time/3600)
-		time -= 3600*walltime_h
-		if walltime_h<10:
-			walltime_h = '0'+str(walltime_h)
-		else:
-			walltime_h = str(walltime_h)
-
-		walltime_m = int(time/60)
-		time -= 60*walltime_m
-		if walltime_m<10:
-			walltime_m = '0'+str(walltime_m)
-		else:
-			walltime_m = str(walltime_m)
-
-		walltime_s = int(time)
-		if walltime_s<10:
-			walltime_s = '0'+str(walltime_s)
-		else:
-			walltime_s = str(walltime_s)
-
-		if hasattr(job,'JOBID'):
-			jobid = job.JOBID
-		else:
-			jobid = 'NO_JOBID'
 
 		format_dict = {
 			'username':self.ssh_cfg['username'],
@@ -81,7 +88,8 @@ class ClusterJobQueue(JobQueue):
 			'job_jobid': jobid,
 			#'modules_cluster': ' '.join(self.modules),
 			'walltime_seconds': job.estimated_time,
-			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
+			'walltime': walltime,
+			'prefix':self.get_prefix(job),
 		}
 
 		return format_dict
@@ -140,10 +148,11 @@ class ClusterJobQueue(JobQueue):
 		job.status = 'missubmitted'
 		job.backup_dir = 'backup_dir'
 		format_dict = self.format_dict(job)
-		wt = format_dict['walltime']
+		#wt = format_dict['walltime']
+		wt = format_dict['prefix']
 		if wt not in list(self.waiting_to_submit.keys()):
 			self.waiting_to_submit[wt] = []
-		self.waiting_to_submit[wt].append(job)#consider walltime
+		self.waiting_to_submit[wt].append(job)
 
 	def global_submit(self):
 		session = self.ssh_session
@@ -484,3 +493,13 @@ class ClusterJobQueue(JobQueue):
 
 	def check_hostname(self,hostname):
 		return check_hostname(hostname)
+
+	def get_prefix(self,job):
+		wtime = self.get_walltime(job.estimated_time)
+		if hasattr(job,'needed_resources'):
+			return self.prefix_string(walltime=wtime,**job.needed_resources)
+		else:
+			return self.prefix_string(walltime=wtime)
+
+	def prefix_string(self,walltime):
+		return '# walltime='+str(walltime)+'\n'

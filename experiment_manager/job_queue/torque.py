@@ -26,8 +26,7 @@ class TorqueJobQueue(ClusterJobQueue):
 		return """#!{python_bin}
 #PBS -o {job_dir}/output.txt
 #PBS -e {job_dir}/error.txt
-#PBS -l walltime={walltime}
-#PBS -l nodes=1:ppn=1
+{prefix}
 #PBS -N {job_name}
 
 print "Preparing Job"
@@ -101,8 +100,7 @@ exit 0
 		return """#!{python_bin}
 #PBS -o {multijob_dir}/output.txt
 #PBS -e {multijob_dir}/error.txt
-#PBS -l walltime={walltime}
-#PBS -l nodes=1:ppn=1
+{prefix}
 #PBS -N {multijob_name}
 
 print "Preparing Job"
@@ -229,8 +227,7 @@ exit 0
 		return """#!/bin/bash
 #PBS -o {job_dir}/output.txt
 #PBS -e {job_dir}/error.txt
-#PBS -l walltime={walltime}
-#PBS -l nodes=1:ppn=1
+{prefix}
 #PBS -N {job_name}
 
 
@@ -292,8 +289,7 @@ exit 0
 		return """#!/bin/bash
 #PBS -o {multijob_dir}/output.txt
 #PBS -e {multijob_dir}/error.txt
-#PBS -l walltime={walltime}
-#PBS -l nodes=1:ppn=1
+{prefix}
 #PBS -N {multijob_name}
 
 JOBID=$PBS_JOBID
@@ -366,3 +362,15 @@ exit 0
 
 	def multijob_json(self, format_dict):
 		return format_dict['jobdir_dict_json']
+
+	def prefix_string(self,walltime,ncpu=1,ngpu=None,other=[]):
+		pref = "#PBS -l walltime="+walltime+"\n"
+		if ncpu is not None:
+			pref += "#PBS -l nodes=1:ppn="+ncpu
+			if ngpu is not None:
+				pref += ":gpus="+ngpu
+			perf += "\n"
+		if len(other):
+			for l in other:
+				pref += "#PBS "+l+"\n"
+		return pref
