@@ -305,6 +305,8 @@ class JobQueue(object):
 			else:
 				envs[env] += copy.deepcopy(j.requirements)
 		for env in list(envs.keys()):
+			if not hasattr(self,'requirements'):
+				self.requirements = []
 			if env == 'None':
 				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 			else:

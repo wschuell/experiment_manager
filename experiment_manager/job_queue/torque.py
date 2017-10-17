@@ -363,14 +363,20 @@ exit 0
 	def multijob_json(self, format_dict):
 		return format_dict['jobdir_dict_json']
 
-	def prefix_string(self,walltime,ncpu=1,ngpu=None,other=[]):
-		pref = "#PBS -l walltime="+walltime+"\n"
+	def prefix_string(self,walltime,ncpu=1,ngpu=None,other=[],commands=[],queue=None):
+		pref = "#PBS -l walltime="+str(walltime)+"\n"
 		if ncpu is not None:
-			pref += "#PBS -l nodes=1:ppn="+ncpu
+			pref += "#PBS -l nodes=1:ppn="+str(ncpu)
 			if ngpu is not None:
-				pref += ":gpus="+ngpu
-			perf += "\n"
+				pref += ":gpus="+str(ngpu)
+			pref += "\n"
+		if queue is not None:
+			pref += "#PBS -q "+str(queue)+"\n"
 		if len(other):
 			for l in other:
 				pref += "#PBS "+l+"\n"
+		if len(commands):
+			pref += '\n'
+			for l in commands:
+				pref += l+"\n"
 		return pref

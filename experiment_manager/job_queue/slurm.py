@@ -18,10 +18,10 @@ class SlurmJobQueue(ClusterJobQueue):
 
 	def individual_launch_script(self, format_dict):
 		return """#!/bin/bash
-{prefix}
 #SBATCH --job-name="{job_name}"
 #SBATCH --output={job_dir}/output.txt
 #SBATCH --error={job_dir}/error.txt
+{prefix}
 
 date
 echo "Starting Job"
@@ -147,10 +147,10 @@ job.run()
 
 	def multijob_launch_script(self, format_dict):
 		return """#!/bin/bash
-{prefix}
 #SBATCH --job-name="{multijob_name}"
 #SBATCH --output={multijob_dir}/output.txt-%a
 #SBATCH --error={multijob_dir}/error.txt-%a
+{prefix}
 
 ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
@@ -262,15 +262,21 @@ scontrol show job $JOBID
 	def multijob_json(self, format_dict):
 		return format_dict['jobdir_dict_json']
 
-	def prefix_string(self,walltime,ncpu=1,ngpu=None,other=[]):
-		pref = "#SBATCH --time="+walltime+"\n"
+	def prefix_string(self,walltime,ncpu=1,ngpu=None,other=[],commands=[],queue=None):
+		pref = "#SBATCH --time="+str(walltime)+"\n"
 		if ncpu is not None:
-			pref += "#SBATCH -n "+ncpu+"\n"
+			pref += "#SBATCH -n "+str(ncpu)+"\n"
 		if ngpu is not None:
-			pref += "#SBATCH --gres=gpu:"+ngpu+"\n"
+			pref += "#SBATCH --gres=gpu:"+str(ngpu)+"\n"
+		if queue is not None:
+			pref += "#SBATCH --partition="+str(queue)+"\n"
 		if len(other):
 			for l in other:
 				pref += "#SBATCH "+l+"\n"
+		if len(commands):
+			pref += '\n'
+			for l in commands:
+				pref += l+"\n"
 		return pref
 
 
