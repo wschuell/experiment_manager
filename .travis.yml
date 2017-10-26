@@ -7,7 +7,7 @@ python:
 # - sudo apt-get update -qq
 # - sudo apt-get install -qq liblzo2-dev
 install:
-  - pip install codecov
+  - pip install codecov pytest-cov
   - pip install .
 script: pytest --cov=./
 after_success:
