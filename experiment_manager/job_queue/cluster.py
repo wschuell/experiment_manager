@@ -32,39 +32,46 @@ class ClusterJobQueue(JobQueue):
 		if len(self.base_work_dir)>1 and self.base_work_dir[-1] == '/':
 			self.base_work_dir = self.base_work_dir[:-1]
 
+
+	def get_walltime(self,walltime_seconds):
+		wtime = walltime_seconds
+		walltime_h = int(wtime/3600)
+		wtime -= 3600*walltime_h
+		if walltime_h<10:
+			walltime_h = '0'+str(walltime_h)
+		else:
+			walltime_h = str(walltime_h)
+
+		walltime_m = int(wtime/60)
+		wtime -= 60*walltime_m
+		if walltime_m<10:
+			walltime_m = '0'+str(walltime_m)
+		else:
+			walltime_m = str(walltime_m)
+
+		walltime_s = int(wtime)
+		if walltime_s<10:
+			walltime_s = '0'+str(walltime_s)
+		else:
+			walltime_s = str(walltime_s)
+		walltime = ':'.join([walltime_h, walltime_m, walltime_s])
+		return walltime
+
+
 	def format_dict(self, job):
+
+		if hasattr(job,'JOBID'):
+			jobid = job.JOBID
+		else:
+			jobid = 'NO_JOBID'
 
 		if job.virtual_env is None:
 			python_bin = '/usr/bin/env python'
 		else:
 			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_cfg['username'], job.virtual_env)
 
-		time = job.estimated_time
+		walltime = self.get_walltime(job.estimated_time)
 
-		walltime_h = int(time/3600)
-		time -= 3600*walltime_h
-		if walltime_h<10:
-			walltime_h = '0'+str(walltime_h)
-		else:
-			walltime_h = str(walltime_h)
-
-		walltime_m = int(time/60)
-		time -= 60*walltime_m
-		if walltime_m<10:
-			walltime_m = '0'+str(walltime_m)
-		else:
-			walltime_m = str(walltime_m)
-
-		walltime_s = int(time)
-		if walltime_s<10:
-			walltime_s = '0'+str(walltime_s)
-		else:
-			walltime_s = str(walltime_s)
-
-		if hasattr(job,'JOBID'):
-			jobid = job.JOBID
-		else:
-			jobid = 'NO_JOBID'
 
 		format_dict = {
 			'username':self.ssh_cfg['username'],
@@ -81,7 +88,8 @@ class ClusterJobQueue(JobQueue):
 			'job_jobid': jobid,
 			#'modules_cluster': ' '.join(self.modules),
 			'walltime_seconds': job.estimated_time,
-			'walltime': ':'.join([walltime_h, walltime_m, walltime_s])
+			'walltime': walltime,
+			'prefix':self.get_prefix(job),
 		}
 
 		return format_dict
@@ -140,20 +148,21 @@ class ClusterJobQueue(JobQueue):
 		job.status = 'missubmitted'
 		job.backup_dir = 'backup_dir'
 		format_dict = self.format_dict(job)
-		wt = format_dict['walltime']
-		if wt not in self.waiting_to_submit.keys():
+		#wt = format_dict['walltime']
+		wt = format_dict['prefix']
+		if wt not in list(self.waiting_to_submit.keys()):
 			self.waiting_to_submit[wt] = []
-		self.waiting_to_submit[wt].append(job)#consider walltime
+		self.waiting_to_submit[wt].append(job)
 
 	def global_submit(self):
 		session = self.ssh_session
 		jobdir_dict = {}
-		for wt,j_list in self.waiting_to_submit.items():
+		for wt,j_list in list(self.waiting_to_submit.items()):
 			jobdir_dict[wt] = {}
 			for i in range(len(j_list)):
 				jobdir_dict[wt][i+1] = self.format_dict(j_list[i])['job_dir']
 
-		for wt,j_list in self.waiting_to_submit.items():
+		for wt,j_list in list(self.waiting_to_submit.items()):
 			format_dict = self.format_dict(j_list[0])
 			multijob_dir = self.name+'_'+self.uuid+'_'+j_list[0].uuid+'_'+time.strftime("%Y%m%d%H%M%S", time.localtime())
 			format_dict .update({
@@ -328,7 +337,7 @@ class ClusterJobQueue(JobQueue):
 			virtualenv_bin = 'virtualenv'
 		else:
 			session.command_output('pip install --user virtualenv')
-			mod_venv = session.command_output('python -c "import virtualenv; print virtualenv;"')
+			mod_venv = session.command_output('python -c "import virtualenv; print(virtualenv);"')
 			assert mod_venv[:27] == "<module 'virtualenv' from '"
 			mod_venv_clean = mod_venv[27:-4]
 			virtualenv_bin = "python " + mod_venv_clean
@@ -429,7 +438,7 @@ class ClusterJobQueue(JobQueue):
 		#session = SSHSession(**self.ssh_cfg)
 		if not hasattr(self,'available_workers'):
 			self.refresh_avail_workers()
-		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
+		offset_waiting = sum([len(j_list) for j_list in list(self.waiting_to_submit.values())])
 		return self.available_workers - offset_waiting
 		#session.close()
 
@@ -484,3 +493,13 @@ class ClusterJobQueue(JobQueue):
 
 	def check_hostname(self,hostname):
 		return check_hostname(hostname)
+
+	def get_prefix(self,job):
+		wtime = self.get_walltime(job.estimated_time)
+		if hasattr(job,'needed_resources'):
+			return self.prefix_string(walltime=wtime,**job.needed_resources)
+		else:
+			return self.prefix_string(walltime=wtime)
+
+	def prefix_string(self,walltime):
+		return '# walltime='+str(walltime)+'\n'

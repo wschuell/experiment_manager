@@ -5,7 +5,7 @@ import time
 import copy
 import uuid
 
-from torque import TorqueJobQueue
+from .torque import TorqueJobQueue
 
 class AvakasJobQueue(TorqueJobQueue):
 	def __init__(self, username=None, hostname='avakas', basedir=None, local_basedir='', base_work_dir='/tmp', max_jobs=1000, key_file='avakas', password=None, without_epilogue=True, **kwargs):
@@ -14,7 +14,7 @@ class AvakasJobQueue(TorqueJobQueue):
 		ssh_cfg = {'username':username,
 					'hostname':hostname}
 		if not self.check_hostname(hostname):
-			print 'Hostname '+hostname+' not in your .ssh/config'
+			print('Hostname '+hostname+' not in your .ssh/config')
 			ssh_cfg = {'username':username,
 					'hostname':'avakas.mcia.univ-bordeaux.fr',
 					'key_file':key_file,

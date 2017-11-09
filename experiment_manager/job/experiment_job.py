@@ -4,7 +4,10 @@ from. import Job
 import time
 import os
 import shutil
-import cPickle
+try:
+	import cPickle as pickle
+except ImportError:
+	import pickle
 import copy
 import path
 import errno
@@ -32,12 +35,12 @@ class ExperimentJob(Job):
 			self.check_time()
 
 	def get_data(self):
-		with open(self.xp_uuid+'.b','r') as f:
-			self.data = cPickle.loads(f.read())
+		with open(self.xp_uuid+'.b','rb') as f:
+			self.data = pickle.loads(f.read())
 
 	def save_data(self):
-		with open(self.data.uuid+'.b','w') as f:
-			f.write(cPickle.dumps(self.data))
+		with open(self.data.uuid+'.b','wb') as f:
+			f.write(pickle.dumps(self.data))
 
 	def unpack_data(self):
 		shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
@@ -227,7 +230,7 @@ class GraphExpJob(ExperimentJob):
 			#graph_cfg['tmin'] += self.data['exp']._time_step
 			graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 			graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
-			if 'graph' not in self.data.keys():
+			if 'graph' not in list(self.data.keys()):
 				self.data['graph'] = self.data['exp'].graph(**graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
@@ -235,18 +238,18 @@ class GraphExpJob(ExperimentJob):
 			self.check_time()
 
 	def get_data(self):
-		with open(self.xp_uuid+'.b','r') as f:
+		with open(self.xp_uuid+'.b','rb') as f:
 			if self.data is None:
 				self.data = {}
-			self.data['exp'] = cPickle.loads(f.read())
+			self.data['exp'] = pickle.loads(f.read())
 		if self.graph_filename is not None and os.path.isfile(self.graph_filename+'.b'):
-			with open(self.graph_filename+'.b', 'r') as f:
-				self.data['graph'] = cPickle.loads(f.read())
+			with open(self.graph_filename+'.b', 'rb') as f:
+				self.data['graph'] = pickle.loads(f.read())
 
 	def save_data(self):
-		with open(self.data['exp'].uuid+'.b','w') as f:
-			f.write(cPickle.dumps(self.data['exp']))
-		if 'graph' in self.data.keys():
+		with open(self.data['exp'].uuid+'.b','wb') as f:
+			f.write(pickle.dumps(self.data['exp']))
+		if 'graph' in list(self.data.keys()):
 			self.data['graph'].write_files()
 
 	def unpack_data(self):
@@ -356,14 +359,14 @@ class GraphExpDBJob(ExperimentDBJob):
 
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		if 'graph' in self.data.keys():
+		if 'graph' in list(self.data.keys()):
 			tmax = self.data['graph']._X[0][-1]
 		else:
 			tmax = -self.data['exp'].stepfun(0,backwards=True)
 		graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
 		graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 		while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
-			if 'graph' not in self.data.keys():
+			if 'graph' not in list(self.data.keys()):
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
@@ -382,12 +385,12 @@ class GraphExpDBJob(ExperimentDBJob):
 			self.graph_filename = self.data['graph'].filename
 
 	def save_data(self):
-		if 'exp' in self.data.keys() and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
+		if 'exp' in list(self.data.keys()) and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
 			self.db.commit(self.data['exp'])
 		#elif not self.injobdir:
 		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		#else:
-		if 'graph' in self.data.keys():
+		if 'graph' in list(self.data.keys()):
 			self.data['exp'].commit_data_to_db(self.data['graph'], self.graph_cfg['method'])
 
 	def unpack_data(self):
@@ -544,14 +547,14 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		for method in self.methods:
 			graph_cfg['method'] = method
-			if method in self.data.keys():
+			if method in list(self.data.keys()):
 				tmax = self.data[method]._X[0][-1]
 			else:
 				tmax = -self.data['exp'].stepfun(0,backwards=True)
 			graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
 			graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
-				if method not in self.data.keys():
+				if method not in list(self.data.keys()):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
@@ -590,13 +593,13 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				self.graph_filename = self.data[method].filename
 
 	def save_data(self):
-		if 'exp' in self.data.keys() and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
+		if 'exp' in list(self.data.keys()) and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
 			self.db.commit(self.data['exp'])
 		#elif not self.injobdir:
 		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		#else:
 		for method in self.methods:
-			if method in self.data.keys() and 'exp' in self.data.keys():
+			if method in list(self.data.keys()) and 'exp' in self.data.keys():
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
 	def unpack_data(self):
@@ -746,14 +749,14 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		for method in self.methods:
 			graph_cfg['method'] = method
-			if method in self.data.keys():
+			if method in list(self.data.keys()):
 				tmax = self.data[method]._X[0][-1]
 			else:
 				tmax = -self.data['exp'].stepfun(0,backwards=True)
 			graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
 			graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
-				if method not in self.data.keys():
+				if method not in list(self.data.keys()):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
@@ -776,7 +779,7 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 			self.data['exp'].continue_exp(autocommit=False,no_storage=True)
 			graph_cfg = copy.deepcopy(self.graph_cfg)
 			for method in self.methods:
-				if method not in self.data.keys():
+				if method not in list(self.data.keys()):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
@@ -815,13 +818,13 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 				self.graph_filename = self.data[method].filename
 
 	def save_data(self):
-		if 'exp' in self.data.keys() and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
+		if 'exp' in list(self.data.keys()) and not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=self.data['exp']._T[-1]):
 			self.db.commit(self.data['exp'])
 		#elif not self.injobdir:
 		#	self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		#else:
 		for method in self.methods:
-			if method in self.data.keys() and 'exp' in self.data.keys():
+			if method in list(self.data.keys()) and 'exp' in self.data.keys():
 				self.data['exp'].commit_data_to_db(self.data[method], method)
 
 	def unpack_data(self):

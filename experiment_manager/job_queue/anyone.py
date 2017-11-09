@@ -1,5 +1,5 @@
 
-from slurm import OldSlurmJobQueue
+from .slurm import OldSlurmJobQueue
 
 class AnyoneJobQueue(OldSlurmJobQueue):
 	def __init__(self, username=None,hostname='anyone', basedir=None, local_basedir=None, base_work_dir=None, max_jobs=256, key_file='cluster_roma', password=None, **kwargs):
@@ -8,7 +8,7 @@ class AnyoneJobQueue(OldSlurmJobQueue):
 		ssh_cfg = {'username':username,
 					'hostname':hostname}
 		if not self.check_hostname(hostname):
-			print 'Hostname '+hostname+' not in your .ssh/config'
+			print('Hostname '+hostname+' not in your .ssh/config')
 			ssh_cfg = {'username':username,
 					'hostname':'anyone.phys.uniroma1.it',
 					'key_file':key_file,

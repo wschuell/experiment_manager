@@ -2,7 +2,10 @@
 from . import Job
 
 import time
-import cPickle
+try:
+	import cPickle as pickle
+except ImportError:
+	import pickle
 import bz2
 import os
 import shutil
@@ -30,22 +33,22 @@ class ClassicJob(Job):
 
 	def get_data(self):
 		try:
-			with open(self.filename,'r') as f:
-				self.data = cPickle.loads(f.read())
+			with open(self.filename,'rb') as f:
+				self.data = pickle.loads(f.read())
 				self.bz2=False
-		except cPickle.UnpicklingError:
-			with open(self.filename,'r') as f:
-				self.data = cPickle.loads(bz2.decompress(f.read()))
+		except pickle.UnpicklingError:
+			with open(self.filename,'rb') as f:
+				self.data = pickle.loads(bz2.decompress(f.read()))
 				self.bz2 = True
 		except Exception:
 			raise Exception
 
 	def save_data(self):
-		with open(self.filename,'w') as f:
+		with open(self.filename,'wb') as f:
 			if self.bz2:
-				f.write(bz2.compress(cPickle.dumps(self.data)))
+				f.write(bz2.compress(pickle.dumps(self.data)))
 			else:
-				f.write(cPickle.dumps(self.data))
+				f.write(pickle.dumps(self.data))
 
 	def unpack_data(self):
 		for f in self.out_files:

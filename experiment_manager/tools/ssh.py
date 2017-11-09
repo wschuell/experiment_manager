@@ -10,13 +10,14 @@ from Crypto.PublicKey import RSA
 import socket
 import time
 from scp import SCPClient
-#import shlex
 import subprocess
 import tarfile
-import StringIO
 import shutil
 import glob
 import uuid
+
+from builtins import input, bytes, chr
+
 
 class SSHSession(object):
     def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False, prefix_command=None):
@@ -53,7 +54,7 @@ class SSHSession(object):
                 cfg.parse(f)
         if self.hostname in cfg.get_hostnames():
             final_cfg = {}
-            for k,v in cfg.lookup(self.hostname).iteritems():
+            for k,v in list(cfg.lookup(self.hostname).items()):
                 if k == 'hostname':
                     final_cfg['hostname'] = v
                 elif k == 'port':
@@ -75,9 +76,9 @@ class SSHSession(object):
             try:
                 self.client.connect(**final_cfg)
             except paramiko.SSHException:
-                print "unknown host, if present in ECDSA, upgrade your version of paramiko"
+                print("unknown host, if present in ECDSA, upgrade your version of paramiko")
                 if hasattr(self,'auto_accept') and self.auto_accept:
-                    if 'sock' in final_cfg.keys():
+                    if 'sock' in list(final_cfg.keys()):
                         final_cfg['sock'] = paramiko.proxy.ProxyCommand(cfg.lookup(self.hostname)['proxycommand'])
                     self.client.set_missing_host_key_policy(paramiko.client.WarningPolicy())
                     self.client.connect(**final_cfg)
@@ -94,7 +95,7 @@ class SSHSession(object):
                     try:
                         self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=self.password, key_filename=self.key_file)
                     except:
-                        a = raw_input('Connection failed. Retry? Y/N/catch')
+                        a = input('Connection failed. Retry? Y/N/catch')
                         if a == 'catch':
                             raise
                         elif a not in ['y','Y']:
@@ -102,9 +103,9 @@ class SSHSession(object):
                 if not retry:
                     temp_password = getpass.getpass('SSH Password:')
                     self.client.connect(hostname=self.hostname, username=self.username, port=self.port, password=temp_password, key_filename=None)
-                    question = raw_input('Install SSH key? Y/N')
+                    question = input('Install SSH key? Y/N')
                     if question == 'Y' or question == 'y':
-                        where = raw_input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
+                        where = input('Where? default (~/.ssh/id_rsa) / key_file (<key_file>) / key_file_name (~/.ssh/<key_file>/id_rsa) / <path>')
                         if where == 'default':
                             where = '{}/.ssh/id_rsa'.format(home)
                         elif where == 'key_file_name':
@@ -130,7 +131,7 @@ class SSHSession(object):
     def path_exists(self, path):
         try:
             self.sftp.stat(path)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return False
             raise e
@@ -178,8 +179,8 @@ class SSHSession(object):
         std_in, std_out, std_err = self.command(cmd,bashrc=bashrc)
         exit_code = std_out.channel.recv_exit_status()
         if check_exit_code and exit_code != 0:
-            raise ValueError('Non-zero exit code ('+str(exit_code)+') for cmd '+cmd+'\n\noutput:'+std_out.read()+'\nerror:'+std_err.read())
-        return std_out.read()
+            raise ValueError('Non-zero exit code ('+str(exit_code)+') for cmd '+cmd+'\n\noutput:'+std_out.read().decode()+'\nerror:'+std_err.read().decode())
+        return std_out.read().decode()
 
     def put(self,localfile,remotefile):
         #if not self.path_exists(os.path.dirname(remotefile)):
@@ -309,8 +310,8 @@ class SSHSession(object):
             #ssh_stdin, ssh_stdout, ssh_stderr = self.client.exec_command("tar xf - /scratch/wschueller/")
             #ssh_stdin.write(process.stdout.read())
             #ssh_stdin.flush()
-            #print ssh_stderr.read(),ssh_stdout.read()
-            #print process.stderr.read(),process.stdout.read()
+            #print(ssh_stderr.read(),ssh_stdout.read())
+            #print(process.stderr.read(),process.stdout.read())
             #process.
             #self.exec_command()
 
@@ -438,7 +439,7 @@ sys.exit(0)
             raise Exception('Keys already exist!')
         key = RSA.generate(2048)
         with open(self.key_file, 'w') as content_file:
-            os.chmod(self.key_file, 0600)
+            os.chmod(self.key_file, 0o600)
             content_file.write(key.exportKey('PEM'))
         pubkey = key.publickey()
         pubkey_string = pubkey.exportKey('OpenSSH') + ' {}@{}'.format(os.environ['USER'], socket.gethostname())

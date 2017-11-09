@@ -2,7 +2,10 @@
 
 import os
 import time
-import cPickle
+try:
+	import cPickle as pickle
+except ImportError:
+	import pickle
 import uuid
 from importlib import import_module
 from ..job import Job
@@ -23,13 +26,13 @@ job_queue_class={
 
 def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 	if name is not None and os.path.isfile('job_queues/'+name+'.jq'):
-		with open('job_queues/'+name+'.jq','r') as f:
-			jq = cPickle.loads(f.read())
-			if 'db' in jq_cfg2.keys():
+		with open('job_queues/'+name+'.jq','rb') as f:
+			jq = pickle.loads(f.read())
+			if 'db' in list(jq_cfg2.keys()):
 				jq.db = jq_cfg2['db']
 	else:
 		tempstr = jq_type
-		if tempstr in job_queue_class.keys():
+		if tempstr in list(job_queue_class.keys()):
 			tempstr = job_queue_class[tempstr]
 		templist = tempstr.split('.')
 		temppath = '.'.join(templist[:-1])
@@ -64,11 +67,11 @@ class JobQueue(object):
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
 			os.makedirs(self.path)#'jobs')
-		with open(os.path.join(self.path,self.name+'.jq'),'w') as f:#'jobs/'+self.name+'.jq','w') as f:
-			f.write(cPickle.dumps(self,cPickle.HIGHEST_PROTOCOL))
+		with open(os.path.join(self.path,self.name+'.jq'),'wb') as f:#'jobs/'+self.name+'.jq','w') as f:
+			f.write(pickle.dumps(self,pickle.HIGHEST_PROTOCOL))
 		try:
 			os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq'),os.path.join(self.original_path,self.name+'.jq'))
-		except OSError, e:
+		except OSError as e:
 			if e.errno == errno.EEXIST:
 				os.remove(os.path.join(self.original_path,self.name+'.jq'))
 				os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq'),os.path.join(self.original_path,self.name+'.jq'))
@@ -109,7 +112,7 @@ class JobQueue(object):
 			ans = [job.uuid]
 		else:
 			if self.verbose:
-				print 'Job already in queue!'
+				print('Job already in queue!')
 			job.clean()
 			ans = [jj.uuid for jj in eq_filter]
 		if save:
@@ -138,6 +141,8 @@ class JobQueue(object):
 				pass
 
 	def update_queue(self):
+		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
+			time.sleep(1)
 		self.save_status(message='Starting queue update')
 		if self.auto_update and self.update_needed:
 			self.check_virtualenvs()
@@ -154,7 +159,7 @@ class JobQueue(object):
 					j.status = 'missubmitted'
 			#elif j.status == 'dependencies not satisfied':
 				#for dep in j.gen_depend():
-				#	print 'Adding dependency for job ' + j.job_dir
+				#	print('Adding dependency for job ' + j.job_dir)
 				#	self.add_job(dep)
 			j.close_connections()
 
@@ -219,10 +224,11 @@ class JobQueue(object):
 			j.close_connections()
 
 		self.save()
-		print self.get_status_string()
+		print(self.get_status_string())
 		self.save_status()
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
+		self.last_update = time.time()
 
 	def get_status_string(self,message='Queue updated'):
 		return time.strftime("[%Y %m %d %H:%M:%S]: "+message+"\n"+str(self), time.localtime())
@@ -235,7 +241,7 @@ class JobQueue(object):
 
 		try:
 			os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq_status'),os.path.join(self.original_path,self.name+'.jq_status'))
-		except OSError, e:
+		except OSError as e:
 			if e.errno == errno.EEXIST:
 				os.remove(os.path.join(self.original_path,self.name+'.jq_status'))
 				os.symlink(os.path.join(self.jobqueue_dir,self.name+'.jq_status'),os.path.join(self.original_path,self.name+'.jq_status'))
@@ -245,7 +251,7 @@ class JobQueue(object):
 		ans = {}
 		for j in self.job_list:
 			total +=1
-			if not j.status in ans.keys():
+			if not j.status in list(ans.keys()):
 				ans[j.status] = 1
 			else:
 				ans[j.status] += 1
@@ -264,7 +270,7 @@ class JobQueue(object):
 		if exec_time_m:
 			str_exec += str(int(exec_time_m))+' min '
 		str_exec +=str(exec_time)+' s'
-		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in ans.items()])
+		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in list(ans.items())])
 		if not hasattr(self,'restarted_jobs'):
 			self.restarted_jobs = 0
 		if not hasattr(self,'extended_jobs'):
@@ -294,11 +300,13 @@ class JobQueue(object):
 		envs = {}
 		for j in self.job_list:
 			env = str(j.virtual_env)
-			if env not in envs.keys():
+			if env not in list(envs.keys()):
 				envs[env] = copy.deepcopy(j.requirements)
 			else:
 				envs[env] += copy.deepcopy(j.requirements)
-		for env in envs.keys():
+		for env in list(envs.keys()):
+			if not hasattr(self,'requirements'):
+				self.requirements = []
 			if env == 'None':
 				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 			else:
