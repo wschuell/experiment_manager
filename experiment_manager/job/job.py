@@ -98,12 +98,17 @@ class Job(object):
 			self.status = 'unfinished'
 			self.init_time += time.time()
 			self.save(chdir=False)
-			if os.path.isfile('profile.txt'):
-				os.remove('profile.txt')
-			self.start_profiler()
-			if not hasattr(self, 'prg_states'):
-				self.load_prg_states()
-			self.set_prg_states()
+			try:
+				if os.path.isfile('profile.txt'):
+					os.remove('profile.txt')
+				self.start_profiler()
+				if not hasattr(self, 'prg_states'):
+					self.load_prg_states()
+				self.set_prg_states()
+			except:
+				self.status = 'missubmitted'
+				self.save(chdir=False)
+				raise
 			try:
 				self.get_data()
 				self.script()
