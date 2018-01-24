@@ -163,11 +163,9 @@ scontrol show job $JOBID
 date
 echo "Starting Job"
 ls -l {base_work_dir}
-echo "bla"
 ls -l {base_work_dir}/$JOBID
 chmod u+x {multijob_dir}/script.py
 cp {multijob_dir}/script.py {multijob_dir}/script.py-$JOBID
-echo "bla"
 srun --overcommit --signal=9@60 {multijob_dir}/script.py-$JOBID
 date
 echo "Job finished"
@@ -209,7 +207,6 @@ echo "Submit Dir: $SLURM_SUBMIT_DIR"
 echo "Submit Host: $SLURM_SUBMIT_HOST"
 echo "Node Name: $SLURMD_NODENAME"
 echo "================================"
-sleep 23
 scontrol show job $JOBID
 
 #exit 0

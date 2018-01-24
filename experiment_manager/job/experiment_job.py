@@ -30,7 +30,7 @@ class ExperimentJob(Job):
 		self.close_connections()
 
 	def script(self):
-		 while self.data._T[-1]<self.tmax:
+		while self.data._T[-1]<self.tmax:
 			self.data.continue_exp()
 			self.check_time()
 
