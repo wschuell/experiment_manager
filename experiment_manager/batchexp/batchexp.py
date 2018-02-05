@@ -130,9 +130,12 @@ class BatchExp(object):
 		self.db.commit_from_RAM()
 
 
-	def auto_finish_queue(self,t=60,coeff=1.):
+	def auto_finish_queue(self,t=60,coeff=1.,call_between=None):
 		try:
-			self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
+			if call_between is None:
+				self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=self.db.commit_from_RAM)
+			else:
+				self.jobqueue.auto_finish_queue(t=t,coeff=coeff,call_between=call_between)
 		finally:
 			self.db.commit_from_RAM()
 		self.db.commit_from_RAM()

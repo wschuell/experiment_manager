@@ -44,6 +44,12 @@ class SSHSession(object):
         self.client = paramiko.SSHClient()
         self.connect()
 
+    def get_username(self):
+        if self.username is not None:
+            return self.username
+        else:
+            return self.command_output('echo "$USER"')
+
     def connect(self):
         home = os.environ['HOME']
         self.client.load_system_host_keys()

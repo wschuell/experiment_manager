@@ -1,6 +1,7 @@
 #partly based on Thibaut Munzer's script
 
 import os
+import sys
 import time
 try:
 	import cPickle as pickle
@@ -18,10 +19,13 @@ job_queue_class={
 	'local_multiprocess':'local.LocalMultiProcessJobQueue',
 	'avakas':'avakas.AvakasJobQueue',
 	'plafrim':'plafrim.PlafrimJobQueue',
+	'plafrim_oldslurm':'plafrim.PlafrimOldSlurm',
 	'torque':'torque.TorqueJobQueue',
 	'slurm':'slurm.SlurmJobQueue',
+	'dockerslurm':'docker.DockerSlurmJobQueue',
 	'oldslurm':'slurm.OldSlurmJobQueue',
-	'anyone':'anyone.AnyoneJobQueue'
+	'anyone':'anyone.AnyoneJobQueue',
+	'anyone_oldslurm':'anyone.AnyoneOldSlurm'
 }
 
 def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
@@ -63,6 +67,7 @@ class JobQueue(object):
 		self.original_path = path
 		self.virtual_env = virtual_env
 		self.requirements = requirements
+		self.python_version = sys.version_info[0]
 
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
@@ -309,8 +314,10 @@ class JobQueue(object):
 				self.requirements = []
 			if env == 'None':
 				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
+				self.check_python_version()
 			else:
 				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
+				self.check_python_version(virtual_env=env)
 
 	def cancel_job(self, job, clean=False):
 		if self.erase:
@@ -381,3 +388,16 @@ class JobQueue(object):
 				errors.append((j.job_dir,j.get_error()))
 		return errors
 
+	def print_errors(self,n=None):
+		errors = self.get_errors()
+		if n is None:
+			nmax = len(errors)
+		else:
+			nmax = n
+		for a,b in errors:
+			print(b)
+			print("==============")
+
+
+	def check_python_version(self,virtual_env=None):
+		pass

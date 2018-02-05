@@ -156,7 +156,6 @@ ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
 
 WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
-WAIT_TIME_2=$(({walltime_seconds}>1200?120:{walltime_seconds}/10))
 
 scontrol show job $JOBID
 
@@ -165,8 +164,17 @@ echo "Starting Job"
 ls -l {base_work_dir}
 ls -l {base_work_dir}/$JOBID
 chmod u+x {multijob_dir}/script.py
-cp {multijob_dir}/script.py {multijob_dir}/script.py-$JOBID
-srun --overcommit --signal=9@60 {multijob_dir}/script.py-$JOBID
+
+#cp {multijob_dir}/script.py {multijob_dir}/script.py-$JOBID
+#srun --overcommit --signal=9@60 {multijob_dir}/script.py-$JOBID
+
+{multijob_dir}/script.py &
+PID=$!
+(sleep $WAIT_TIME ; echo "Reaching time limit: Killing Job" ; kill -9 $PID ) &
+PID2=$!
+wait $PID
+kill -9 $PID2;
+
 date
 echo "Job finished"
 
@@ -188,9 +196,7 @@ date
 echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}/$JOBID
-ls -l {base_work_dir}
-ls -l {base_work_dir}/$JOBID
+rm -Rf {base_work_dir}/$JOBID
 
 date
 echo "Backup done"
