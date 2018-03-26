@@ -67,7 +67,7 @@ date
 echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
-rm -R {base_work_dir}/$JOBID
+rm -R {base_work_dir}/\"$JOBID\"
 
 date
 echo "Backup done"
@@ -161,12 +161,8 @@ scontrol show job $JOBID
 
 date
 echo "Starting Job"
-ls -l {base_work_dir}
-ls -l {base_work_dir}/$JOBID
 chmod u+x {multijob_dir}/script.py
 
-#cp {multijob_dir}/script.py {multijob_dir}/script.py-$JOBID
-#srun --overcommit --signal=9@60 {multijob_dir}/script.py-$JOBID
 
 {multijob_dir}/script.py &
 PID=$!
@@ -189,14 +185,17 @@ date
 echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
-rm -R {base_work_dir}/\"$JOBID\"/backup_dir
+rm -Rf {base_work_dir}/\"$JOBID\"/backup_dir
 fi
+
+rm {base_work_dir}/\"$JOBID\"/error.txt
+rm {base_work_dir}/\"$JOBID\"/output.txt
 
 date
 echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
-rm -Rf {base_work_dir}/$JOBID
+rm -Rf {base_work_dir}/\"$JOBID\"
 
 date
 echo "Backup done"

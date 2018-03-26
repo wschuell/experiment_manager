@@ -1,5 +1,6 @@
 
 import os
+import sys
 import shutil
 import time
 import copy
@@ -524,6 +525,6 @@ class ClusterJobQueue(JobQueue):
 			else:
 				python_bin = '/usr/bin/env python'
 		cmd.append(python_bin+' -c "import sys; print(sys.version_info[0]);" ')
-		version = session.command_output(cmd)
+		version = session.command_output('&&'.join(cmd))[0]
 		if not str(version) == str(sys.version_info[0]):
 			raise ValueError("Remote Python version is "+str(version)+", but local Python version is "+str(sys.version_info[0]))
