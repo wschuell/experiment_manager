@@ -276,7 +276,8 @@ class SSHSession(object):
                 with tarfile.open(os.path.join(localtardir,tar_name_ext), 'w') as tar:
                     for i in range(len(self.put_wait)):
                         f = self.put_wait[i]
-                        tar.add(os.path.join(f['localdir'],f['localname']),arcname=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename']))#,arcname=str(i)) #if folder structure not respected, maybe add a with pathpy.Path and just tar add localname
+                        if os.path.exists(os.path.join(f['localdir'],f['localname'])):
+                            tar.add(os.path.join(f['localdir'],f['localname']),arcname=os.path.join(self.put_wait[i]['remotedir'],self.put_wait[i]['remotename']))#,arcname=str(i)) #if folder structure not respected, maybe add a with pathpy.Path and just tar add localname
                 self.put(os.path.join(localtardir,tar_name_ext),os.path.join(remotetardir,tar_name_ext))
                 #mkdir_command = 'mkdir -p ' + os.path.join(remotetardir,tar_name)
                 tar_command = 'tar xf '+ os.path.join(remotetardir,tar_name_ext) +' -C '+untar_basedir
@@ -372,7 +373,8 @@ tar_name_ext = "{tar_name_ext}"
 with tarfile.open(os.path.join(remotetardir,tar_name_ext), 'w') as tar:
     for i in range(len(get_wait)):
         f = get_wait[i]
-        tar.add(os.path.join(f['remotedir'],f['remotename']),arcname=os.path.join(get_wait[i]['localdir'],get_wait[i]['localname']))
+        if os.path.exists(os.path.join(f['remotedir'],f['remotename'])):
+            tar.add(os.path.join(f['remotedir'],f['remotename']),arcname=os.path.join(get_wait[i]['localdir'],get_wait[i]['localname']))
 
 sys.exit(0)
             """.format(remotetardir=remotetardir,localtardir=localtardir,gw_str=gw_str,untar_basedir=untar_basedir, tar_name_ext=tar_name_ext)

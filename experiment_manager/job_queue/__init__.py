@@ -47,7 +47,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0):
+	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
 		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
@@ -313,11 +313,11 @@ class JobQueue(object):
 			if not hasattr(self,'requirements'):
 				self.requirements = []
 			if env == 'None':
-				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 				self.check_python_version()
+				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 			else:
-				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
 				self.check_python_version(virtual_env=env)
+				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
 
 	def cancel_job(self, job, clean=False):
 		if self.erase:
