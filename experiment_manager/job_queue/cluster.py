@@ -12,7 +12,7 @@ from . import JobQueue
 from ..tools.ssh import SSHSession,get_username_from_hostname,check_hostname
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=True, modules=[], **kwargs):
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=False, modules=[], **kwargs):
 		super(ClusterJobQueue,self).__init__(requirements=requirements,**kwargs)
 		self.max_jobs = max_jobs
 		self.modules = modules
@@ -332,7 +332,7 @@ class ClusterJobQueue(JobQueue):
 			j.close_connections()
 		return retrieving_list
 
-	def set_virtualenv(self, virtual_env, requirements, sys_site_packages=True):
+	def set_virtualenv(self, virtual_env, requirements=[], sys_site_packages=True):
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
 		python_version = str(sys.version_info[0])
@@ -345,7 +345,10 @@ class ClusterJobQueue(JobQueue):
 			session.command_output('pip'+python_version+' install --user virtualenv')
 			mod_venv = session.command_output('python'+python_version+' -c "import virtualenv; print(virtualenv);"')
 		assert (len(mod_venv)>27 and mod_venv[:27] == "<module 'virtualenv' from '")
-		mod_venv_clean = mod_venv[27:-4]
+		if mod_venv[-5:] == "pyc'>":
+			mod_venv_clean = mod_venv[27:-4]
+		else:
+			mod_venv_clean = mod_venv[27:-3]
 		virtualenv_bin = 'python'+ python_version + ' ' + mod_venv_clean
 		cmd = []
 		if sys_site_packages:
@@ -362,7 +365,7 @@ class ClusterJobQueue(JobQueue):
 				cmd.append(virtualenv_bin + ' {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_session.get_username(), virtual_env))
 			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_session.get_username(), virtual_env))
 			for package in requirements:
-				cmd.append('pip install '+package)
+				cmd.append('pip'+ python_version + ' install '+package)
 			cmd.append('deactivate')
 			#out = session.command_output(' && '.join(cmd))
 			if self.install_as_job:
@@ -394,7 +397,7 @@ class ClusterJobQueue(JobQueue):
 				python_version = str(sys.version_info[0])
 			if requirements == ['all']:
 					cmd.append("pip"+python_version+" freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U "+option)
-			else:
+			elif len(requirements)>0:
 					cmd.append('pip'+python_version+' install --upgrade --no-deps --src '+src_path+' '+option+' '.join(requirements))
 					cmd.append('pip'+python_version+' install --src '+src_path+' '+option+' '.join(requirements))
 			if virtual_env is not None:
@@ -407,12 +410,16 @@ class ClusterJobQueue(JobQueue):
 			#session.close()
 
 	def command_asjob_output(self,cmd,t_min=10,retry=True,retry_time=30):
+		session = self.ssh_session
+		if hasattr(self,'modules') and self.modules:
+			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
+		pref_cmd = session.prefix_command + cmd
 		cmd_uuid = str(uuid.uuid1())
 		cmd_path = os.path.join(self.basedir,'tempcommand_'+cmd_uuid)
 		out = self.ssh_session.command_output('mkdir -p '+cmd_path)
 		file_path = os.path.join(cmd_path,'cmd.sh')
 		output_path = os.path.join(cmd_path,'output.txt')
-		self.ssh_session.command_output('echo \"#!/bin/bash\n'+cmd+'\" > '+file_path+' && chmod u+x '+file_path)
+		self.ssh_session.command_output('echo \"#!/bin/bash\n'+pref_cmd+'\" > '+file_path+' && chmod u+x '+file_path)
 		cmdjob_id = self.send_submit_command(cmd_type='simple',t_min=t_min,output_path=output_path, file_path=file_path)
 		cmdjob_id = self.jobid_from_submit_output(cmdjob_id)
 		t = time.time()
@@ -519,6 +526,8 @@ class ClusterJobQueue(JobQueue):
 			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		if virtual_env is not None:
 			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_session.get_username(), virtual_env)
+			if not self.ssh_session.path_exists(python_bin):
+				self.set_virtualenv(virtual_env)
 		else:
 			if hasattr(self,'python_version'):
 				python_bin = '/usr/bin/env python'+str(self.python_version)

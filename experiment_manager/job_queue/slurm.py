@@ -279,6 +279,9 @@ scontrol show job $JOBID
 			pref += '\n'
 			for l in commands:
 				pref += l+"\n"
+		if hasattr(self,'modules') and self.modules:
+			for m in self.modules:
+				pref += 'module load '+m+'\n'
 		return pref
 
 

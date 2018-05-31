@@ -24,12 +24,8 @@ class TorqueJobQueue(ClusterJobQueue):
 
 	def individual_script(self, format_dict):
 		return """#!{python_bin}
-#PBS -o {job_dir}/output.txt
-#PBS -e {job_dir}/error.txt
-{prefix}
-#PBS -N {job_name}
 
-print "Preparing Job"
+print("Preparing Job")
 
 import os
 import sys
@@ -48,11 +44,11 @@ with open('job.json','r') as f:
 
 job.path = '.'
 
-print "Starting Job"
+print("Starting Job")
 
 job.run()
 
-print "Job finished"
+print("Job finished")
 
 sys.exit(0)
 """.format(**format_dict)
@@ -98,12 +94,8 @@ exit 0
 
 	def multijob_script(self, format_dict):
 		return """#!{python_bin}
-#PBS -o {multijob_dir}/output.txt
-#PBS -e {multijob_dir}/error.txt
-{prefix}
-#PBS -N {multijob_name}
 
-print "Preparing Job"
+print("Preparing Job")
 
 import os
 import sys
@@ -127,11 +119,11 @@ with open('job.json','r') as f:
 
 job.path = '.'
 
-print "Starting Job"
+print("Starting Job")
 
 job.run()
 
-print "Job finished"
+print("Job finished")
 
 sys.exit(0)
 """.format(**format_dict)
@@ -379,4 +371,7 @@ exit 0
 			pref += '\n'
 			for l in commands:
 				pref += l+"\n"
+		if hasattr(self,'modules') and self.modules:
+			for m in self.modules:
+				pref += 'module load '+m+'\n'
 		return pref
