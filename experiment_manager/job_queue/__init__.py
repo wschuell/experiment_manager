@@ -1,6 +1,7 @@
 #partly based on Thibaut Munzer's script
 
 import os
+import sys
 import time
 try:
 	import cPickle as pickle
@@ -18,10 +19,13 @@ job_queue_class={
 	'local_multiprocess':'local.LocalMultiProcessJobQueue',
 	'avakas':'avakas.AvakasJobQueue',
 	'plafrim':'plafrim.PlafrimJobQueue',
+	'plafrim_oldslurm':'plafrim.PlafrimOldSlurm',
 	'torque':'torque.TorqueJobQueue',
 	'slurm':'slurm.SlurmJobQueue',
+	'dockerslurm':'docker.DockerSlurmJobQueue',
 	'oldslurm':'slurm.OldSlurmJobQueue',
-	'anyone':'anyone.AnyoneJobQueue'
+	'anyone':'anyone.AnyoneJobQueue',
+	'anyone_oldslurm':'anyone.AnyoneOldSlurm'
 }
 
 def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
@@ -43,7 +47,7 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0):
+	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
 		self.verbose = verbose
 		self.job_list = []
 		self.erase = erase
@@ -63,6 +67,7 @@ class JobQueue(object):
 		self.original_path = path
 		self.virtual_env = virtual_env
 		self.requirements = requirements
+		self.python_version = sys.version_info[0]
 
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
@@ -308,8 +313,10 @@ class JobQueue(object):
 			if not hasattr(self,'requirements'):
 				self.requirements = []
 			if env == 'None':
+				self.check_python_version()
 				self.update_virtualenv(None, requirements=list(set(envs[env]+self.requirements)))
 			else:
+				self.check_python_version(virtual_env=env)
 				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
 
 	def cancel_job(self, job, clean=False):
@@ -381,3 +388,16 @@ class JobQueue(object):
 				errors.append((j.job_dir,j.get_error()))
 		return errors
 
+	def print_errors(self,n=None):
+		errors = self.get_errors()
+		if n is None:
+			nmax = len(errors)
+		else:
+			nmax = n
+		for a,b in errors:
+			print(b)
+			print("==============")
+
+
+	def check_python_version(self,virtual_env=None):
+		pass

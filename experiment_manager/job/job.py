@@ -63,6 +63,7 @@ class Job(object):
 		#self.save()
 		#self.data = None
 		self.backup_dir = os.path.join('..','backup_dir')
+		self.python_version = sys.version_info[0]
 
 	def get_path(self):
 		if not os.path.exists(self.path):
@@ -165,6 +166,8 @@ class Job(object):
 
 	def check_mem(self):
 		mem = memory_usage()
+		if isinstance(mem,list):
+			mem = mem[0]
 		self.memory_usage.append(mem)
 		self.mem_max = max(mem,self.mem_max)
 

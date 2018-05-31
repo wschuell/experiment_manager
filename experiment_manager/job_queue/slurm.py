@@ -67,7 +67,7 @@ date
 echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* {job_dir}/
-rm -R {base_work_dir}/$JOBID
+rm -R {base_work_dir}/\"$JOBID\"
 
 date
 echo "Backup done"
@@ -156,19 +156,21 @@ ARRAYID=$SLURM_ARRAY_TASK_ID
 JOBID=\"$SLURM_ARRAY_JOB_ID\"_\"$ARRAYID\"
 
 WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{walltime_seconds}/10))
-WAIT_TIME_2=$(({walltime_seconds}>1200?120:{walltime_seconds}/10))
 
 scontrol show job $JOBID
 
 date
 echo "Starting Job"
-ls -l {base_work_dir}
-echo "bla"
-ls -l {base_work_dir}/$JOBID
 chmod u+x {multijob_dir}/script.py
-cp {multijob_dir}/script.py {multijob_dir}/script.py-$JOBID
-echo "bla"
-srun --overcommit --signal=9@60 {multijob_dir}/script.py-$JOBID
+
+
+{multijob_dir}/script.py &
+PID=$!
+(sleep $WAIT_TIME ; echo "Reaching time limit: Killing Job" ; kill -9 $PID ) &
+PID2=$!
+wait $PID
+kill -9 $PID2;
+
 date
 echo "Job finished"
 
@@ -183,16 +185,17 @@ date
 echo 'Retrieving from secondary backup directory'
 cp -f -R {base_work_dir}/\"$JOBID\"/backup_dir/*/* {base_work_dir}\"$JOBID\"/
 fi
-rm -R {base_work_dir}/\"$JOBID\"/backup_dir
+rm -Rf {base_work_dir}/\"$JOBID\"/backup_dir
 fi
+
+rm {base_work_dir}/\"$JOBID\"/error.txt
+rm {base_work_dir}/\"$JOBID\"/output.txt
 
 date
 echo "Backing up files"
 
 cp -f -R {base_work_dir}/\"$JOBID\"/* $JOBDIR/
-rm -R {base_work_dir}/$JOBID
-ls -l {base_work_dir}
-ls -l {base_work_dir}/$JOBID
+rm -Rf {base_work_dir}/\"$JOBID\"
 
 date
 echo "Backup done"
@@ -209,7 +212,6 @@ echo "Submit Dir: $SLURM_SUBMIT_DIR"
 echo "Submit Host: $SLURM_SUBMIT_HOST"
 echo "Node Name: $SLURMD_NODENAME"
 echo "================================"
-sleep 23
 scontrol show job $JOBID
 
 #exit 0
@@ -277,6 +279,9 @@ scontrol show job $JOBID
 			pref += '\n'
 			for l in commands:
 				pref += l+"\n"
+		if hasattr(self,'modules') and self.modules:
+			for m in self.modules:
+				pref += 'module load '+m+'\n'
 		return pref
 
 
