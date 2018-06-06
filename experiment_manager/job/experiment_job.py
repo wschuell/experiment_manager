@@ -15,7 +15,6 @@ import math
 import path as pathpy
 import naminggamesal as ngal
 
-
 class ExperimentJob(Job):
 
 	def __init__(self, exp, tmax, *args,**kwargs):
@@ -234,7 +233,11 @@ class GraphExpJob(ExperimentJob):
 				self.data['graph'] = self.data['exp'].graph(**graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
-				self.data['graph'].complete_with(self.data['exp'].graph(**graph_cfg))
+				cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+				if cfunc.level != 'exp':
+					self.data['graph'].complete_with(self.data['exp'].graph(**graph_cfg))
+				else:
+					self.data['graph'] = self.data['exp'].graph(**graph_cfg)
 			self.check_time()
 
 	def get_data(self):
@@ -370,7 +373,11 @@ class GraphExpDBJob(ExperimentDBJob):
 				self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				self.graph_filename = self.data['graph'].filename
 			else:
-				self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+				cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+				if cfunc.level != 'exp':
+					self.data['graph'].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+				else:
+					self.data['graph'] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 			graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 			self.check_time()
@@ -558,7 +565,11 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
-					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+					if cfunc.level != 'exp':
+						self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					else:
+						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 				self.check_time()
@@ -760,7 +771,11 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
-					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+					if cfunc.level != 'exp':
+						self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					else:
+						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
 				self.check_time()
@@ -783,7 +798,11 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 					self.graph_filename = self.data[method].filename
 				else:
-					self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+					if cfunc.level != 'exp':
+						self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
+					else:
+						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 
 			T = self.data['exp']._T[-1]
 
