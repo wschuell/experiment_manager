@@ -13,6 +13,10 @@ from ..job import Job
 import copy
 import path
 import errno
+try:
+	from IPython.display import clear_output as cl_output
+except:
+	pass
 
 job_queue_class={
 	'local':'local.LocalJobQueue',
@@ -145,7 +149,7 @@ class JobQueue(object):
 			except OSError:
 				pass
 
-	def update_queue(self):
+	def update_queue(self,clear_output=False):
 		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
 			time.sleep(1)
 		self.save_status(message='Starting queue update')
@@ -229,6 +233,11 @@ class JobQueue(object):
 			j.close_connections()
 
 		self.save()
+		if clear_output:
+			try:
+				cl_output(wait=True)
+			except:
+				pass
 		print(self.get_status_string())
 		self.save_status()
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
@@ -283,13 +292,13 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=10,coeff=1,call_between=None):
+	def auto_finish_queue(self,t=10,coeff=1,call_between=None,clear_output=True):
 		self.update_queue()
 		step = t
 		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
 			time.sleep(step)
-			self.update_queue()
+			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
 				step *= coeff
 			else:
@@ -298,7 +307,7 @@ class JobQueue(object):
 			if call_between is not None:
 				call_between()
 			if self.job_list and not [j for j in self.job_list if j.status != 'to be cleaned']:
-				self.update_queue()
+				self.update_queue(clear_output=clear_output)
 		self.clean_jobqueue()
 
 	def check_virtualenvs(self):

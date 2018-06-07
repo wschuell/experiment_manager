@@ -396,29 +396,36 @@ class MetaExperiment(object):
 		if set_as_default:
 			self.default_batch = name
 
-	def powerlaw_fit(self,graph,get_object=False,get_values=False):
+	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False):
 		gr = copy.deepcopy(graph)
-		gr._X = []
-		gr._Y = []
-		gr.Yoptions = []
-		gr.stdvec = []
-		gr.legendoptions['labels'] = []
 		if 'labels' in list(graph.legendoptions.keys()) and len(graph.legendoptions['labels']) == len(graph._X):
 			labels = copy.deepcopy(graph.legendoptions['labels'])
 		else:
 			labels = ['' for _ in graph._X]
+		if display_mode=='2columns':
+			gr.legendoptions['labels'] = labels
+		else:
+			gr._X = []
+			gr._Y = []
+			gr.Yoptions = []
+			gr.stdvec = []
+			gr.legendoptions['labels'] = []
 		for i in range(len(graph._X)):
 			x = copy.deepcopy(graph._X[i])
 			y = copy.deepcopy(graph._Y[i])
 			params,r2 = powerlaw_loglogfit(x,y)
 			y_fit = params[0]*np.power(x,params[1])
+			if not display_mode=='2columns':
+				gr._X.append(copy.deepcopy(x))
+				gr._Y.append(copy.deepcopy(y))
+				gr.stdvec.append(copy.deepcopy(graph.stdvec[i]))
+				gr.Yoptions.append(copy.deepcopy(graph.Yoptions[i]))
+				gr.legendoptions['labels'].append(labels[i])
+			else:
+				gr.legendoptions['ncol'] = 2
 			gr._X.append(copy.deepcopy(x))
-			gr._X.append(copy.deepcopy(x))
-			gr._Y.append(copy.deepcopy(y))
 			gr._Y.append(copy.deepcopy(y_fit))
-			gr.stdvec.append(copy.deepcopy(graph.stdvec[i]))
 			gr.stdvec.append([0]*len(x))
-			gr.Yoptions.append(copy.deepcopy(graph.Yoptions[i]))
 			options = copy.deepcopy(graph.Yoptions[i])
 			options['linestyle'] = '--'
 			options['color'] = 'black'
@@ -432,9 +439,11 @@ class MetaExperiment(object):
 				x_symbol = gr.xlabel
 			else:
 				x_symbol = 'x'
-			gr.legendoptions['labels'].append(labels[i])
-			gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'}$, R$^2$='+number_str(r2))
-		#gr.legendoptions['ncol'] = 2
+			if use_formula:
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'}$, R$^2$='+number_str(r2))
+			else:
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'*'+x_symbol+'^'+number_str(params[1])+', R^2='+number_str(r2))
+			#gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+r'$\cdot$'+x_symbol+'^{'+number_str(params[1])+'}, R^2='+number_str(r2))
 		if not get_values and not get_object:
 			gr.show()
 		elif get_object:
