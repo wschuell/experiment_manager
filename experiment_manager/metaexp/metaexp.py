@@ -1,6 +1,8 @@
 import copy
 import numpy as np
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+from matplotlib.mlab import griddata
 
 from ..batchexp.batchexp import BatchExp
 
@@ -46,7 +48,7 @@ def powerlaw_loglogfit(X,Y):
 	return best_vals, r2
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',time_short_label='t'):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',time_short_label='t',time_min=None,time_max=None):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -56,6 +58,8 @@ class MetaExperiment(object):
 		self.db = None
 		self.time_label = time_label
 		self.time_short_label = time_short_label
+		self.time_min = time_min
+		self.time_max = time_max
 		self.default_batch = 'nobatch'
 		self.batches = {'nobatch':'nobatch'}
 		self.measures = list(self.local_measures.keys()) + list(self.global_measures.keys())
@@ -129,7 +133,7 @@ class MetaExperiment(object):
 		cfg = self.xp_cfg(**_subparams)
 		xp_uuid = self.db.get_graph_id_list(method=measure,xp_cfg=cfg)[:nbiter]
 		if len(xp_uuid)<nbiter:
-			raise ValueError('Only '+str(len(xp_uuid))+' experiments available in the database, nbiter=' +str(nbiter)+ ' asked')
+			raise ValueError('Only '+str(len(xp_uuid))+' experiments available in the database, nbiter=' +str(nbiter)+ ' asked, for configuration: '+str(cfg))
 		gr = self.db.get_graph(method=measure,xp_uuid=xp_uuid[0])
 		for i in range(nbiter-1):
 			gr.add_graph(self.db.get_graph(method=measure,xp_uuid=xp_uuid[i+1]))
@@ -146,6 +150,11 @@ class MetaExperiment(object):
 			except:
 				gr.title = measure
 		gr.xlabel = self.time_label
+		if self.time_min is not None:
+			gr.xmin = self.time_min
+		if self.time_max is not None:
+			gr.xmax = self.time_max
+		gr.xticker = True
 		if get_object:
 			return gr
 		else:
@@ -228,7 +237,9 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot_bestparam(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,**subparams):
+	def plot_bestparam(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,heatmap=False,**subparams):
+		if heatmap:
+			return self.plot_bestparam_heatmap(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,get_object=get_object,get_vect=get_vect,**subparams)
 		sp = copy.deepcopy(subparams)
 		for k in list(sp.keys()):
 			if k not in [xtoken,ytoken] and (isinstance(sp[k],list) or sp[k] == 'all'):
@@ -329,9 +340,7 @@ class MetaExperiment(object):
 				_subparams[k] = copy.deepcopy(self.params[k]['values'])
 			if not isinstance(_subparams[k],list):
 				_subparams[k] = [_subparams[k]]
-		if batch is None:
-			batch = self.batches[self.default_batch]
-		if batch == 'nobatch':
+		if batch == 'nobatch' or (batch is None and self.batches[self.default_batch] == 'nobatch'):
 			configs = []
 			for k in list(_subparams.keys()):
 				if configs == []:
@@ -362,6 +371,10 @@ class MetaExperiment(object):
 						for m in  list(self.local_measures.keys())+list(self.global_measures.keys()):
 							xp.graph(method=m)
 		else:
+			if batch is None:
+				_batch = self.batches[self.default_batch]
+			else:
+				_batch = self.batches[batch]
 			job_configs = []
 			for k in list(_subparams.keys()):
 				if job_configs == []:
@@ -375,12 +388,13 @@ class MetaExperiment(object):
 							configs_bis.append(c2)
 					job_configs = configs_bis
 			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
-			batch.add_jobs(job_cfg_list)
-			batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
+			_batch.add_jobs(job_cfg_list)
+			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
 
 	def run_single(self,batch=None):
-		self.run(batch=batch,nbiter=1)
+		subparams = self.complete_params()
+		self.run(batch=batch,nbiter=1,**subparams)
 
 	@dbcheck
 	def set_batch(self,name=None,set_as_default=False,**batch_cfg):
@@ -391,8 +405,9 @@ class MetaExperiment(object):
 			except:
 				name = _batch_cfg['jq_cfg']['jq_type']
 		elif not _batch_cfg:
-			_batch_cfg['jq_cfg']={'jq_type':name}
-		self.batches[name] = BatchExp(db=self.db,**_batch_cfg)
+			_batch_cfg['jq_cfg'] = {'jq_type':name}
+
+		self.batches[name] = BatchExp(db=self.db,name=name,**_batch_cfg)
 		if set_as_default:
 			self.default_batch = name
 
@@ -453,3 +468,83 @@ class MetaExperiment(object):
 		else:
 			raise ValueError('get_object and get_values cannot be set to True at the same time.')
 
+	def plot_bestparam_heatmap(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,matrix_mode=False,precision=50,**subparams):
+		sp = copy.deepcopy(subparams)
+		for k in list(sp.keys()):
+			if k not in [xtoken,ytoken] and (isinstance(sp[k],list) or sp[k] == 'all'):
+				raise ValueError('Heatmaps can only be drawn for a single set of parameters, parameter '+str(k)+' was given several values: '+str(sp[k]))
+		assert type_optim in ['min','max']
+		if ytoken not in list(subparams.keys()) or subparams[ytoken] == 'all':
+			yvec = self.params[ytoken]['values']
+		else:
+			yvec = subparams[ytoken]		
+		if xtoken not in list(subparams.keys()) or subparams[xtoken] == 'all':
+			xvec = self.params[xtoken]['values']
+		else:
+			xvec = subparams[xtoken]
+		heatmap_mat = np.empty((len(xvec),len(yvec)))
+		heatmap_mat[:] = np.nan
+		heatmap_vecx = []
+		heatmap_vecy = []
+		heatmap_vecz = []
+		for y in range(len(yvec)):
+			sp2 = copy.deepcopy(sp)
+			sp2[ytoken] = yvec[y]
+			gr = self.plot_against(token=xtoken,measure=measure,nbiter=nbiter,get_object=True,**sp2)
+			heatmap_mat[:,y] = copy.deepcopy(gr._Y[0])
+			heatmap_vecx += copy.deepcopy(gr._X[0])
+			heatmap_vecy += [yvec[y] for _ in gr._Y[0]]
+			heatmap_vecz += copy.deepcopy(gr._Y[0])
+		if get_vect:
+			return heatmap_mat,xvec,yvec,heatmap_vecx,heatmap_vecy,heatmap_vecz
+		try:
+			mm = self.global_measures[measure]['label']
+		except:
+			mm = measure
+		if get_object:
+			raise ValueError('get object for heatmap plot: Not implemented')
+		else:
+			plt.title(mm)
+			plt.xlabel(self.params[xtoken]['unit_label'])
+			plt.ylabel(self.params[ytoken]['unit_label'])
+			try:
+				xmin = self.params[xtoken]['min']
+			except:
+				xmin = min(xvec)
+			try:
+				xmax = self.params[xtoken]['max']
+			except:
+				xmax = max(xvec)
+			try:
+				ymin = self.params[ytoken]['min']
+			except:
+				ymin = min(yvec)
+			try:
+				ymax = self.params[ytoken]['max']
+			except:
+				ymax = max(yvec)
+			#extent = (xmin,xmax,ymin,ymax)
+			extent = (min(xvec),max(xvec),min(yvec),max(yvec))
+			aspect = (extent[1]-extent[0])*1./(extent[3]-extent[2])
+			if type_optim == 'min':
+				cmap = 'inferno_r'
+			else:
+				cmap = 'inferno'
+			if matrix_mode:
+				plt.imshow(heatmap_mat,origin='lower',extent=extent,aspect=aspect,cmap=cmap)
+			else:
+				N = precision*1j
+				xs0,ys0,zs0 = heatmap_vecx,heatmap_vecy,heatmap_vecz
+				zmin = min(zs0)
+				zidx = [i for i in range(len(zs0)) if zs0[i]==zmin]
+				valx = [xs0[i] for i in zidx]
+				valy = [ys0[i] for i in zidx]
+				xs,ys = np.mgrid[extent[0]:extent[1]:N, extent[2]:extent[3]:N]
+				resampled = griddata(xs0, ys0, zs0, xs, ys,interp='linear')
+				plt.imshow(resampled.T, origin='lower',aspect=aspect, extent=extent,cmap=cmap)
+				plt.plot(xs0, ys0, "r.")
+				plt.plot(valx, valy, "g.")
+				try:
+					plt.colorbar(label=self.global_measures[measure]['unit_label'])
+				except:
+					plt.colorbar()
