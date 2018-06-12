@@ -92,6 +92,9 @@ class MetaExperiment(object):
 					_subparams[k] = copy.deepcopy(v['default_value'])
 				if _subparams[k] == 'all':
 					_subparams[k] = copy.deepcopy(self.params[k]['values'])
+				if _subparams[k] == 'all_but_default':
+					_subparams[k] = copy.deepcopy(self.params[k]['values'])
+					_subparams[k].remove(self.params[k]['default_value'])
 				if _subparams[k] == 'first':
 					_subparams[k] = copy.deepcopy(self.params[k]['values'][0])
 				elif _subparams[k] == 'last':
@@ -106,7 +109,7 @@ class MetaExperiment(object):
 					_subparams[k] = copy.deepcopy(self.params[k]['values'][-1])
 				if isinstance(_subparams[k],list):
 					raise TypeError('Parameter '+str(k)+' was provided several values instead of one: '+str(_subparams[k]))
-				if _subparams[k] == 'all':
+				if _subparams[k] in ['all','all_but_default']:
 					raise TypeError('Parameter '+str(k)+' was provided several values instead of one: '+str(v['values']))
 		return _subparams
 
@@ -122,18 +125,22 @@ class MetaExperiment(object):
 		self.db = db
 
 	@dbcheck
-	def plot(self,measure,nbiter=None,get_object=False,**subparams):
+	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		try:
 			_subparams = self.complete_params(subparams,allow_list=False)
 		except TypeError:
-			return self.plot_several(measure=measure,nbiter=nbiter,get_object=get_object,**subparams)
+			return self.plot_several(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
 			#raise ValueError('Parameter '+str(k)+' has several values: '+str(_subparams[k])+'. Use plot_several to use different parameter values.')
 		cfg = self.xp_cfg(**_subparams)
 		xp_uuid = self.db.get_graph_id_list(method=measure,xp_cfg=cfg)[:nbiter]
 		if len(xp_uuid)<nbiter:
-			raise ValueError('Only '+str(len(xp_uuid))+' experiments available in the database, nbiter=' +str(nbiter)+ ' asked, for configuration: '+str(cfg))
+			if len(xp_uuid)>1:
+				plural = 's'
+			else:
+				plural = ''
+			raise ValueError('Only '+str(len(xp_uuid))+' experiment'+plural+' available in the database, nbiter=' +str(nbiter)+ ' asked, for configuration: '+str(cfg))
 		gr = self.db.get_graph(method=measure,xp_uuid=xp_uuid[0])
 		for i in range(nbiter-1):
 			gr.add_graph(self.db.get_graph(method=measure,xp_uuid=xp_uuid[i+1]))
@@ -155,6 +162,8 @@ class MetaExperiment(object):
 		if self.time_max is not None:
 			gr.xmax = self.time_max
 		gr.xticker = True
+		gr.semilog = semilog
+		gr.loglog = loglog
 		if get_object:
 			return gr
 		else:
@@ -170,7 +179,7 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot_several(self,measure,nbiter=None,get_object=False,**subparams):
+	def plot_several(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		_subparams = self.complete_params(subparams,allow_list=True)
@@ -180,7 +189,7 @@ class MetaExperiment(object):
 				varying_params.append(k)
 		configs = []
 		if varying_params == []:
-			return self.plot(measure=measure,nbiter=nbiter,get_object=get_object,**subparams)
+			return self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
 		for k in varying_params:
 			if configs == []:
 				configs = [{k:v} for v in _subparams[k]]
@@ -194,12 +203,12 @@ class MetaExperiment(object):
 				configs = configs_bis
 		_subparams_bis = copy.deepcopy(_subparams)
 		_subparams_bis.update(configs[0])
-		gr = self.plot(measure=measure,get_object=True,nbiter=nbiter,**_subparams_bis)
+		gr = self.plot(measure=measure,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 		if len(configs) > 1:
 			for c in configs[1:]:
 				_subparams_bis = copy.deepcopy(_subparams)
 				_subparams_bis.update(c)
-				gr2 = self.plot(measure=measure,get_object=True,nbiter=nbiter,**_subparams_bis)
+				gr2 = self.plot(measure=measure,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 				gr.add_graph(gr2)
 		gr.legendoptions['labels'] = [', '.join([self.params[k]['short_label']+'='+str(c[k]) for k in varying_params]) for c in configs]
 		if get_object:
@@ -208,7 +217,7 @@ class MetaExperiment(object):
 			gr.show()
 
 	@dbcheck
-	def plot_against(self,token,measure,nbiter=None,get_object=False,**subparams):
+	def plot_against(self,token,measure,nbiter=None,get_object=False,loglog=False,semilog=False,**subparams):
 		if not token in self.params.keys():
 			raise ValueError('Unknown parameter: '+str(token))
 		if token not in list(subparams.keys()) or subparams[token] == 'all':
@@ -217,19 +226,21 @@ class MetaExperiment(object):
 			token_values = copy.deepcopy(subparams[token])
 		_subparams = copy.deepcopy(subparams)
 		_subparams[token] = token_values[0]
-		gr = self.plot(measure=measure,nbiter=nbiter,get_object=True,**_subparams)
+		gr = self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
 		for i in range(len(gr._X)):
 			gr._X[i][0] = _subparams[token]
 		for v in token_values[1:]:
 			_subparams = copy.deepcopy(subparams)
 			_subparams[token] = v
-			gr2 = self.plot(measure=measure,nbiter=nbiter,get_object=True,**_subparams)
+			gr2 = self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
 			for i in range(len(gr2._X)):
 				gr2._X[i][0] = _subparams[token]
 			gr.complete_with(gr2)
 		gr.xlabel = self.params[token]['unit_label']
 		gr.xmin = self.params[token]['min']
 		gr.xmax = self.params[token]['max']
+		gr.semilog = semilog
+		gr.loglog = loglog
 		if get_object:
 			return gr
 		else:
@@ -243,7 +254,7 @@ class MetaExperiment(object):
 		sp = copy.deepcopy(subparams)
 		for k in list(sp.keys()):
 			if k not in [xtoken,ytoken] and (isinstance(sp[k],list) or sp[k] == 'all'):
-				return self.plot_bestparam_several(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,get_object=get_object,get_vect=get_vect,**sp)
+				return self.plot_bestparam_several(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,get_vect=get_vect,**sp)
 				#TODO: get_vect for plot_bestparam_several
 		gr = self.plot_against(token=xtoken,measure=measure,nbiter=nbiter,get_object=True,**sp)
 		assert type_optim in ['min','max']
@@ -288,22 +299,21 @@ class MetaExperiment(object):
 			gr2.show()
 
 	@dbcheck
-	def plot_bestparam_several(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,**subparams):
+	def plot_bestparam_several(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,loglog=False,semilog=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		_subparams = self.complete_params(subparams,allow_list=True)
-		print(_subparams)
 		varying_params = []
 		for k in list(_subparams.keys()):
-			if isinstance(_subparams[k],list):
+			if isinstance(_subparams[k],list) and k not in [xtoken, ytoken]:
 				varying_params.append(k)
 		configs = []
-		if xtoken not in subparams:
+		if xtoken not in list(subparams.keys()):
 			_subparams[xtoken] = self.params[xtoken]['values']
-		if ytoken not in subparams:
+		if ytoken not in list(subparams.keys()):
 			_subparams[ytoken] = self.params[ytoken]['values']
 		if varying_params == []:
-			return self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,get_object=get_object,**_subparams)
+			return self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**_subparams)
 		for k in varying_params:
 			if configs == []:
 				configs = [{k:v} for v in _subparams[k]]
@@ -317,12 +327,12 @@ class MetaExperiment(object):
 				configs = configs_bis
 		_subparams_bis = copy.deepcopy(_subparams)
 		_subparams_bis.update(configs[0])
-		gr = self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,get_object=True,nbiter=nbiter,**_subparams_bis)
+		gr = self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 		if len(configs) > 1:
 			for c in configs[1:]:
 				_subparams_bis = copy.deepcopy(_subparams)
 				_subparams_bis.update(c)
-				gr2 = self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,type_optim=type_optim,measure=measure,get_object=True,nbiter=nbiter,**_subparams_bis)
+				gr2 = self.plot_bestparam(xtoken=xtoken,ytoken=ytoken,type_optim=type_optim,measure=measure,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 				gr.add_graph(gr2)
 		gr.legendoptions['labels'] = [', '.join([self.params[k]['short_label']+'='+str(c[k]) for k in varying_params]) for c in configs]
 		if get_object:
@@ -332,12 +342,17 @@ class MetaExperiment(object):
 
 	@dbcheck
 	def run(self,batch=None,t=10,coeff=2,nbiter=None,**subparams):
+		#if hasattr(self.db,'move_to_RAM'):
+		#	self.db.move_to_RAM()
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		_subparams = copy.deepcopy(subparams)
 		for k in list(self.params.keys()):
 			if k not in list(_subparams.keys()) or _subparams[k]=='all':
 				_subparams[k] = copy.deepcopy(self.params[k]['values'])
+			if _subparams[k]=='all_but_default':
+				_subparams[k] = copy.deepcopy(self.params[k]['values'])
+				_subparams[k].remove(self.params[k]['default_value'])
 			if not isinstance(_subparams[k],list):
 				_subparams[k] = [_subparams[k]]
 		if batch == 'nobatch' or (batch is None and self.batches[self.default_batch] == 'nobatch'):
@@ -391,9 +406,11 @@ class MetaExperiment(object):
 			_batch.add_jobs(job_cfg_list)
 			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
+		#if hasattr(self.db,'get_back_from_RAM'):
+		#	self.db.get_back_from_RAM()
 
 	def run_single(self,batch=None):
-		subparams = self.complete_params()
+		subparams = self.complete_params(subparams={})
 		self.run(batch=batch,nbiter=1,**subparams)
 
 	@dbcheck
@@ -411,7 +428,7 @@ class MetaExperiment(object):
 		if set_as_default:
 			self.default_batch = name
 
-	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False):
+	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False,loglog=True):
 		gr = copy.deepcopy(graph)
 		if 'labels' in list(graph.legendoptions.keys()) and len(graph.legendoptions['labels']) == len(graph._X):
 			labels = copy.deepcopy(graph.legendoptions['labels'])
@@ -445,7 +462,7 @@ class MetaExperiment(object):
 			options['linestyle'] = '--'
 			options['color'] = 'black'
 			gr.Yoptions.append(options)
-			gr.loglog = True
+			gr.loglog = loglog
 			if gr.ylabel is not None and (len(gr.ylabel)<4 or (gr.ylabel[:2]=='$\\' and gr.ylabel[-1] == '$')):
 				y_symbol = gr.ylabel
 			else:
@@ -468,18 +485,22 @@ class MetaExperiment(object):
 		else:
 			raise ValueError('get_object and get_values cannot be set to True at the same time.')
 
-	def plot_bestparam_heatmap(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,matrix_mode=False,precision=50,**subparams):
+	def plot_bestparam_heatmap(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,matrix_mode=False,append_title='',precision=50,**subparams):
 		sp = copy.deepcopy(subparams)
 		for k in list(sp.keys()):
-			if k not in [xtoken,ytoken] and (isinstance(sp[k],list) or sp[k] == 'all'):
+			if k not in [xtoken,ytoken] and (isinstance(sp[k],list) or sp[k] in ['all','all_but_default']):
 				raise ValueError('Heatmaps can only be drawn for a single set of parameters, parameter '+str(k)+' was given several values: '+str(sp[k]))
 		assert type_optim in ['min','max']
-		if ytoken not in list(subparams.keys()) or subparams[ytoken] == 'all':
+		if ytoken not in list(subparams.keys()) or subparams[ytoken] in ['all','all_but_default']:
 			yvec = self.params[ytoken]['values']
+			if ytoken in list(subparams.keys()) and subparams[ytoken] == 'all_but_default':
+				yvec.remove(self.params[ytoken]['default_value'])
 		else:
 			yvec = subparams[ytoken]		
-		if xtoken not in list(subparams.keys()) or subparams[xtoken] == 'all':
+		if xtoken not in list(subparams.keys()) or subparams[xtoken] in ['all','all_but_default']:
 			xvec = self.params[xtoken]['values']
+			if xtoken in list(subparams.keys()) and subparams[xtoken] == 'all_but_default':
+				xvec.remove(self.params[xtoken]['default_value'])
 		else:
 			xvec = subparams[xtoken]
 		heatmap_mat = np.empty((len(xvec),len(yvec)))
@@ -504,7 +525,7 @@ class MetaExperiment(object):
 		if get_object:
 			raise ValueError('get object for heatmap plot: Not implemented')
 		else:
-			plt.title(mm)
+			plt.title(mm+append_title)
 			plt.xlabel(self.params[xtoken]['unit_label'])
 			plt.ylabel(self.params[ytoken]['unit_label'])
 			try:
@@ -532,6 +553,7 @@ class MetaExperiment(object):
 				cmap = 'inferno'
 			if matrix_mode:
 				plt.imshow(heatmap_mat,origin='lower',extent=extent,aspect=aspect,cmap=cmap)
+				plt.show()
 			else:
 				N = precision*1j
 				xs0,ys0,zs0 = heatmap_vecx,heatmap_vecy,heatmap_vecz
@@ -543,8 +565,9 @@ class MetaExperiment(object):
 				resampled = griddata(xs0, ys0, zs0, xs, ys,interp='linear')
 				plt.imshow(resampled.T, origin='lower',aspect=aspect, extent=extent,cmap=cmap)
 				plt.plot(xs0, ys0, "r.")
-				plt.plot(valx, valy, "g.")
+				plt.plot(valx, valy, "bD")
 				try:
 					plt.colorbar(label=self.global_measures[measure]['unit_label'])
 				except:
 					plt.colorbar()
+				plt.show()
