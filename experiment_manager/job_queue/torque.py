@@ -229,6 +229,9 @@ JOBID=$PBS_JOBID
 date
 echo "Starting Job"
 
+touch {job_dir}/output.txt
+touch {job_dir}/error.txt
+
 chmod u+x {job_dir}/script.py
 {job_dir}/script.py &
 PID=$!
@@ -289,6 +292,9 @@ ARRAYID=$PBS_ARRAYID
 
 date
 echo "Starting Job"
+
+touch {multijob_dir}/output.txt-$ARRAYID
+touch {multijob_dir}/error.txt-$ARRAYID
 
 chmod u+x {multijob_dir}/script.py
 {multijob_dir}/script.py &

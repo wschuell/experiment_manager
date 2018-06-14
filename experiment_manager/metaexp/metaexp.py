@@ -45,7 +45,8 @@ def powerlaw_loglogfit(X,Y):
 	ssreg = np.sum((logY_fit-logYbar)**2)
 	sstot = np.sum((logY - logYbar)**2)
 	r2 = ssreg / sstot
-	return best_vals, r2
+	perr = np.sqrt(np.diag(pcov))
+	return best_vals, r2, perr
 
 class MetaExperiment(object):
 	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',time_short_label='t',time_min=None,time_max=None):
@@ -445,7 +446,7 @@ class MetaExperiment(object):
 		for i in range(len(graph._X)):
 			x = copy.deepcopy(graph._X[i])
 			y = copy.deepcopy(graph._Y[i])
-			params,r2 = powerlaw_loglogfit(x,y)
+			params,r2,perr = powerlaw_loglogfit(x,y)
 			y_fit = params[0]*np.power(x,params[1])
 			if not display_mode=='2columns':
 				gr._X.append(copy.deepcopy(x))
@@ -472,9 +473,9 @@ class MetaExperiment(object):
 			else:
 				x_symbol = 'x'
 			if use_formula:
-				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'}$, R$^2$='+number_str(r2))
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+perr[0]+')$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'(±'+perr[1]+')}$, R$^2$='+number_str(r2))
 			else:
-				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'*'+x_symbol+'^'+number_str(params[1])+', R^2='+number_str(r2))
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+perr[0]+')*'+x_symbol+'^'+number_str(params[1])+'(±'+perr[1]+'), R^2='+number_str(r2))
 			#gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+r'$\cdot$'+x_symbol+'^{'+number_str(params[1])+'}, R^2='+number_str(r2))
 		if not get_values and not get_object:
 			gr.show()
