@@ -210,6 +210,12 @@ class GraphExpJob(ExperimentJob):
 		self.graph_cfg = graph_cfg
 		if 'tmax' not in graph_cfg:
 			self.graph_cfg['tmax'] = self.data['exp']._T[-1]
+		else:
+			t_init = self.graph_cfg['tmax']
+			t = 0
+			while t < t_init:
+				t += self.data['exp'].stepfun(t)
+			self.graph_cfg['tmax'] = t
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
 		self.save(keep_data=False)
@@ -289,6 +295,12 @@ class GraphExpDBJob(ExperimentDBJob):
 					xp_tmax = -1
 			if 'tmax' not in graph_cfg:
 				self.graph_cfg['tmax'] = xp_tmax
+			else:
+				t_init = self.graph_cfg['tmax']
+				t = 0
+				while t < t_init:
+					t += self.data['exp'].stepfun(t)
+				self.graph_cfg['tmax'] = t
 			if 'tmin' not in graph_cfg:
 				self.graph_cfg['tmin'] = 0
 			if xp_tmax<self.graph_cfg['tmax']:
@@ -467,6 +479,12 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					xp_tmax = -1
 			if 'tmax' not in graph_cfg:
 				self.graph_cfg['tmax'] = xp_tmax
+			else:
+				t_init = self.graph_cfg['tmax']
+				t = 0
+				while t < t_init:
+					t += self.data['exp'].stepfun(t)
+				self.graph_cfg['tmax'] = t
 			if 'tmin' not in graph_cfg:
 				self.graph_cfg['tmin'] = 0
 			if xp_tmax<self.graph_cfg['tmax']:
@@ -695,6 +713,12 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 					xp_tmax = -1
 			if 'tmax' not in graph_cfg:
 				self.graph_cfg['tmax'] = xp_tmax
+			else:
+				t_init = self.graph_cfg['tmax']
+				t = 0
+				while t < t_init:
+					t += self.data['exp'].stepfun(t)
+				self.graph_cfg['tmax'] = t
 			if 'tmin' not in graph_cfg:
 				self.graph_cfg['tmin'] = 0
 			if xp_tmax<self.graph_cfg['tmax']:
