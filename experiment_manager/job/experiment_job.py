@@ -352,6 +352,7 @@ class GraphExpDBJob(ExperimentDBJob):
 		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
+				self.graph_cfg['tmax'] = T # To avoid being between two snapshot step values
 				if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
 					self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 				self.status = 'pending'
@@ -532,6 +533,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
+				self.graph_cfg['tmax'] = T # To avoid being between two snapshot step values
 				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
 				#if self.dep_path is None:
 				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
@@ -740,6 +742,7 @@ class MultipleGraphExpDBJobNoStorage(MultipleGraphExpDBJob):
 		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
 			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
 			if T >= self.graph_cfg['tmax']:
+				self.graph_cfg['tmax'] = T # To avoid being between two snapshot step values
 				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
 				#if self.dep_path is None:
 				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
