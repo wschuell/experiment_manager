@@ -20,32 +20,44 @@ def number_str(number):
 	except:
 		return 'NaN'
 
-def powerlaw_loglogfit(X,Y):
+def powerlaw_loglogfit(X,Y,stdvec=None):
 	def powerlaw(logx,A,k):
 		return np.log(A) + k*logx
-	index_list = [index for index in range(len(Y)) if np.isfinite(Y[index])]
+	index_list = [index for index in range(len(Y)) if np.isfinite(Y[index]) and Y[index]!=0]
 	_Y = [Y[i] for i in index_list]
 	_X = [X[i] for i in index_list]
+	if stdvec is not None:
+		_stdvec = [stdvec[i] for i in index_list]
 	logX = np.log(_X)
 	logY = np.log(_Y)
 	init_vals = [1, 0]
 	if len(logY) < 2:
 		best_vals = np.array(init_vals)
+		covar = np.zeros((2,2))
+		_logY = logY
 	elif len(logY) == 2:
 		_k = np.log(_Y[0]/float(_Y[1]))/np.log(_X[0]/float(_X[1]))
 		_A = _Y[0]/float(_X[0]**_k)
 		best_vals = (_A,_k)
+		covar = np.zeros((2,2))
+		_logY = logY
 	else:
 		try:
-			best_vals, covar = curve_fit(powerlaw, xdata=logX, ydata=logY, p0=init_vals)
+			if stdvec is None:
+				sigma = None
+				_logY = logY
+			else:
+				_logY = [np.log(m) - 1./2*np.log(1+(s**2*1./m**2)) for m,s in zip(_Y,_stdvec)]
+				sigma = [np.sqrt(np.log(1+(s**2)*1./m**2)) for m,s in zip(_Y,_stdvec)]
+			best_vals, covar = curve_fit(powerlaw, xdata=logX, ydata=_logY, p0=init_vals,sigma=sigma,absolute_sigma=False)
 		except ValueError:
 			raise ValueError(str(logX)+'\n'+str(logY)+'\n'+str(X)+'\n'+str(Y)+'\n'+str(_X)+'\n'+str(_Y))
 	logY_fit = powerlaw(logX,*best_vals)
-	logYbar = np.sum(logY)/len(logY)
+	logYbar = np.sum(_logY)/len(_logY)
 	ssreg = np.sum((logY_fit-logYbar)**2)
-	sstot = np.sum((logY - logYbar)**2)
+	sstot = np.sum((_logY - logYbar)**2)
 	r2 = ssreg / sstot
-	perr = np.sqrt(np.diag(pcov))
+	perr = np.sqrt(np.diag(covar))
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
@@ -429,7 +441,7 @@ class MetaExperiment(object):
 		if set_as_default:
 			self.default_batch = name
 
-	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False,loglog=True):
+	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False,loglog=True,stdvec_mode=True):
 		gr = copy.deepcopy(graph)
 		if 'labels' in list(graph.legendoptions.keys()) and len(graph.legendoptions['labels']) == len(graph._X):
 			labels = copy.deepcopy(graph.legendoptions['labels'])
@@ -446,7 +458,11 @@ class MetaExperiment(object):
 		for i in range(len(graph._X)):
 			x = copy.deepcopy(graph._X[i])
 			y = copy.deepcopy(graph._Y[i])
-			params,r2,perr = powerlaw_loglogfit(x,y)
+			stdvec = copy.deepcopy(graph.stdvec[i])
+			if stdvec_mode:
+				params,r2,perr = powerlaw_loglogfit(x,y,stdvec=stdvec)
+			else:
+				params,r2,perr = powerlaw_loglogfit(x,y)
 			y_fit = params[0]*np.power(x,params[1])
 			if not display_mode=='2columns':
 				gr._X.append(copy.deepcopy(x))
@@ -473,9 +489,9 @@ class MetaExperiment(object):
 			else:
 				x_symbol = 'x'
 			if use_formula:
-				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+perr[0]+')$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'(±'+perr[1]+')}$, R$^2$='+number_str(r2))
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+number_str(perr[0])+')$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'(±'+number_str(perr[1])+')}$, R$^2$='+number_str(r2))
 			else:
-				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+perr[0]+')*'+x_symbol+'^'+number_str(params[1])+'(±'+perr[1]+'), R^2='+number_str(r2))
+				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+number_str(perr[0])+')*'+x_symbol+'^'+number_str(params[1])+'(±'+number_str(perr[1])+'), R^2='+number_str(r2))
 			#gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+r'$\cdot$'+x_symbol+'^{'+number_str(params[1])+'}, R^2='+number_str(r2))
 		if not get_values and not get_object:
 			gr.show()
@@ -497,7 +513,7 @@ class MetaExperiment(object):
 			if ytoken in list(subparams.keys()) and subparams[ytoken] == 'all_but_default':
 				yvec.remove(self.params[ytoken]['default_value'])
 		else:
-			yvec = subparams[ytoken]		
+			yvec = subparams[ytoken]
 		if xtoken not in list(subparams.keys()) or subparams[xtoken] in ['all','all_but_default']:
 			xvec = self.params[xtoken]['values']
 			if xtoken in list(subparams.keys()) and subparams[xtoken] == 'all_but_default':
