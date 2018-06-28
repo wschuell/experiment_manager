@@ -242,7 +242,7 @@ class SSHSession(object):
                     os.makedirs(os.path.join(localdir,f))
                 self.get_dir(os.path.join(remotedir,f),os.path.join(localdir,f),max_depth=max_depth-1)
 
-    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=50,limit_max=500,limit_concurrent_processes=10):
+    def batch_send(self,localtardir='',tar_name=None,remotetardir='',command_send_func=None,untar_basedir='.',limit_min=15,limit_max=500,limit_concurrent_processes=10):
         output = ''
         if len(untar_basedir)>1 and untar_basedir[-1] == '/':
             untar_basedir = untar_basedir[:-1]
@@ -327,7 +327,7 @@ class SSHSession(object):
             #clean
             #remotetempdir? and use it
 
-    def batch_receive(self,untar_basedir='',localtardir='',tar_name=None,remotetardir='',command_send_func=None,limit_min=50,limit_max=500):
+    def batch_receive(self,untar_basedir='',localtardir='',tar_name=None,remotetardir='',command_send_func=None,limit_min=15,limit_max=500):
         output = ''
         if len(untar_basedir)>1 and untar_basedir[-1] == '/':
             untar_basedir = untar_basedir[:-1]

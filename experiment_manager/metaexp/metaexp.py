@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import random
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
@@ -138,7 +139,7 @@ class MetaExperiment(object):
 		self.db = db
 
 	@dbcheck
-	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,**subparams):
+	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		try:
@@ -157,7 +158,7 @@ class MetaExperiment(object):
 		gr = self.db.get_graph(method=measure,xp_uuid=xp_uuid[0])
 		for i in range(nbiter-1):
 			gr.add_graph(self.db.get_graph(method=measure,xp_uuid=xp_uuid[i+1]))
-		gr.merge()
+		gr.merge(keep_all_data=prepare_for_fit)
 		try:
 			gr.title = self.local_measures[measure]['label']
 			if 'unit_label' in list(self.local_measures[measure].keys()):
@@ -261,7 +262,7 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot_bestparam(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,heatmap=False,**subparams):
+	def plot_bestparam(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,heatmap=False,prepare_for_fit=True,**subparams):
 		if heatmap:
 			return self.plot_bestparam_heatmap(xtoken=xtoken,ytoken=ytoken,measure=measure,type_optim=type_optim,nbiter=nbiter,get_object=get_object,get_vect=get_vect,**subparams)
 		sp = copy.deepcopy(subparams)
@@ -293,12 +294,14 @@ class MetaExperiment(object):
 		if get_vect:
 			return best_param_vect
 		gr2 = copy.deepcopy(gr)
-		gr2.merge()
+		gr2.merge(keep_all_data=prepare_for_fit)
 		gr2.ymin = self.params[ytoken]['min']#min(yvec)
 		gr2.ymax = self.params[ytoken]['max']#max(yvec)
 		if 'labels' in list(gr2.legendoptions.keys()):
 			del gr2.legendoptions['labels']
 		gr2.stdvec = [[0 for _ in best_param_vect]]
+		gr2.minvec = [[np.nan for _ in best_param_vect]]
+		gr2.maxvec = [[np.nan for _ in best_param_vect]]
 		gr2._Y[0] = best_param_vect
 		try:
 			mm = self.global_measures[measure]['label']
@@ -454,12 +457,34 @@ class MetaExperiment(object):
 			gr._Y = []
 			gr.Yoptions = []
 			gr.stdvec = []
+			gr.minvec = []
+			gr.maxvec = []
 			gr.legendoptions['labels'] = []
 		for i in range(len(graph._X)):
 			x = copy.deepcopy(graph._X[i])
 			y = copy.deepcopy(graph._Y[i])
 			stdvec = copy.deepcopy(graph.stdvec[i])
-			if stdvec_mode:
+
+			xx = []
+			yy = []
+			x_resample = []
+			y_resample = []
+			for j in range(len(graph._X[i])):
+				yy += graph.all_data[i][j]
+				xx += [graph._X[i][j] for _ in graph.all_data[i][j]]
+				y_resample.append(copy.deepcopy(graph.all_data[i][j]))
+				x_resample.append(graph._X[i][j])
+			exponents = []
+			for elt in y_resample:
+				random.shuffle(elt)
+			for k in range(len(y_resample[0])):
+				yvec = [elt[k] for elt in y_resample]
+				params,r2,perr = powerlaw_loglogfit(x_resample,yvec)
+				exponents.append(params[1])
+			print(exponents,np.mean(exponents),np.std(exponents))
+			if yy:
+				params,r2,perr = powerlaw_loglogfit(xx,yy)
+			elif stdvec_mode:
 				params,r2,perr = powerlaw_loglogfit(x,y,stdvec=stdvec)
 			else:
 				params,r2,perr = powerlaw_loglogfit(x,y)
@@ -468,13 +493,17 @@ class MetaExperiment(object):
 				gr._X.append(copy.deepcopy(x))
 				gr._Y.append(copy.deepcopy(y))
 				gr.stdvec.append(copy.deepcopy(graph.stdvec[i]))
+				gr.minvec.append(copy.deepcopy(graph.minvec[i]))
+				gr.maxvec.append(copy.deepcopy(graph.maxvec[i]))
 				gr.Yoptions.append(copy.deepcopy(graph.Yoptions[i]))
 				gr.legendoptions['labels'].append(labels[i])
 			else:
 				gr.legendoptions['ncol'] = 2
 			gr._X.append(copy.deepcopy(x))
 			gr._Y.append(copy.deepcopy(y_fit))
-			gr.stdvec.append([0]*len(x))
+			gr.stdvec.append([0 for _ in x])
+			gr.minvec.append([np.nan for _ in x])
+			gr.maxvec.append([np.nan for _ in x])
 			options = copy.deepcopy(graph.Yoptions[i])
 			options['linestyle'] = '--'
 			options['color'] = 'black'
@@ -501,6 +530,9 @@ class MetaExperiment(object):
 			return params,r2
 		else:
 			raise ValueError('get_object and get_values cannot be set to True at the same time.')
+
+#	def plot_powerlaw_fit(self,get_object=False,get_values=False,display_mode=None,use_formula=False,loglog=True,stdvec_mode=True):
+
 
 	def plot_bestparam_heatmap(self,xtoken,ytoken,measure,type_optim,nbiter=None,get_object=False,get_vect=False,matrix_mode=False,append_title='',precision=50,**subparams):
 		sp = copy.deepcopy(subparams)

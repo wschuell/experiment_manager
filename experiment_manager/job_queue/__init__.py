@@ -283,7 +283,7 @@ class JobQueue(object):
 			str_exec += str(int(exec_time_h))+' h '
 		if exec_time_m:
 			str_exec += str(int(exec_time_m))+' min '
-		str_exec +=str(exec_time)+' s'
+		str_exec +=str(int(exec_time))+' s'
 		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in list(ans.items())])
 		if not hasattr(self,'restarted_jobs'):
 			self.restarted_jobs = 0
