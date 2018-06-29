@@ -676,7 +676,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 			methods = [methods]
 		self.methods = methods
 		self.graph_cfg = graph_cfg
-		ExperimentDBJob.__init__(self,tmax=tmax,db=db,db_cfg=db_cfg,xp_uuid=xp_uuid,exp=exp,get_data_at_unpack=False,profiling=profiling, checktime=checktime, estimated_time=estimated_time, descr=descr, requirements=requirements, virtual_env=virtual_env)
+		ExperimentDBJob.__init__(self,tmax=tmax,db=db,db_cfg=db_cfg,xp_uuid=xp_uuid,exp=exp,profiling=profiling, checktime=checktime, estimated_time=estimated_time, descr=descr, requirements=requirements, virtual_env=virtual_env)
 
 
 	def monitoring_func(self):
