@@ -681,7 +681,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 	def monitoring_func(self,*args,**kwargs):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
-		for m in self.methods:
+		for method in self.methods:
 			graph_cfg['method'] = method
 			if method in list(self.data.keys()):
 				tmax = self.data[method]._X[0][-1]
