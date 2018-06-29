@@ -419,8 +419,8 @@ class MetaExperiment(object):
 							c2[k] = v
 							configs_bis.append(c2)
 					job_configs = configs_bis
-			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter,'no_storage':self.no_storage} for c in job_configs]
-			_batch.add_jobs(job_cfg_list)
+			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
+			_batch.add_jobs(job_cfg_list,no_storage=self.no_storage)
 			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
 		#if hasattr(self.db,'get_back_from_RAM'):

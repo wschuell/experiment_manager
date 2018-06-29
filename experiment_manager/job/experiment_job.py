@@ -67,7 +67,7 @@ class ExperimentDBJob(Job):
 			#self.status = 'already done'
 			#self.xp_uuid = None
 		#else:
-		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False,profiling=profiling, checktime=checktime, estimated_time=estimated_time, **kwargs)
+		super(ExperimentDBJob, self).__init__(tmax=tmax,get_data_at_unpack=False,db=db,db_cfg=db_cfg,xp_uuid=xp_uuid,exp=exp,profiling=profiling, checktime=checktime, estimated_time=estimated_time, **kwargs)
 		if exp is None:
 			self.origin_db = db
 			with path.Path(self.get_path()):
