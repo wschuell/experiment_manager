@@ -72,7 +72,7 @@ class BatchExp(object):
 			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 
-	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}):
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}, no_storage=False):
 		if xp_uuid is None:
 			exp = self.get_experiment(**xp_cfg)#modify in order to get only uuid and not whole exp
 			tmax_xp = exp._T[-1]
@@ -82,14 +82,17 @@ class BatchExp(object):
 		if tmax is None:
 			tmax = tmax_xp
 		try:
-			job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
+			if no_storage:
+				job = ExperimentDBJobNoStorage(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
+			else:
+				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 		except Exception as e:
 			if e.args[0] != 'Job already done':
 				raise
 
 
-	def add_jobs(self, cfg_list, save_jq=True):
+	def add_jobs(self, cfg_list, save_jq=True, no_storage=False):
 		for cfg in cfg_list:
 			cfg_str = json.dumps(cfg, sort_keys=True)
 			if cfg_str not in self.jobqueue.past_job_cfg:
@@ -115,7 +118,7 @@ class BatchExp(object):
 				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in list(cfg.keys()))
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
-						self.add_graph_job(xp_uuid=xp_uuid,save=False,**cfg2)
+						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)
 				else:
 					for xp_uuid in uuid_l:
 						self.add_exp_job(xp_uuid=xp_uuid,save=False,**cfg2)

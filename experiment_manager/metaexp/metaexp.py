@@ -62,7 +62,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',time_short_label='t',time_min=None,time_max=None):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -77,6 +77,7 @@ class MetaExperiment(object):
 		self.default_batch = 'nobatch'
 		self.batches = {'nobatch':'nobatch'}
 		self.measures = list(self.local_measures.keys()) + list(self.global_measures.keys())
+		self.no_storage = no_storage
 
 		for k,v in list(self.params.items()):
 			test1 = 'default_value' not in list(self.params[k].keys())
@@ -418,7 +419,7 @@ class MetaExperiment(object):
 							c2[k] = v
 							configs_bis.append(c2)
 					job_configs = configs_bis
-			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
+			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter,'no_storage':self.no_storage} for c in job_configs]
 			_batch.add_jobs(job_cfg_list)
 			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
@@ -475,13 +476,14 @@ class MetaExperiment(object):
 				y_resample.append(copy.deepcopy(graph.all_data[i][j]))
 				x_resample.append(graph._X[i][j])
 			exponents = []
+			const = []
 			for elt in y_resample:
 				random.shuffle(elt)
 			for k in range(len(y_resample[0])):
 				yvec = [elt[k] for elt in y_resample]
 				params,r2,perr = powerlaw_loglogfit(x_resample,yvec)
+				const.append(params[0])
 				exponents.append(params[1])
-			print(exponents,np.mean(exponents),np.std(exponents))
 			if yy:
 				params,r2,perr = powerlaw_loglogfit(xx,yy)
 			elif stdvec_mode:
