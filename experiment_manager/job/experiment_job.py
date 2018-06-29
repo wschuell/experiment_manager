@@ -679,7 +679,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 		ExperimentDBJob.__init__(self,tmax=tmax,db=db,db_cfg=db_cfg,xp_uuid=xp_uuid,exp=exp,profiling=profiling, checktime=checktime, estimated_time=estimated_time, descr=descr, requirements=requirements, virtual_env=virtual_env)
 
 
-	def monitoring_func(self):
+	def monitoring_func(self,*args,**kwargs):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		for m in self.methods:
 			graph_cfg['method'] = method
