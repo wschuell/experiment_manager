@@ -672,11 +672,13 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={},descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=2*3600, **graph_cfg):
 		methods = graph_cfg['method']
-		graph_cfg['tmax'] = tmax
+		self.graph_cfg = graph_cfg
+		self.graph_cfg['tmax'] = tmax
+		if 'tmin' not in graph_cfg:
+			self.graph_cfg['tmin'] = 0
 		if not isinstance(methods, list):
 			methods = [methods]
 		self.methods = methods
-		self.graph_cfg = graph_cfg
 		ExperimentDBJob.__init__(self,tmax=tmax,db=db,db_cfg=db_cfg,xp_uuid=xp_uuid,exp=exp,profiling=profiling, checktime=checktime, estimated_time=estimated_time, descr=descr, requirements=requirements, virtual_env=virtual_env)
 
 
