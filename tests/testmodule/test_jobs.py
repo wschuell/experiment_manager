@@ -14,6 +14,7 @@ newpath = tempfile.mkdtemp()
 os.chdir(newpath)
 
 import naminggamesal as ngal
+db = ngal.ngdb.NamingGamesDB(do_not_close=True)
 
 jq_cfg_list = [
 	{'jq_type':'local'},
@@ -39,7 +40,6 @@ def job(request):
 	if ind == 0:
 		return get_job(**{'job_type':'example_job'})
 	elif ind == 1:
-		db = ngal.ngdb.NamingGamesDB()
 		xp = db.get_experiment(force_new=True)
 		return get_job(**{'job_type':'experiment_job','xp_uuid':xp.uuid,'tmax':10})
 	else:
