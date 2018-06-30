@@ -34,7 +34,7 @@ def jq(request):
 #	]
 
 @pytest.fixture(params=list(range(2)))
-def job_list(request):
+def job(request):
 	ind = request.param
 	if ind == 0:
 		return get_job(**{'job_type':'example_job'})
@@ -44,11 +44,6 @@ def job_list(request):
 		return get_job(**{'job_type':'experiment_job','exp':xp,'tmax':10})
 	else:
 		raise ValueError('No jobs for value:',ind)
-
-@pytest.fixture(params=job_list)
-def jq(request):
-	return request.param
-
 
 def test_jobs(job,jq):
 	jq.add_job(job)
