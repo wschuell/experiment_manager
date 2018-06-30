@@ -5,12 +5,15 @@ import numpy as np
 import os
 
 import tempfile
+import uuid
 
 from experiment_manager.job_queue import get_jobqueue
 from experiment_manager.job import get_job
+
 newpath = tempfile.mkdtemp()
 os.chdir(newpath)
 
+import naminggamesal as ngal
 
 jq_cfg_list = [
 	{'jq_type':'local'},
@@ -25,16 +28,28 @@ def jq(request):
 	jq.clean_jobqueue()
 	return jq
 
-job_cfg_list = [
-	{'job_type':'example_job'},
-	{'job_type':'experiment_job','xp_cfg':{},'tmax':10},
-	]
+#job_cfg_list = [
+#	{'job_type':'example_job'},
+#	{'job_type':'experiment_job','xp_cfg':{},'tmax':10},
+#	]
 
-@pytest.fixture(params=job_cfg_list)
-def job_cfg(request):
+@pytest.fixture(params=list(range(2)))
+def job_list(request):
+	ind = request.param
+	if ind == 0:
+		return get_job(**{'job_type':'example_job'})
+	elif ind == 1:
+		db = ngal.ngdb.NamingGamesDB()
+		xp = db.get_experiment(force_new=True)
+		return get_job(**{'job_type':'experiment_job','exp':xp,'tmax':10})
+	else:
+		raise ValueError('No jobs for value:',ind)
+
+@pytest.fixture(params=job_list)
+def jq(request):
 	return request.param
 
-def test_jobs(job_cfg,jq):
-	j = get_job(**job_cfg)
-	jq.add_job(j)
+
+def test_jobs(job,jq):
+	jq.add_job(job)
 	jq.auto_finish_queue(t=1)
