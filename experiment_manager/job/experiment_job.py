@@ -87,10 +87,9 @@ class ExperimentDBJob(Job):
 			db_path = os.path.basename(self.db.dbpath)
 		self.files.append(db_path)
 		#self.db.dbpath = os.path.join(self.get_path(),self.db.dbpath)
+		self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		if hasattr(self,'methods'):
 			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)
-		else:
-			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid])
 		#self.db.dbpath = db_path
 		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -113,6 +112,8 @@ class ExperimentDBJob(Job):
 
 	def script(self):
 		self.data['exp'].continue_exp_until(T=self.tmax,autocommit=False,monitoring_func=self.monitoring_func)
+		if self.data['exp']._T[-1] < self.tmax:
+			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
 
 	def monitoring_func(self,*args,**kwargs):
 		self.check_time()
@@ -535,14 +536,14 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		#self.data['exp'] = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		#if self.data['exp'] is not None and self.data['exp']._T[-1] >= self.graph_cfg['tmax']:
 		#old_path = self.db.dbpath
-		if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
-			T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
-			if T >= self.graph_cfg['tmax']:
-				self.graph_cfg['tmax'] = T # To avoid being between two snapshot step values
-				#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
-				#if self.dep_path is None:
-				self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
-				self.status = 'pending'
+		#if self.origin_db.id_in_db(xp_uuid=self.xp_uuid):
+		T = self.origin_db.get_param(xp_uuid=self.xp_uuid,param='Tmax')
+		if T >= self.graph_cfg['tmax']:
+			self.graph_cfg['tmax'] = T # To avoid being between two snapshot step values
+			#if not (self.db.id_in_db(xp_uuid=self.xp_uuid) and self.db.get_param(xp_uuid=self.xp_uuid,param='Tmax')>=T):
+			#if self.dep_path is None:
+			self.origin_db.export(other_db=self.db, id_list=[self.xp_uuid],methods=self.methods)#new policy: always get from origin_db and not dep_path
+			self.status = 'pending'
 		#self.db.dbpath = old_path
 
 		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
@@ -719,8 +720,8 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 		for method in self.methods:
 			if method in list(self.data.keys()) and 'exp' in self.data.keys():
 				self.data['exp'].commit_data_to_db(self.data[method], method)
-		self.data.compress(rm=False)
-		self.db.commit(self.data)
+		self.data['exp'].compress(rm=False)
+		self.db.commit(self.data['exp'])
 
 
 	def __eq__(self, other):
