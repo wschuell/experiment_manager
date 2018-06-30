@@ -22,7 +22,7 @@ job_class={
 	'experiment_job_multigraph':'experiment_job.MultiGraphExpDBJob',
 	}
 
-def get_job(job_type='example_job', **jq_cfg2):
+def get_job(job_type='example_job', **job_cfg2):
 	tempstr = job_type
 	if tempstr in list(job_class.keys()):
 		tempstr = job_class[tempstr]
