@@ -4,6 +4,8 @@ from ._example_job import ExampleJob
 #from .experiment_job import ExperimentJob, GraphExpJob, ExperimentDBJob, GraphExpDBJob, MultipleGraphExpDBJob
 #from .cjob import CJob
 
+from importlib import import_module
+
 import os
 import time
 import jsonpickle
