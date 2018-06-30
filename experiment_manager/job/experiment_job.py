@@ -56,11 +56,14 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
+	def __init__(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			if db is None:
 				db = ngal.ngdb.NamingGamesDB()
+			if xp_uuid is None:
+				exp = db.get_experiment(**xp_cfg)
+				xp_uuid  = exp.uuid
 			xp_tmax = db.get_param(xp_uuid=xp_uuid,param='Tmax')
 		else:
 			xp_tmax = exp._T[-1]
@@ -277,6 +280,9 @@ class GraphExpDBJob(ExperimentDBJob):
 			if exp is None:
 				if db is None:
 					db = ngal.ngdb.NamingGamesDB()
+				if xp_uuid is None:
+					exp = db.get_experiment(**xp_cfg)
+					xp_uuid  = exp.uuid
 				tmax_db = db.get_param(xp_uuid=xp_uuid, method=graph_cfg['method'], param='Time_max')
 			else:
 				tmax_db = exp.db.get_param(xp_uuid=exp.uuid, method=graph_cfg['method'], param='Time_max')
@@ -455,6 +461,9 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				if exp is None:
 					if db is None:
 						db = ngal.ngdb.NamingGamesDB()
+					if xp_uuid is None:
+						exp = db.get_experiment(**xp_cfg)
+						xp_uuid  = exp.uuid
 					tmax_db = min(tmax_db,db.get_param(xp_uuid=xp_uuid, method=mt, param='Time_max'))
 				else:
 					tmax_db = min(tmax_db,exp.db.get_param(xp_uuid=exp.uuid, method=mt, param='Time_max'))
