@@ -41,7 +41,7 @@ def job(request):
 	elif ind == 1:
 		db = ngal.ngdb.NamingGamesDB()
 		xp = db.get_experiment(force_new=True)
-		return get_job(**{'job_type':'experiment_job','exp':xp,'tmax':10})
+		return get_job(**{'job_type':'experiment_job','xp_uuid':xp.uuid,'tmax':10})
 	else:
 		raise ValueError('No jobs for value:',ind)
 
