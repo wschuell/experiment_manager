@@ -382,7 +382,7 @@ class JobQueue(object):
 		pass
 
 	def clean_jobqueue(self):
-		pass
+		self.job_list = []
 
 	def global_retrieval(self):
 		return []
