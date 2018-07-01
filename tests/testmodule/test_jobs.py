@@ -34,7 +34,7 @@ def jq(request):
 #	{'job_type':'experiment_job','xp_cfg':{},'tmax':10},
 #	]
 
-@pytest.fixture(params=list(range(2)))
+@pytest.fixture(params=list(range(4)))
 def job(request):
 	ind = request.param
 	if ind == 0:
@@ -43,6 +43,14 @@ def job(request):
 		db.reconnect()
 		xp = db.get_experiment(force_new=True)
 		return get_job(**{'job_type':'experiment_job','xp_uuid':xp.uuid,'tmax':10})
+	elif ind == 2:
+		db.reconnect()
+		xp = db.get_experiment(force_new=True)
+		return get_job(**{'job_type':'experiment_job_multigraph','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','conv_time2','N_d']})
+	elif ind == 3:
+		db.reconnect()
+		xp = db.get_experiment(force_new=True)
+		return get_job(**{'job_type':'experiment_job_nostorage','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','conv_time2','N_d']})
 	else:
 		raise ValueError('No jobs for value:',ind)
 
