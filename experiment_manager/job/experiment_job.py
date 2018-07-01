@@ -143,7 +143,7 @@ class ExperimentDBJob(Job):
 			if not hasattr(self.db,'connection'):
 				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
-			raise IOError('global database not active')
+			#raise IOError('global database not active')
 			self.origin_db.reconnect()#RAM_only=True)
 		if hasattr(self,'methods'):
 			self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid],methods=self.methods)
@@ -423,7 +423,7 @@ class GraphExpDBJob(ExperimentDBJob):
 			if not hasattr(self.db,'connection'):
 				self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
-			raise IOError('global database not active')
+			#raise IOError('global database not active')
 			self.origin_db.reconnect()#RAM_only=True)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=[self.graph_cfg['method']], graph_only=True)
 		#source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
@@ -642,7 +642,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		if not hasattr(self.origin_db,'connection'):
-			raise IOError('global database not active')
+			#raise IOError('global database not active')
 			self.origin_db.reconnect()#RAM_only=True)
 		self.db.export(other_db=self.origin_db, id_list=[self.xp_uuid], methods=self.methods, graph_only=True)
 		#source_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
