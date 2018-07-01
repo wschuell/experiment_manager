@@ -19,7 +19,7 @@ job_class={
 	'notebook_job':'notebook_job.NotebookJob',
 	'experiment_job':'experiment_job.ExperimentDBJob',
 	'experiment_job_nostorage':'experiment_job.ExperimentDBJobNoStorage',
-	'experiment_job_multigraph':'experiment_job.MultiGraphExpDBJob',
+	'experiment_job_multigraph':'experiment_job.MultipleGraphExpDBJob',
 	}
 
 def get_job(job_type='example_job', **job_cfg2):
