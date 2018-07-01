@@ -40,6 +40,7 @@ def job(request):
 	if ind == 0:
 		return get_job(**{'job_type':'example_job'})
 	elif ind == 1:
+		db.reconnect()
 		xp = db.get_experiment(force_new=True)
 		return get_job(**{'job_type':'experiment_job','xp_uuid':xp.uuid,'tmax':10})
 	else:
