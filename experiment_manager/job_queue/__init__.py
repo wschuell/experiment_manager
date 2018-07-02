@@ -245,6 +245,7 @@ class JobQueue(object):
 		print(self.get_status_string())
 		self.save_status()
 		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied','md5 check failed']]:
+			print(self.job_list[0].get_error())
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
 		self.last_update = time.time()
 
