@@ -190,13 +190,15 @@ class JobQueue(object):
 				if j.get_data_at_unpack:
 					with path.Path(j.get_path()):
 						j.get_data()
-				j.check_md5(chdir=True)
-				j.unpack_data()
-				j.data = None
-				self.past_exec_time += j.exec_time
-				self.executed_jobs += 1
-				#if self.erase:
-				j.status = 'to be cleaned'
+				if j.check_md5(bool_mode=True,chdir=True):
+					j.unpack_data()
+					j.data = None
+					self.past_exec_time += j.exec_time
+					self.executed_jobs += 1
+					#if self.erase:
+					j.status = 'to be cleaned'
+				else:
+					j.status = 'md5 check failed'
 			j.close_connections()
 
 		for j in [x for x in self.job_list]:
@@ -241,7 +243,7 @@ class JobQueue(object):
 				pass
 		print(self.get_status_string())
 		self.save_status()
-		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
+		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied','md5 check failed']]:
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
 		self.last_update = time.time()
 

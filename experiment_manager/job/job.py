@@ -86,7 +86,7 @@ class Job(object):
 					if os.path.isfile(f):
 						self.files_md5[f] = get_md5(f)
 
-	def check_md5(self,chdir=False):
+	def check_md5(self,chdir=False,bool_mode=False):
 		if chdir:
 			j_path = self.get_path()
 		else:
@@ -94,9 +94,17 @@ class Job(object):
 		with pathpy.Path(j_path):
 			for f in list(self.files_md5.keys()):
 				if not os.path.isfile(f):
-					raise IOError('File '+str(f)+' not present, should have md5 '+str(self.files_md5[f]))
+					if bool_mode:
+						return False
+					else:
+						raise IOError('File '+str(f)+' not present, should have md5 '+str(self.files_md5[f]))
 				elif not self.files_md5[f] == get_md5(f):
-					raise IOError('File '+str(f)+' had md5 '+str(get_md5(f))+' but should have md5 '+str(self.files_md5[f]))
+					if bool_mode:
+						return False
+					else:
+						raise IOError('File '+str(f)+' had md5 '+str(get_md5(f))+' but should have md5 '+str(self.files_md5[f]))
+		if bool_mode:
+			return True
 
 	def get_path(self):
 		if not os.path.exists(self.path):
@@ -243,9 +251,9 @@ class Job(object):
 		self.lastsave_time = time.time()
 		with pathpy.Path(j_path):
 			self.save_prg_states()
+			self.update_md5()
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,pickle.HIGHEST_PROTOCOL))
-			self.update_md5()
 		if keep_data and data_exists:
 			with pathpy.Path(j_path):
 				self.get_data()

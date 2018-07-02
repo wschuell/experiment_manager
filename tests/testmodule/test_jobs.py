@@ -56,4 +56,4 @@ def job(request):
 
 def test_jobs(job,jq):
 	jq.add_job(job)
-	jq.auto_finish_queue(t=1)
+	jq.auto_finish_queue()
