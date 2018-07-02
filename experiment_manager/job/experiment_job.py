@@ -54,7 +54,7 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
+	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, *args, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			if db is None:
@@ -272,7 +272,7 @@ class GraphExpJob(ExperimentJob):
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
-	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, descr=None, requirements=[], virtual_env=None, profiling=False, checktime=True, estimated_time=2*3600, **graph_cfg):
+	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, **graph_cfg):
 		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):
@@ -386,7 +386,8 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		source_file = os.path.join(os.path.dirname(self.origin_db.dbpath),'data',self.xp_uuid+'.db.xz')
 		dst_file = os.path.join(self.get_path(),'data',self.xp_uuid+'.db.xz')
 		shutil.copy(source_file, dst_file)
-		self.files.append('data/'+self.xp_uuid+'.db.xz')
+		if 'data/'+self.xp_uuid+'.db.xz' not in self.files:
+			self.files.append('data/'+self.xp_uuid+'.db.xz')
 
 		self.save(keep_data=False)
 		self.origin_db.close()
@@ -426,14 +427,14 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 		if not hasattr(self.db,'connection'):
 			self.db.reconnect()
 		self.data = {}
-		if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
-			dep_db = self.db.__class__(db_type="sqlite3",path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
-			dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
-			self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
-			source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
-			dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
-			shutil.copy(source_file, dst_file)
-			dep_db.close()
+		# if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
+		# 	dep_db = self.db.__class__(db_type="sqlite3",path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+		# 	dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
+		# 	self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
+		# 	source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')
+		# 	dst_file = os.path.join('data',self.xp_uuid+'.db.xz')#self.get_path(),'data',self.xp_uuid+'.db.xz')
+		# 	shutil.copy(source_file, dst_file)
+		# 	dep_db.close()
 
 		#if not os.path.isfile(os.path.join('data',self.xp_uuid+'.db.xz')):#self.get_path(),'data',self.xp_uuid+'.db.xz')):
 			#source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')

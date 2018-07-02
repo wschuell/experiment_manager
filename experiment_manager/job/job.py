@@ -75,6 +75,8 @@ class Job(object):
 		self.files_md5 = {}
 		self.init(*args,**kwargs)
 		self.save(keep_data=False)
+		if hasattr(self,'close_connections'):
+			self.close_connections()
 
 	def init(self,*args,**kwargs):
 		pass

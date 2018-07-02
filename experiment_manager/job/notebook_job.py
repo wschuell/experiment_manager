@@ -5,13 +5,10 @@ from IPython.nbformat.current import write as ipynb_write
 
 class NotebookJob(Job):
 
-	def __init__(self, notebook_file, *args, **kwargs):
-		super(NotebookJob, self).__init__(self, *args, **kwargs):
+	def init(self, notebook_file, *args, **kwargs):
 		self.requirements.append('runipy')
 		self.requirements.append('ipython')
 		self.get_data()
-		self.save()
-		self.data = None
 
 	def script(self):
 		r.run_notebook()
