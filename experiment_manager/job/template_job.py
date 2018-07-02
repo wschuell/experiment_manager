@@ -15,12 +15,11 @@ or even chdir in it in a clean way: with pathpy.Path(self.get_path()):
 
 class TemplateJob(Job):
 
-	def __init__(self,myvariables,*args,**kwargs):#runs in top level folder / on local machine
-		Job.__init__(self,*args,**kwargs) # mandatory, always as first line
+	def init(self,myvariables,*args,**kwargs):#runs in top level folder / on local machine
+		## CAUTION This is init and NOT __init__ !
 		""" init as you which, set variables that you need , pack the data you need in specific files, etc. You just need to call the first line before everything, and the last line at the end"""
 		self.files.append(FILES)# optional, tell here the specific files that you create and want to be transfered to the cluster
 		self.clean_at_retrieval = [FILES] #optional, files to delete before batch-downloading the job folder (db journals for example, compilation artifacts, etc)
-		self.save(keep_data=False) #mandatory, always as last line
 
 	def script(self): #runs in the folder local top the job / on cluster
 		""" do what you need to do. For checkpoints, you can call check_time as showed below

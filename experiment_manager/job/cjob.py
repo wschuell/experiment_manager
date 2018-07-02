@@ -8,16 +8,13 @@ import sys
 
 class CJob(Job):
 
-	def __init__(self, files=[], make_opts=[''], exec_file='',*args,**kwargs):
-		Job.__init__(self,*args,**kwargs)
+	def init(self, files=[], make_opts=[''], exec_file='',*args,**kwargs):
 		os.makedirs(self.path)
 		for f_src,f_dst in files:
 			shutil.copy(f_src,os.path.join(self.path,f_dst))
 			self.files.append(f_dst)
 		self.make_opts = make_opts
 		self.exec_file = exec_file
-		self.save()
-		self.data = None
 
 	def script(self):
 		cmd_tab = []

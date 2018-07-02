@@ -17,15 +17,13 @@ import naminggamesal as ngal
 
 class ExperimentJob(Job):
 
-	def __init__(self, exp, tmax, *args,**kwargs):
-		super(ExperimentJob, self).__init__(*args,**kwargs)
+	def init(self, exp, tmax, *args,**kwargs):
 		if exp._T[-1] >= tmax:
 			self.status = 'already done'
 		self.data = exp #copy.deepcopy(exp)
 		self.xp_uuid = self.data.uuid
 		self.tmax = tmax
 		self.files.append(self.xp_uuid+'.b')
-		self.save(keep_data=False)
 		self.close_connections()
 
 	def script(self):
@@ -56,7 +54,7 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def __init__(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
+	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, profiling=False, checktime=True, estimated_time=2*3600, **kwargs):
 		self.tmax = tmax
 		if exp is None:
 			if db is None:
@@ -72,7 +70,7 @@ class ExperimentDBJob(Job):
 			#self.status = 'already done'
 			#self.xp_uuid = None
 		#else:
-		super(ExperimentDBJob, self).__init__(get_data_at_unpack=False,profiling=profiling, checktime=checktime, estimated_time=estimated_time, **kwargs)
+		#super(ExperimentDBJob, self).init(get_data_at_unpack=False,profiling=profiling, checktime=checktime, estimated_time=estimated_time, **kwargs)
 		if exp is None:
 			self.origin_db = db
 			with path.Path(self.get_path()):
@@ -112,7 +110,7 @@ class ExperimentDBJob(Job):
 		self.files.append('data/'+self.xp_uuid+'.db.xz')
 		self.clean_at_retrieval = ['data/'+self.xp_uuid+'.db','data/'+self.xp_uuid+'.db-journal']
 
-		self.save(keep_data=False)
+		#self.save(keep_data=False)
 		self.db.close()
 
 	def script(self):

@@ -35,7 +35,7 @@ def get_md5(filename):
 
 class Job(object):
 
-	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True):
+	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=True,*args,**kwargs):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		if descr is None:
@@ -73,6 +73,11 @@ class Job(object):
 		self.backup_dir = os.path.join('..','backup_dir')
 		self.python_version = sys.version_info[0]
 		self.files_md5 = {}
+		self.init(*args,**kwargs)
+		self.save(keep_data=False)
+
+	def init(self,*args,**kwargs):
+		pass
 
 	def update_md5(self,chdir=False):
 		if chdir:

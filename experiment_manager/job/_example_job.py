@@ -9,8 +9,7 @@ import random
 
 class ExampleJob(Job):
 
-	def __init__(self,*args,**kwargs):
-		super(ExampleJob,self).__init__(*args,**kwargs)
+	def init(self,*args,**kwargs):
 		if os.path.isfile(self.descr+'data.dat'):
 			try:
 				os.makedirs(self.path)
