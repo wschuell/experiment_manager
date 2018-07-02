@@ -209,6 +209,7 @@ class JobQueue(object):
 						j.deps.remove(dep_uuid)
 				if not j.deps:
 					j.re_init()
+					#j.update_md5(chdir=True)
 				#self.job_list.remove(j)
 				#self.add_job(j)
 			j.close_connections()
