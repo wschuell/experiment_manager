@@ -3,7 +3,7 @@ import copy
 import json
 from ..job_queue import get_jobqueue
 #from ..database import get_database
-from ..job.experiment_job import ExperimentDBJob, ExperimentDBJobNoStorage, GraphExpDBJob, MultipleGraphExpDBJob
+from ..job.experiment_job import ExperimentDBJob, ExperimentDBJobNoStorage, MultipleGraphExpDBJob
 
 
 class BatchExp(object):
