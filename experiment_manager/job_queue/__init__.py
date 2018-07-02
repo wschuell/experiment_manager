@@ -190,6 +190,7 @@ class JobQueue(object):
 				if j.get_data_at_unpack:
 					with path.Path(j.get_path()):
 						j.get_data()
+				j.check_md5(chdir=True)
 				j.unpack_data()
 				j.data = None
 				self.past_exec_time += j.exec_time

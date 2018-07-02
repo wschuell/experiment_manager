@@ -12,6 +12,7 @@ import copy
 import shutil
 import jsonpickle
 import glob
+import hashlib
 import cProfile, pstats
 try:
 	from StringIO import StringIO
@@ -24,6 +25,13 @@ import numpy as np
 jsonpickle.set_preferred_backend('json')
 jsonpickle.set_encoder_options('json', indent=4)
 jsonpickle.enable_fallthrough(False)
+
+def get_md5(filename):
+	with open(filename,'rb') as f:
+		content = f.read()
+	m = hashlib.md5()
+	m.update(content)
+	return m.hexdigest()
 
 class Job(object):
 
@@ -64,6 +72,31 @@ class Job(object):
 		#self.data = None
 		self.backup_dir = os.path.join('..','backup_dir')
 		self.python_version = sys.version_info[0]
+		self.files_md5 = {}
+
+	def update_md5(self,chdir=False):
+		if chdir:
+			j_path = self.get_path()
+		else:
+			j_path = '.'
+		self.files_md5 = {}
+		with pathpy.Path(j_path):
+			for f in self.files:
+				if f not in  ['job.json']:
+					if os.path.isfile(f):
+						self.files_md5[f] = get_md5(f)
+
+	def check_md5(self,chdir=False):
+		if chdir:
+			j_path = self.get_path()
+		else:
+			j_path = '.'
+		with pathpy.Path(j_path):
+			for f in list(self.files_md5.keys()):
+				if not os.path.isfile(f):
+					raise IOError('File '+str(f)+' not present, should have md5 '+str(self.files_md5[f]))
+				elif not self.files_md5[f] == get_md5(f):
+					raise IOError('File '+str(f)+' had md5 '+str(get_md5(f))+' but should have md5 '+str(self.files_md5[f]))
 
 	def get_path(self):
 		if not os.path.exists(self.path):
@@ -96,6 +129,7 @@ class Job(object):
 	def run(self):
 		self.lastsave_time = -1
 		with pathpy.Path(self.get_path()):
+			self.check_md5()
 			self.status = 'unfinished'
 			self.init_time += time.time()
 			self.save(chdir=False)
@@ -211,6 +245,7 @@ class Job(object):
 			self.save_prg_states()
 			with open('job.json','w') as f:
 				f.write(jsonpickle.dumps(self))#,pickle.HIGHEST_PROTOCOL))
+			self.update_md5()
 		if keep_data and data_exists:
 			with pathpy.Path(j_path):
 				self.get_data()
@@ -275,6 +310,7 @@ class Job(object):
 				self.__dict__.update(out_job.__dict__)
 				if os.path.isfile('scripterror_notifier'):
 					self.status = 'script error'
+				self.check_md5()
 		else:
 			self.save()
 
