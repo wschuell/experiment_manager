@@ -182,7 +182,8 @@ class ExperimentDBJob(Job):
 		Job.fix(self)
 		if self.db.dbpath in self.files:
 			self.files.remove(self.db.dbpath)
-	def re_init(self):
+
+	def restart(self):
 		with pathpy.Path(self.get_path()):
 			if not hasattr(self.db,'connection'):
 				self.db.reconnect()
@@ -207,9 +208,6 @@ class ExperimentDBJob(Job):
 		elif os.path.exists(dst_file):
 			os.remove(dst_file)
 		self.close_connections()
-
-	def restart(self):
-		self.re_init()
 
 class GraphExpJob(ExperimentJob):
 
@@ -428,7 +426,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 			self.db.reconnect()
 		self.data = {}
 		# if self.dep_path and (not self.db.id_in_db(xp_uuid=self.xp_uuid) or int(self.db.get_param(param='Tmax', xp_uuid=self.xp_uuid))<self.graph_cfg['tmax']):
-		# 	dep_db = self.db.__class__(db_type="sqlite3",path=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
+		# 	dep_db = self.db.__class__(db_type="sqlite3",conn_info=os.path.join(self.get_back_path(),self.dep_path,'naminggames.db'))
 		# 	dep_db.export(other_db=self.db, id_list=[self.xp_uuid], methods=self.methods)
 		# 	self.data['exp'] = self.db.get_experiment(xp_uuid=self.xp_uuid)
 		# 	source_file = os.path.join(self.get_back_path(),self.dep_path,'data',self.xp_uuid+'.db.xz')

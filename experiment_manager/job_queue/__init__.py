@@ -187,10 +187,10 @@ class JobQueue(object):
 				else:
 					self.extended_jobs = 1
 			elif j.status == 'done':
-				if j.get_data_at_unpack:
-					with path.Path(j.get_path()):
-						j.get_data()
 				if j.check_md5(bool_mode=True,chdir=True):
+					if j.get_data_at_unpack:
+						with path.Path(j.get_path()):
+							j.get_data()
 					j.unpack_data()
 					j.data = None
 					self.past_exec_time += j.exec_time
@@ -198,6 +198,7 @@ class JobQueue(object):
 					#if self.erase:
 					j.status = 'to be cleaned'
 				else:
+					#TODO: write on job error file md5 details
 					j.status = 'md5 check failed'
 			j.close_connections()
 
@@ -209,7 +210,6 @@ class JobQueue(object):
 						j.deps.remove(dep_uuid)
 				if not j.deps:
 					j.re_init()
-					#j.update_md5(chdir=True)
 				#self.job_list.remove(j)
 				#self.add_job(j)
 			j.close_connections()
