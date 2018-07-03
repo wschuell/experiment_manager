@@ -18,6 +18,7 @@ import naminggamesal as ngal
 class ExperimentJob(Job):
 
 	def init(self, exp, tmax, *args,**kwargs):
+		self.get_data_at_unpack = False
 		if exp._T[-1] >= tmax:
 			self.status = 'already done'
 		self.data = exp #copy.deepcopy(exp)
@@ -40,7 +41,7 @@ class ExperimentJob(Job):
 			f.write(pickle.dumps(self.data))
 
 	def unpack_data(self):
-		shutil.move(self.path+'/'+self.data.uuid+'.b', self.data.uuid+'_'+self.uuid+'.b')
+		shutil.move(self.path+'/'+self.xp_uuid+'.b', self.xp_uuid+'_'+self.uuid+'.b')
 
 	def __eq__(self, other):
 		return self.__class__ == other.__class__ and self.xp_uuid == other.xp_uuid
@@ -55,6 +56,7 @@ class ExperimentJob(Job):
 class ExperimentDBJob(Job):
 
 	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, *args, **kwargs):
+		self.get_data_at_unpack = False
 		self.tmax = tmax
 		if exp is None:
 			if db is None:
@@ -212,6 +214,7 @@ class ExperimentDBJob(Job):
 class GraphExpJob(ExperimentJob):
 
 	def init(self, exp, graph_cfg, *args, **kwargs):
+		self.get_data_at_unpack = False
 		self.data = {}
 		self.graph_filename = None
 		self.xp_uuid = exp.uuid
@@ -263,14 +266,15 @@ class GraphExpJob(ExperimentJob):
 			self.data['graph'].write_files()
 
 	def unpack_data(self):
-		shutil.move(self.path+'/'+self.data['exp'].uuid+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
-		shutil.move(self.path+'/'+self.graph_filename+'.b', self.data['exp'].uuid+'_'+self.uuid+'.b')
+		shutil.move(self.path+'/'+self.xp_uuid+'.b', self.xp_uuid+'_'+self.uuid+'.b')
+		shutil.move(self.path+'/'+self.graph_filename+'.b', self.xp_uuid+'_'+self.uuid+'.b')
 
 
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, **graph_cfg):
+		self.get_data_at_unpack = False
 		self.dep_path = None
 		methods = graph_cfg['method']
 		if not isinstance(methods, list):

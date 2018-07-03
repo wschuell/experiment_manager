@@ -53,7 +53,7 @@ class TemplateJob(Job):
 	self.erase = False #whether to clean up job folders or not after job is finished and unpacked
 	self.profiling= False #whether to perform a cProfile of the job while it runs or not
 	self.checktime = False # whether to allow or not checkpoints
-	self.get_data_at_unpack=True #do you need to call get_data before using unpack_data?
+	self.get_data_at_unpack = True #do you need to call get_data before using unpack_data?
 
 
 
