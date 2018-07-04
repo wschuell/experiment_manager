@@ -502,7 +502,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 	def init(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, **graph_cfg):
 		methods = graph_cfg['method']
 		self.graph_cfg = graph_cfg
-		self.graph_cfg['tmax'] = tmax
+		#self.graph_cfg['tmax'] = tmax
 		if 'tmin' not in graph_cfg:
 			self.graph_cfg['tmin'] = 0
 		if not isinstance(methods, list):
@@ -515,23 +515,14 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 		for method in self.methods:
 			graph_cfg['method'] = method
 			if method in list(self.data.keys()):
-				tmax = self.data[method]._X[0][-1]
-			else:
-				tmax = -self.data['exp'].stepfun(0,backwards=True)
-			graph_cfg['tmin'] = max(tmax + self.data['exp'].stepfun(tmax), self.graph_cfg['tmin']) - 0.1
-			graph_cfg['tmax'] = graph_cfg['tmin'] + self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
-			while graph_cfg['tmax']<self.graph_cfg['tmax'] + self.data['exp'].stepfun(self.graph_cfg['tmax']):
-				if method not in list(self.data.keys()):
-					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
-					self.graph_filename = self.data[method].filename
+				cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
+				if cfunc.level != 'exp':
+					tempgraph = copy.deepcopy(self.data[method])
+					self.data[method] = self.data['exp'].graph(autocommit=False,tempgraph=tempgraph, **graph_cfg)
 				else:
-					cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
-					if cfunc.level != 'exp':
-						self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
-					else:
-						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
-				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
-				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
+			else:
+				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 		self.check_time()
 
 	def get_data(self):
@@ -543,13 +534,12 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 				self.graph_filename = self.data[method].filename
 
 	def save_data(self):
-		self.db.commit(self.data['exp'])
 		for method in self.methods:
 			if method in list(self.data.keys()) and 'exp' in self.data.keys():
 				self.data['exp'].commit_data_to_db(self.data[method], method)
-		self.data['exp'].compress(rm=False)
+		self.data['exp'].store_lastpop()
 		self.db.commit(self.data['exp'])
-
+		self.data['exp'].compress(rm=False)
 
 	def __eq__(self, other):
 		try:

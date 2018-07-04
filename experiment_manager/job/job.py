@@ -325,7 +325,8 @@ class Job(object):
 				self.__dict__.update(out_job.__dict__)
 				if os.path.isfile('scripterror_notifier'):
 					self.status = 'script error'
-				self.check_md5()
+				#if not self.check_md5(bool_mode=True):
+				#	self.status = 'md5 check failed'
 		else:
 			self.save()
 
