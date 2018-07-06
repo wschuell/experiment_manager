@@ -13,6 +13,10 @@ from ..job import Job
 import copy
 import path
 import errno
+try:
+	from IPython.display import clear_output as cl_output
+except:
+	pass
 
 job_queue_class={
 	'local':'local.LocalJobQueue',
@@ -145,7 +149,7 @@ class JobQueue(object):
 			except OSError:
 				pass
 
-	def update_queue(self):
+	def update_queue(self,clear_output=False):
 		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
 			time.sleep(1)
 		self.save_status(message='Starting queue update')
@@ -183,15 +187,19 @@ class JobQueue(object):
 				else:
 					self.extended_jobs = 1
 			elif j.status == 'done':
-				if j.get_data_at_unpack:
-					with path.Path(j.get_path()):
-						j.get_data()
-				j.unpack_data()
-				j.data = None
-				self.past_exec_time += j.exec_time
-				self.executed_jobs += 1
-				#if self.erase:
-				j.status = 'to be cleaned'
+				if j.check_md5(bool_mode=True,chdir=True):
+					if j.get_data_at_unpack:
+						with path.Path(j.get_path()):
+							j.get_data()
+					j.unpack_data()
+					j.data = None
+					self.past_exec_time += j.exec_time
+					self.executed_jobs += 1
+					#if self.erase:
+					j.status = 'to be cleaned'
+				else:
+					#TODO: write on job error file md5 details
+					j.status = 'md5 check failed'
 			j.close_connections()
 
 		for j in [x for x in self.job_list]:
@@ -229,9 +237,15 @@ class JobQueue(object):
 			j.close_connections()
 
 		self.save()
+		if clear_output:
+			try:
+				cl_output(wait=True)
+			except:
+				pass
 		print(self.get_status_string())
 		self.save_status()
-		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied']]:
+		if self.job_list and not [j for j in self.job_list if j.status not in ['missubmitted', 'script error', 'dependencies not satisfied','md5 check failed']]:
+			print(self.job_list[0].get_error())
 			raise Exception('Queue blocked, only missubmitted jobs, script errors or waiting for dependencies jobs')
 		self.last_update = time.time()
 
@@ -274,7 +288,7 @@ class JobQueue(object):
 			str_exec += str(int(exec_time_h))+' h '
 		if exec_time_m:
 			str_exec += str(int(exec_time_m))+' min '
-		str_exec +=str(exec_time)+' s'
+		str_exec +=str(int(exec_time))+' s'
 		str_ans = '    total: '+str(total)+'\n    '+'\n    '.join([str(key)+': '+str(val) for key,val in list(ans.items())])
 		if not hasattr(self,'restarted_jobs'):
 			self.restarted_jobs = 0
@@ -283,13 +297,13 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=10,coeff=1,call_between=None):
+	def auto_finish_queue(self,t=10,coeff=1,call_between=None,clear_output=True):
 		self.update_queue()
 		step = t
 		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
 			time.sleep(step)
-			self.update_queue()
+			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
 				step *= coeff
 			else:
@@ -298,7 +312,7 @@ class JobQueue(object):
 			if call_between is not None:
 				call_between()
 			if self.job_list and not [j for j in self.job_list if j.status != 'to be cleaned']:
-				self.update_queue()
+				self.update_queue(clear_output=clear_output)
 		self.clean_jobqueue()
 
 	def check_virtualenvs(self):
@@ -373,7 +387,7 @@ class JobQueue(object):
 		pass
 
 	def clean_jobqueue(self):
-		pass
+		self.job_list = []
 
 	def global_retrieval(self):
 		return []
