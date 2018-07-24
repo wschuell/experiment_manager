@@ -64,7 +64,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None,estimated_time=None):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -80,6 +80,7 @@ class MetaExperiment(object):
 		self.batches = {'nobatch':'nobatch'}
 		self.measures = list(self.local_measures.keys()) + list(self.global_measures.keys())
 		self.no_storage = no_storage
+		self.estimated_time = estimated_time
 
 		for k,v in list(self.params.items()):
 			test1 = 'default_value' not in list(self.params[k].keys())
@@ -443,7 +444,8 @@ class MetaExperiment(object):
 				name = _batch_cfg['jq_cfg']['jq_type']
 		elif not _batch_cfg:
 			_batch_cfg['jq_cfg'] = {'jq_type':name}
-
+		if self.estimated_time is not None:
+			_batch_cfg['estimated_time'] = self.estimated_time
 		self.batches[name] = BatchExp(db=self.db,name=name,**_batch_cfg)
 		if set_as_default:
 			self.default_batch = name

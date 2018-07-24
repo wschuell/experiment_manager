@@ -283,7 +283,10 @@ class JobQueue(object):
 		exec_time -= exec_time_m * 60
 		str_exec = ''
 		if exec_time_j:
-			str_exec += str(int(exec_time_j)) + ' days '
+			if int(exec_time_j) == 1:
+				str_exec += str(int(exec_time_j)) + ' day '
+			else:
+				str_exec += str(int(exec_time_j)) + ' days '
 		if exec_time_h:
 			str_exec += str(int(exec_time_h))+' h '
 		if exec_time_m:
@@ -394,6 +397,9 @@ class JobQueue(object):
 
 	def avail_workers(self):
 		return 1
+
+	def kill(self):
+		pass
 
 	def get_errors(self):
 		errors = []
