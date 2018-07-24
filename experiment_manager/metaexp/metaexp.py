@@ -1,6 +1,8 @@
 import copy
+import os
 import numpy as np
 import random
+import json
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
@@ -138,6 +140,7 @@ class MetaExperiment(object):
 
 	def set_db(self,db):
 		self.db = db
+		self.db.do_not_close = True
 
 	@dbcheck
 	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
@@ -622,3 +625,119 @@ class MetaExperiment(object):
 				except:
 					plt.colorbar()
 				plt.show()
+
+
+
+
+def render(input_string,params_list):
+	inner_params_list = [s.split(' %}}')[0].split(',') for s in input_string.split('{{% ')[1:]]
+	for p,val in inner_params_list:
+		if p in params_list:
+			return input_string.replace('{{% '+p+','+val+' %}}',p)
+		else:
+			return input_string.replace('{{% '+p+','+val+' %}}',val)
+
+
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics,imports):
+	if not os.exists(folder):
+		os.makedirs(folder)
+
+	with open('exec.json','r') as f:
+		exec_str = json.loads(f.read())[exec_type]
+
+	with open('plt_settings.json','r') as f:
+		plt_str = json.loads(f.read())[plt_settings]
+
+	with open('tmax.json','r') as f:	
+		tmax = json.loads(f.read())[tmax_type]
+
+	with open('metrics.json','r') as f:	
+		metrics_all = json.loads(f.read())
+	metrics_list = [str(metrics_all[m]) for m in metrics]
+	metrics_str = '[' + ',\n'.join(metrics_list) + ']'
+	
+	with open('cfg_func.json','r') as f:	
+		cfg_func = json.loads(f.read())[func_type]
+
+	with open('params.json','r') as f:	
+		params_all = json.loads(f.read())
+	params_list = [params_all[p] for p in params]
+	params_names_list = [params_all[p]['short_label'] for p in params]
+	params_str = '[' + ',\n'.join(str(params_list)) + ']'
+
+	format_dict = {
+		'imports':'\n'.join(imports),
+		'nbiter':nbiter,
+		'exec_str':exec_str,
+		'func_str':'def xp_cfg(''def xp_cfg('+''.join(params_names_list)+'):\n'++''.join(params_names_list)+'):\n'+render(cfg_func,params_names_list),
+		'Tmax_str':'def Tmax_func('+''.join(params_names_list)+'):\n'+render(tmax,params_names_list),
+		'params':params_str,
+		'metrics':metrics_str,
+		'plt_func':plt_str,
+
+	}
+	main_str = """
+
+import experiment_manager as xp_man
+{imports}
+
+from experiment_manager.metaexp.metaexp import MetaExperiment
+
+
+#### Function to construct the configuration of each simulation, depending on a few parameters, described below ####
+
+{func_str}
+
+
+#### Function to determine the number of time steps for each simulation ####
+
+{Tmax_str}
+
+
+#### Number of trials per distinct configuration ####
+
+nbiter = {nbiter}
+
+
+#### Description of the parameters of experiment configuration ####
+
+{params}
+
+
+#### Measures, to be found in naminggamesal.ngmeth ####
+
+{metrics}
+
+
+#### Defining the MetaExperiment object, containing all this information ####
+
+meta_exp = MetaExperiment(params=params,
+              local_measures=local_measures,
+              global_measures=global_measures,
+              xp_cfg=xp_cfg,
+              Tmax_func=Tmax_func,
+              default_nbiter=nbiter,
+              time_label='#interactions',
+              time_short_label='T',
+              #time_max=80000,
+              time_min=0)
+
+#### Parameters for running the simulations. By default, using all available cores on local computer ####
+
+db = ngal.ngdb.NamingGamesDB(do_not_close=True)
+meta_exp.set_db(db)
+
+{exec_str}
+
+
+##### Making matplotlib more readable #####
+
+{plt_func}
+
+
+if __name__ == '__main__':
+    meta_exp.run()
+	""".format(**format_dict)
+
+	with open(folder+'/metaexp_settings.py','w') as f:
+		f.write(main_str)
