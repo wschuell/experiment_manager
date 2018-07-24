@@ -57,13 +57,13 @@ class BatchExp(object):
 			print('added job for exp {}, from {} to {}'.format(xp_uuid, exp._T[-1], tmax))
 		return exp
 
-	def get_graph(self, xp_uuid, method, tmin=0, tmax=None):
+	def get_graph(self, xp_uuid, method, tmin=0, tmax=None,no_storage=False):
 		if self.db.data_exists(xp_uuid=xp_uuid, method=method):
 			graph = self.db.get_graph(xp_uuid=xp_uuid, method=method)
 			return graph
 #		self.control_exp(exp)
 		if self.auto_job and exp._T[-1] < tmax:
-			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax)
+			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax,no_storage=no_storage)
 			print('added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax))
 
 	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
