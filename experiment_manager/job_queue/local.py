@@ -101,7 +101,7 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 
 	def kill(self):
 		for p in self.running_processes:
-			p.kill()
+			p[0].kill()
 
 
 	def check_running_jobs(self):
