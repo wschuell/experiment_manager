@@ -4,6 +4,7 @@ import random
 import numpy as np
 import os
 import time
+import subprocess
 
 import tempfile
 import uuid
@@ -21,6 +22,22 @@ jq_cfg_list = [
 	{'jq_type':'local'},
 	{'jq_type':'local_multiprocess'},
 	]
+
+try:
+	command = "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' docker_slurm"
+	IP = subprocess.run(command.split(' '),shell=True,check=True,capture_output=True)
+	jq_cfg_docker = {'jq_type':'slurm',
+    'modules':[],
+    #'virtual_env':virtualenv,
+    #'requirements': [pip_arg_xp_man],
+     'ssh_cfg':{            
+     'username':'root',
+    'hostname':IP,
+    'password':'dockerslurm',}
+                }
+    jq_cfg_list.append(jq_cfg_docker)
+except:
+	pass
 
 jq_list = [get_jobqueue(**cfg) for cfg in jq_cfg_list]
 

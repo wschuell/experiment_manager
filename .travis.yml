@@ -7,6 +7,14 @@ before_install:
  - sudo apt-get update -qq
  - sudo apt-get install -qq liblzo2-dev
  - pip install -e git+https://github.com/flowersteam/naminggamesal.git@develop#egg=naminggamesal
+ - docker pull giovtorres/docker-centos7-slurm:latest
+ - docker run -itd -h ernie --name docker_slurm giovtorres/docker-centos7-slurm:latest
+ - docker exec -it docker_slurm yum -y install openssh-server openssh-clients
+ - docker exec -it docker_slurm ssh-keygen -A
+ - docker exec -it docker_slurm echo "PermitRootLogin yes"|/etc/ssh/sshd_config
+ - docker exec -it docker_slurm echo root:dockerslurm|chpasswd
+ - docker exec -it docker_slurm /usr/sbin/sshd -D
+
 install:
   - pip install codecov pytest-cov
   - pip install -r requirements.txt
