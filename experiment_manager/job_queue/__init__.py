@@ -12,6 +12,7 @@ from importlib import import_module
 from ..job import Job
 import copy
 import path
+import numpy as np
 import errno
 try:
 	from IPython.display import clear_output as cl_output
@@ -297,7 +298,13 @@ class JobQueue(object):
 			self.restarted_jobs = 0
 		if not hasattr(self,'extended_jobs'):
 			self.extended_jobs = 0
+		completion_levels = [j.completion_level for j in self.job_list if j.status == 'running' and hasattr(j,'completion_level')]
+		if completion_levels:
+			completion_level = np.mean(j.completion_levels)
+		else:
+			completion_level = 0.
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
+		str_ans += '\n    completion level of running jobs: ' + str(round(completion_level,1)) + '%\n'
 		return str_ans
 
 	def auto_finish_queue(self,t=10,coeff=1,call_between=None,clear_output=True):

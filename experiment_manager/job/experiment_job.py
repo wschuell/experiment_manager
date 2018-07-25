@@ -18,6 +18,7 @@ import naminggamesal as ngal
 class ExperimentJob(Job):
 
 	def init(self, exp, tmax, *args,**kwargs):
+		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		if exp._T[-1] >= tmax:
 			self.status = 'already done'
@@ -56,6 +57,7 @@ class ExperimentJob(Job):
 class ExperimentDBJob(Job):
 
 	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, *args, **kwargs):
+		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		self.tmax = tmax
 		if exp is None:
@@ -214,6 +216,7 @@ class ExperimentDBJob(Job):
 class GraphExpJob(ExperimentJob):
 
 	def init(self, exp, graph_cfg, *args, **kwargs):
+		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		self.data = {}
 		self.graph_filename = None
@@ -274,6 +277,7 @@ class GraphExpJob(ExperimentJob):
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, **graph_cfg):
+		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		self.dep_path = None
 		methods = graph_cfg['method']
@@ -420,6 +424,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
+				self.completion_level = self.data['exp']._T[-1]*1./self.graph_cfg['tmax']
 				self.check_time()
 			self.save_data()
 		del self.data['exp']
@@ -500,6 +505,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 	def init(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, **graph_cfg):
+		self.completion_level = 0.
 		methods = graph_cfg['method']
 		self.graph_cfg = graph_cfg
 		#self.graph_cfg['tmax'] = tmax
