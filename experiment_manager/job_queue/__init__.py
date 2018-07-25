@@ -300,7 +300,7 @@ class JobQueue(object):
 			self.extended_jobs = 0
 		completion_levels = [j.completion_level for j in self.job_list if j.status == 'running' and hasattr(j,'completion_level')]
 		if completion_levels:
-			completion_level = np.mean(j.completion_levels)
+			completion_level = np.mean(completion_levels)
 		else:
 			completion_level = 0.
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
