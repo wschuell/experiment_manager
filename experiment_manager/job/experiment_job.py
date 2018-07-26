@@ -18,7 +18,6 @@ import naminggamesal as ngal
 class ExperimentJob(Job):
 
 	def init(self, exp, tmax, *args,**kwargs):
-		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		if exp._T[-1] >= tmax:
 			self.status = 'already done'
@@ -57,7 +56,6 @@ class ExperimentJob(Job):
 class ExperimentDBJob(Job):
 
 	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, *args, **kwargs):
-		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		self.tmax = tmax
 		if exp is None:
@@ -121,6 +119,12 @@ class ExperimentDBJob(Job):
 		self.data['exp'].continue_exp_until(T=self.tmax,autocommit=False,monitoring_func=self.monitoring_func)
 		if self.data['exp']._T[-1] < self.tmax:
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
+
+	def get_completion_level(self):
+		if self.data is not None and 'exp' in list(self.data.keys()) and self.data['exp']._T:
+			self.completion_level = self.data['exp']._T[-1]*1./self.tmax
+		else:
+			self.completion_level = 0.
 
 	def monitoring_func(self,*args,**kwargs):
 		self.check_time()
@@ -277,7 +281,6 @@ class GraphExpJob(ExperimentJob):
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
 	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, **graph_cfg):
-		self.completion_level = 0.
 		self.get_data_at_unpack = False
 		self.dep_path = None
 		methods = graph_cfg['method']
@@ -402,6 +405,12 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def restart(self):
 		self.re_init()
 
+	def get_completion_level(self):
+		if self.data is not None and 'exp' in list(self.data.keys()) and self.data['exp']._T:
+			self.completion_level = self.data['exp']._T[-1]*1./self.graph_cfg['tmax']
+		else:
+			self.completion_level = 0.
+
 	def script(self):
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		for method in self.methods:
@@ -420,11 +429,10 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 					cfunc = getattr(ngal.ngmeth,'custom_'+graph_cfg['method'])
 					if cfunc.level != 'exp':
 						self.data[method].complete_with(self.data['exp'].graph(autocommit=False, **graph_cfg), remove_duplicates=True)
-					else:
+					elif graph_cfg['tmax'] >= self.graph_cfg['tmax']:
 						self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 				graph_cfg['tmax'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmax']))
 				graph_cfg['tmin'] += self.data['exp'].stepfun(math.ceil(graph_cfg['tmin']))
-				self.completion_level = self.data['exp']._T[-1]*1./self.graph_cfg['tmax']
 				self.check_time()
 			self.save_data()
 		del self.data['exp']
@@ -505,7 +513,6 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 	def init(self, tmax, exp=None, xp_uuid=None, db=None, db_cfg={}, **graph_cfg):
-		self.completion_level = 0.
 		methods = graph_cfg['method']
 		self.graph_cfg = graph_cfg
 		#self.graph_cfg['tmax'] = tmax
@@ -525,7 +532,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 				if cfunc.level != 'exp':
 					tempgraph = copy.deepcopy(self.data[method])
 					self.data[method] = self.data['exp'].graph(autocommit=False,tempgraph=tempgraph, **graph_cfg)
-				else:
+				elif graph_cfg['tmax'] >= self.graph_cfg['tmax']:
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			else:
 				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
