@@ -561,7 +561,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 			return True
 
 	def __lt__(self, other):
-		return self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] > other.graph_cfg['tmax']
+		return self.__eq__(other) and self.tmax < other.tmax
 
 	def __ge__(self, other):
-		return (self.__eq__(other) and self.graph_cfg['tmax'] < other.graph_cfg['tmax'] and self.graph_cfg['tmin'] <= other.graph_cfg['tmax']) and set(other.methods) <= set(self.methods)
+		return (self.__eq__(other) and self.tmax < other.tmax and set(other.methods) <= set(self.methods)
