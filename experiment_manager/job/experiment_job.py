@@ -564,4 +564,4 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 		return self.__eq__(other) and self.tmax < other.tmax
 
 	def __ge__(self, other):
-		return (self.__eq__(other) and self.tmax < other.tmax and set(other.methods) <= set(self.methods)
+		return self.__eq__(other) and self.tmax < other.tmax and set(other.methods) <= set(self.methods)
