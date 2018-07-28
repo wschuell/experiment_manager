@@ -6,6 +6,7 @@ import json
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
+import math
 
 from ..batchexp.batchexp import BatchExp
 
@@ -133,7 +134,7 @@ class MetaExperiment(object):
 
 	def Tmax(self,**subparams):
 		_subparams = self.complete_params(subparams,allow_list=False)
-		return self._Tmax_func(**_subparams)
+		return math.ceil(self._Tmax_func(**_subparams))
 
 	def xp_cfg(self,**subparams):
 		_subparams = self.complete_params(subparams,allow_list=False)
