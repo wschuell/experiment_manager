@@ -116,8 +116,9 @@ class ExperimentDBJob(Job):
 		self.db.close()
 
 	def script(self):
-		self.data['exp'].continue_exp_until(T=self.tmax,autocommit=False,monitoring_func=self.monitoring_func)
-		if self.data['exp']._T[-1] < self.tmax:
+		if not self.data['exp']._T or self.data['exp']._T[-1] < self.tmax:
+			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
+		while self.data['exp']._T[-1] < self.tmax:
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
 		print(self.tmax)
 		assert  self.data['exp']._T[-1] >= self.tmax
