@@ -120,7 +120,6 @@ class ExperimentDBJob(Job):
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
 		while self.data['exp']._T[-1] < self.tmax:
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
-		print(self.tmax)
 		assert  self.data['exp']._T[-1] >= self.tmax
 		self.save_data()
 
@@ -540,7 +539,6 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			else:
 				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
-		print(self.data['exp']._T[-1])
 		self.check_time()
 
 	def get_data(self):
