@@ -297,7 +297,7 @@ class JobQueue(object):
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
 		return str_ans
 
-	def auto_finish_queue(self,t=10,coeff=1,call_between=None,clear_output=True):
+	def auto_finish_queue(self,t=10,coeff=1,max_time=1800,call_between=None,clear_output=True):
 		self.update_queue()
 		step = t
 		state = str(self)
@@ -305,7 +305,7 @@ class JobQueue(object):
 			time.sleep(step)
 			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
-				step *= coeff
+				step = min(step*coeff,max_time)
 			else:
 				state = str(self)
 				step = t

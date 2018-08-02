@@ -1,4 +1,5 @@
 import copy
+import os
 import numpy as np
 import random
 from scipy.optimize import curve_fit
@@ -138,6 +139,7 @@ class MetaExperiment(object):
 
 	def set_db(self,db):
 		self.db = db
+		self.db.do_not_close = True
 
 	@dbcheck
 	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
@@ -622,3 +624,78 @@ class MetaExperiment(object):
 				except:
 					plt.colorbar()
 				plt.show()
+
+
+def auto_gen(folder,exec_str,func_str,Tmax_str,nbiter,params,metrics,imports):
+	if not os.exists(folder):
+		os.makedirs(folder)
+
+	format_dict = {
+
+		'nbiter':nbiter,
+	}
+	main_str = """
+
+import experiment_manager as xp_man
+{imports}
+
+from experiment_manager.metaexp.metaexp import MetaExperiment
+
+
+#### Function to construct the configuration of each simulation, depending on a few parameters, described below ####
+
+{func_str}
+
+
+#### Function to determine the number of time steps for each simulation ####
+
+{Tmax_str}
+
+
+#### Number of trials per distinct configuration ####
+
+nbiter = {nbiter}
+
+
+#### Description of the parameters of experiment configuration ####
+
+{params}
+
+
+#### Measures, to be found in naminggamesal.ngmeth ####
+
+{metrics}
+
+
+#### Defining the MetaExperiment object, containing all this information ####
+
+meta_exp = MetaExperiment(params=params,
+              local_measures=local_measures,
+              global_measures=global_measures,
+              xp_cfg=xp_cfg,
+              Tmax_func=Tmax_func,
+              default_nbiter=nbiter,
+              time_label='#interactions',
+              time_short_label='T',
+              #time_max=80000,
+              time_min=0)
+
+#### Parameters for running the simulations. By default, using all available cores on local computer ####
+
+db = ngal.ngdb.NamingGamesDB(do_not_close=True)
+meta_exp.set_db(db)
+
+{exec_str}
+
+
+##### Making matplotlib more readable #####
+
+{plt_func}
+
+
+if __name__ == '__main__':
+    meta_exp.run()
+	""".format(**format_dict)
+
+	with open(folder+'/metaexp_settings.py','w') as f:
+		f.write(main_str)
