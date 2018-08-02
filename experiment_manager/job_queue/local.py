@@ -99,6 +99,10 @@ class LocalMultiProcessJobQueue(LocalJobQueue):
 	def global_submit(self):
 		pass
 
+	def kill(self):
+		for p in self.running_processes:
+			p[0].terminate()
+
 
 	def check_running_jobs(self):
 		self.finished_running_jobs = []

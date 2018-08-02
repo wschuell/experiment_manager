@@ -2,9 +2,11 @@ import copy
 import os
 import numpy as np
 import random
+import json
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
+import math
 
 from ..batchexp.batchexp import BatchExp
 
@@ -63,7 +65,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None,estimated_time=None):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -79,6 +81,7 @@ class MetaExperiment(object):
 		self.batches = {'nobatch':'nobatch'}
 		self.measures = list(self.local_measures.keys()) + list(self.global_measures.keys())
 		self.no_storage = no_storage
+		self.estimated_time = estimated_time
 
 		for k,v in list(self.params.items()):
 			test1 = 'default_value' not in list(self.params[k].keys())
@@ -131,7 +134,7 @@ class MetaExperiment(object):
 
 	def Tmax(self,**subparams):
 		_subparams = self.complete_params(subparams,allow_list=False)
-		return self._Tmax_func(**_subparams)
+		return math.ceil(self._Tmax_func(**_subparams))
 
 	def xp_cfg(self,**subparams):
 		_subparams = self.complete_params(subparams,allow_list=False)
@@ -442,7 +445,8 @@ class MetaExperiment(object):
 				name = _batch_cfg['jq_cfg']['jq_type']
 		elif not _batch_cfg:
 			_batch_cfg['jq_cfg'] = {'jq_type':name}
-
+		if self.estimated_time is not None:
+			_batch_cfg['estimated_time'] = self.estimated_time
 		self.batches[name] = BatchExp(db=self.db,name=name,**_batch_cfg)
 		if set_as_default:
 			self.default_batch = name
@@ -626,13 +630,53 @@ class MetaExperiment(object):
 				plt.show()
 
 
-def auto_gen(folder,exec_str,func_str,Tmax_str,nbiter,params,metrics,imports):
+
+
+def render(input_string,params_list):
+	inner_params_list = [s.split(' %}}')[0].split(',') for s in input_string.split('{{% ')[1:]]
+	for p,val in inner_params_list:
+		if p in params_list:
+			return input_string.replace('{{% '+p+','+val+' %}}',p)
+		else:
+			return input_string.replace('{{% '+p+','+val+' %}}',val)
+
+
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics,imports):
 	if not os.exists(folder):
 		os.makedirs(folder)
 
-	format_dict = {
+	with open('exec.json','r') as f:
+		exec_str = json.loads(f.read())[exec_type]
 
+	with open('plt_settings.json','r') as f:
+		plt_str = json.loads(f.read())[plt_settings]
+
+	with open('tmax.json','r') as f:
+		tmax = json.loads(f.read())[tmax_type]
+
+	with open('metrics.json','r') as f:
+		metrics_all = json.loads(f.read())
+	metrics_list = [str(metrics_all[m]) for m in metrics]
+	metrics_str = '[' + ',\n'.join(metrics_list) + ']'
+
+	with open('cfg_func.json','r') as f:
+		cfg_func = json.loads(f.read())[func_type]
+
+	with open('params.json','r') as f:
+		params_all = json.loads(f.read())
+	params_list = [params_all[p] for p in params]
+	params_names_list = [params_all[p]['short_label'] for p in params]
+	params_str = '[' + ',\n'.join(str(params_list)) + ']'
+
+	format_dict = {
+		'imports':'\n'.join(imports),
 		'nbiter':nbiter,
+		'exec_str':exec_str,
+		'func_str':'def xp_cfg(''def xp_cfg('+''.join(params_names_list)+'):\n'++''.join(params_names_list)+'):\n'+render(cfg_func,params_names_list),
+		'Tmax_str':'def Tmax_func('+''.join(params_names_list)+'):\n'+render(tmax,params_names_list),
+		'params':params_str,
+		'metrics':metrics_str,
+		'plt_func':plt_str,
 	}
 	main_str = """
 

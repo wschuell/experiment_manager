@@ -73,6 +73,7 @@ class Job(object):
 		self.backup_dir = os.path.join('..','backup_dir')
 		self.python_version = sys.version_info[0]
 		self.files_md5 = {}
+		self.get_completion_level()
 		self.init(*args,**kwargs)
 		self.save(keep_data=False)
 		if hasattr(self,'close_connections'):
@@ -80,6 +81,9 @@ class Job(object):
 
 	def init(self,*args,**kwargs):
 		pass
+
+	def get_completion_level(self):
+		self.get_completion_level = 0.
 
 	def update_md5(self,chdir=False):
 		if chdir:
@@ -207,6 +211,7 @@ class Job(object):
 			if t is None:
 				t = 4*self.estimated_time/10.
 			self.update_exec_time()
+			self.get_completion_level()
 			if self.lastsave_time == -1 or ((self.exec_time + self.init_time) - self.lastsave_time > t):
 				self.get_prg_states()
 				self.check_mem()
