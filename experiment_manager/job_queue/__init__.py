@@ -304,7 +304,7 @@ class JobQueue(object):
 		else:
 			completion_level = 0.
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
-		str_ans += '\n    completion level of running jobs: ' + str(round(completion_level,1)) + '%\n'
+		str_ans += '\n    completion level of running jobs: ' + str(round(100*completion_level,1)) + '%\n'
 		return str_ans
 
 	def auto_finish_queue(self,t=10,coeff=1,max_time=1800,call_between=None,clear_output=True):

@@ -119,6 +119,7 @@ class ExperimentDBJob(Job):
 		self.data['exp'].continue_exp_until(T=self.tmax,autocommit=False,monitoring_func=self.monitoring_func)
 		if self.data['exp']._T[-1] < self.tmax:
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
+		self.save_data()
 
 	def get_completion_level(self):
 		if self.data is not None and 'exp' in list(self.data.keys()) and self.data['exp']._T:
@@ -536,6 +537,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			else:
 				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
+		print(self.data['exp']._T[-1])
 		self.check_time()
 
 	def get_data(self):
