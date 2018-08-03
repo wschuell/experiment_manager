@@ -10,6 +10,31 @@ import math
 
 from ..batchexp.batchexp import BatchExp
 
+
+def txt_to_dict(filename):
+	with open(filename,'r') as f:
+		txt = f.read()
+	lines = txt.split('\n')
+	ans = {}
+	txt_str = ''
+	key = ''
+	for l in lines:
+		if len(l)>=3 and l[0] == '#' and l[-1] == '#':
+			if key != '':
+				ans[key] = txt_str
+			txt_str = ''
+			key = l.replace('#','')
+		else:
+			txt_str += l + '\n'
+	if key != '':
+		ans[key] = txt_str
+	return ans
+
+
+def dict_to_txt(filename,in_dict):
+	with open(filename,'w') as f:
+		f.write('\n'.join(['#####'+k+'#####\n\n'+v for k,v in list(in_dict.items())]))
+
 def dbcheck(func):
 	def dbcheckobj(obj_self,*args,**kwargs):
 		if obj_self.db is None:
@@ -65,7 +90,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=False, time_short_label='t',time_min=None,time_max=None,estimated_time=None):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=True, time_short_label='t',time_min=None,time_max=None,estimated_time=None):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -633,47 +658,46 @@ class MetaExperiment(object):
 
 
 def render(input_string,params_list):
+	ans = input_string
 	inner_params_list = [s.split(' %}}')[0].split(',') for s in input_string.split('{{% ')[1:]]
 	for p,val in inner_params_list:
 		if p in params_list:
-			return input_string.replace('{{% '+p+','+val+' %}}',p)
+			ans = ans.replace('{{% '+p+','+val+' %}}',p)
 		else:
-			return input_string.replace('{{% '+p+','+val+' %}}',val)
+			ans = ans.replace('{{% '+p+','+val+' %}}',val)
+	return ans
 
-
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics,imports):
-	if not os.exists(folder):
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports):
+	if not os.path.exists(folder):
 		os.makedirs(folder)
 
-	with open('exec.json','r') as f:
-		exec_str = json.loads(f.read())[exec_type]
+	exec_str = txt_to_dict('configs/exec.py')[exec_type]
 
-	with open('plt_settings.json','r') as f:
-		plt_str = json.loads(f.read())[plt_settings]
+	plt_str = txt_to_dict('configs/plt_settings.py')[plt_settings]
 
-	with open('tmax.json','r') as f:
-		tmax = json.loads(f.read())[tmax_type]
+	tmax = txt_to_dict('configs/tmax.py')[tmax_type]
 
-	with open('metrics.json','r') as f:
+	cfg_func = txt_to_dict('configs/cfg_func.py')[func_type]
+
+	with open('configs/metrics.json','r') as f:
 		metrics_all = json.loads(f.read())
-	metrics_list = [str(metrics_all[m]) for m in metrics]
-	metrics_str = '[' + ',\n'.join(metrics_list) + ']'
+	metrics_list = [str(metrics_all[m]) for m in metrics_local]
+	metrics_str = 'local_measures = {'+',\n                  '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_local])+'\n                  }'
 
-	with open('cfg_func.json','r') as f:
-		cfg_func = json.loads(f.read())[func_type]
+	metrics_list = [str(metrics_all[m]) for m in metrics_global]
+	metrics_str += '\n\nglobal_measures = {'+',\n                   '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_global])+'\n                   }'
 
-	with open('params.json','r') as f:
+	with open('configs/params.json','r') as f:
 		params_all = json.loads(f.read())
 	params_list = [params_all[p] for p in params]
-	params_names_list = [params_all[p]['short_label'] for p in params]
-	params_str = '[' + ',\n'.join(str(params_list)) + ']'
+	params_str = 'params = {'+',\n          '.join(['\''+str(p)+'\':'+str(params_all[p]) for p in params])+'\n          }'
 
 	format_dict = {
 		'imports':'\n'.join(imports),
 		'nbiter':nbiter,
 		'exec_str':exec_str,
-		'func_str':'def xp_cfg(''def xp_cfg('+''.join(params_names_list)+'):\n'++''.join(params_names_list)+'):\n'+render(cfg_func,params_names_list),
-		'Tmax_str':'def Tmax_func('+''.join(params_names_list)+'):\n'+render(tmax,params_names_list),
+		'func_str':'def xp_cfg('+','.join(params)+'):\n'+render(cfg_func,params),
+		'Tmax_str':'def Tmax_func('+','.join(params)+'):\n'+render(tmax,params),
 		'params':params_str,
 		'metrics':metrics_str,
 		'plt_func':plt_str,
