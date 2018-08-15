@@ -692,14 +692,18 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 	with open('configs/params.json','r') as f:
 		params_all = json.loads(f.read())
 	params_list = [params_all[p] for p in params]
-	params_str = 'params = {'+',\n          '.join(['\''+str(p)+'\':'+str(params_all[p]) for p in params])+'\n          }'
+	param_names = [params_all[p]['param_name'] for p in params]
+	for pl in params_list:
+		del pl['param_name']
+	params_info = zip(param_names,params_list)
+	params_str = 'params = {'+',\n          '.join(['\''+str(n)+'\':'+str(p) for n,p in params_info])+'\n          }'
 
 	format_dict = {
 		'imports':'\n'.join(imports),
 		'nbiter':nbiter,
 		'exec_str':exec_str,
-		'func_str':'def xp_cfg('+','.join(params)+'):\n'+render(cfg_func,params),
-		'Tmax_str':'def Tmax_func('+','.join(params)+'):\n'+render(tmax,params),
+		'func_str':'def xp_cfg('+','.join(param_names)+'):\n'+render(cfg_func,param_names),
+		'Tmax_str':'def Tmax_func('+','.join(param_names)+'):\n'+render(tmax,param_names),
 		'params':params_str,
 		'metrics':metrics_str,
 		'plt_func':plt_str,
