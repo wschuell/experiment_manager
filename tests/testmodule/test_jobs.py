@@ -30,7 +30,7 @@ try:
     'modules':[],
     #'virtual_env':virtualenv,
     #'requirements': [pip_arg_xp_man],
-     'ssh_cfg':{            
+     'ssh_cfg':{
      'username':'root',
     'hostname':IP,
     'password':'dockerslurm',}
@@ -64,11 +64,11 @@ def job(request):
 	elif ind == 2:
 		db.reconnect()
 		xp = db.get_experiment(force_new=True)
-		return get_job(**{'job_type':'experiment_job_multigraph','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','conv_time2','N_d']})
+		return get_job(**{'job_type':'experiment_job_multigraph','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','N_d','N_words','N_meanings','conv_time2']})
 	elif ind == 3:
 		db.reconnect()
 		xp = db.get_experiment(force_new=True)
-		return get_job(**{'job_type':'experiment_job_nostorage','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','conv_time2','N_d']})
+		return get_job(**{'job_type':'experiment_job_nostorage','xp_uuid':xp.uuid,'tmax':10,'method':['srtheo','N_d','N_words','N_meanings','conv_time2']})
 	else:
 		raise ValueError('No jobs for value:',ind)
 
