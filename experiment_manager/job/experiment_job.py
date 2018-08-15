@@ -535,6 +535,9 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 				if cfunc.level != 'exp':
 					tempgraph = copy.deepcopy(self.data[method])
 					self.data[method] = self.data['exp'].graph(autocommit=False,tempgraph=tempgraph, **graph_cfg)
+					if not hasattr(self.data['exp'],'tempgraph'):
+						self.data['exp'].tempgraph = {}
+					self.data['exp'].tempgraph[method] = self.data[method]
 				elif self.data['exp']._T and self.data['exp']._T[-1] >= self.tmax:
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			else:
