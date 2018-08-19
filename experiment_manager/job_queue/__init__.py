@@ -316,7 +316,7 @@ class JobQueue(object):
 		step = t
 		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
-			rlist, wlist, xlist = select([sys.stdin], [], [], step)
+			time.sleep(step)#rlist, wlist, xlist = select([sys.stdin], [], [], step)
 			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
 				step = min(step*coeff,max_time)
