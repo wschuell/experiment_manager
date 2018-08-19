@@ -172,6 +172,15 @@ class MetaExperiment(object):
 		self.db.do_not_close = True
 
 	@dbcheck
+	def plot_alldata(self,measure,lim_m=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
+		g = self.plot(measure=measure,nbiter=1,get_object=False,loglog=loglog,semilog=semilog,prepare_for_fit=prepare_for_fit,**subparams)
+		ans = g.get_alldata_graph(lim_m=lim_m)
+		if get_object:
+			return ans
+		else:
+			ans.show()
+
+	@dbcheck
 	def plot(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
@@ -191,7 +200,8 @@ class MetaExperiment(object):
 		gr = self.db.get_graph(method=measure,xp_uuid=xp_uuid[0])
 		for i in range(nbiter-1):
 			gr.add_graph(self.db.get_graph(method=measure,xp_uuid=xp_uuid[i+1]))
-		gr.merge(keep_all_data=prepare_for_fit)
+		if nbiter > 1:
+			gr.merge(keep_all_data=prepare_for_fit)
 		try:
 			gr.title = self.local_measures[measure]['label']
 			if 'unit_label' in list(self.local_measures[measure].keys()):

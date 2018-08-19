@@ -12,6 +12,7 @@ from importlib import import_module
 from ..job import Job
 import copy
 import path
+from select import select
 import numpy as np
 import errno
 try:
@@ -306,7 +307,7 @@ class JobQueue(object):
 			completion_level = 0.
 			min_completion_level = 0.
 		str_ans += '\n\n    execution time: '+str_exec+'\n    jobs done: '+str(self.executed_jobs)+'\n    jobs restarted: '+str(self.restarted_jobs)+'\n    jobs extended: '+str(self.extended_jobs)+'\n'
-		str_ans += '\n    completion level of running jobs: ' + str(round(100*completion_level,1)) + '%\n'
+		str_ans += '\n    completion level of running jobs: ' + str(round(100*completion_level,1)) + '%'
 		str_ans += '\n    minimum completion level: ' + str(round(100*min_completion_level,1)) + '%\n'
 		return str_ans
 
@@ -315,7 +316,7 @@ class JobQueue(object):
 		step = t
 		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
-			time.sleep(step)
+			rlist, wlist, xlist = select([sys.stdin], [], [], step)
 			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
 				step = min(step*coeff,max_time)
