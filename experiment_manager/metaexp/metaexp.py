@@ -173,7 +173,7 @@ class MetaExperiment(object):
 
 	@dbcheck
 	def plot_alldata(self,measure,lim_m=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
-		g = self.plot(measure=measure,nbiter=1,get_object=False,loglog=loglog,semilog=semilog,prepare_for_fit=prepare_for_fit,**subparams)
+		g = self.plot(measure=measure,nbiter=1,get_object=True,loglog=loglog,semilog=semilog,prepare_for_fit=prepare_for_fit,**subparams)
 		ans = g.get_alldata_graph(lim_m=lim_m)
 		if get_object:
 			return ans
