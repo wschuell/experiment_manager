@@ -53,8 +53,9 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
+	def __init__(self, erase=False, auto_update=True, force_profiling=False, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
 		self.verbose = verbose
+		self.force_profiling = force_profiling
 		self.job_list = []
 		self.erase = erase
 		self.update_needed = False
@@ -114,6 +115,8 @@ class JobQueue(object):
 		elif lt_filter and not ge_filter:
 			job.status = 'dependencies not satisfied'
 			self.append_job(job)
+			if self.force_profiling:
+				job.profiling = True
 			#self.job_list.append(job)
 			#self.move_job(job)
 			#self.update_needed = True

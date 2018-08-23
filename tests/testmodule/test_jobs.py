@@ -20,6 +20,7 @@ db = ngal.ngdb.NamingGamesDB(do_not_close=True)
 
 jq_cfg_list = [
 	{'jq_type':'local'},
+	{'jq_type':'local','force_profiling':True},
 	{'jq_type':'local_multiprocess'},
 	]
 
