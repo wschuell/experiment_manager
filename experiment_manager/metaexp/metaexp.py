@@ -12,10 +12,18 @@ import math
 
 from ..batchexp.batchexp import BatchExp
 
+def get_file_content(filename,cache=None):
+	if cache is None or filename not in list(cache.keys()):
+		with open(filename,'r') as f:
+			ans = f.read()
+	else:
+		ans = cache[filename]
+	if cache is not None and filename not in list(cache.keys()):
+		cache[filename] = ans
+	return ans
 
-def txt_to_dict(filename):
-	with open(filename,'r') as f:
-		txt = f.read()
+def txt_to_dict(filename,cache=None):
+	txt = get_file_content(filename=filename,cache=cache)
 	lines = txt.split('\n')
 	ans = {}
 	txt_str = ''
@@ -679,28 +687,25 @@ def render(input_string,params_list):
 			ans = ans.replace('{{% '+p+','+val+' %}}',val)
 	return ans
 
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports):
+
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,cache=None):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
-	exec_str = txt_to_dict('configs/exec.py')[exec_type]
+	exec_str = txt_to_dict('configs/exec.py',cache=cache)[exec_type]
+	plt_str = txt_to_dict('configs/plt_settings.py',cache=cache)[plt_settings]
+	tmax = txt_to_dict('configs/tmax.py',cache=cache)[tmax_type]
+	cfg_func = txt_to_dict('configs/cfg_func.py',cache=cache)[func_type]
 
-	plt_str = txt_to_dict('configs/plt_settings.py')[plt_settings]
+	metrics_all = json.loads(get_file_content('configs/metrics.json',cache=cache))
 
-	tmax = txt_to_dict('configs/tmax.py')[tmax_type]
-
-	cfg_func = txt_to_dict('configs/cfg_func.py')[func_type]
-
-	with open('configs/metrics.json','r') as f:
-		metrics_all = json.loads(f.read())
 	metrics_list = [str(metrics_all[m]) for m in metrics_local]
 	metrics_str = 'local_measures = {'+',\n                  '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_local])+'\n                  }'
 
 	metrics_list = [str(metrics_all[m]) for m in metrics_global]
 	metrics_str += '\n\nglobal_measures = {'+',\n                   '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_global])+'\n                   }'
 
-	with open('configs/params.json','r') as f:
-		params_all = json.loads(f.read())
+	params_all = json.loads(get_file_content('configs/params.json',cache=cache))
 	params_list = [params_all[p] for p in params]
 	param_names = [params_all[p]['param_name'] for p in params]
 	for pl in params_list:
@@ -709,15 +714,16 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 	params_str = 'params = {'+',\n          '.join(['\''+str(n)+'\':'+str(p) for n,p in params_info])+'\n          }'
 
 	format_dict = {
-		'imports':'\n'.join(imports),
-		'nbiter':nbiter,
-		'exec_str':exec_str,
-		'func_str':'def xp_cfg('+','.join(param_names)+'):\n'+render(cfg_func,param_names),
-		'Tmax_str':'def Tmax_func('+','.join(param_names)+'):\n'+render(tmax,param_names),
-		'params':params_str,
-		'metrics':metrics_str,
-		'plt_func':plt_str,
-	}
+			'imports':'\n'.join(imports),
+			'nbiter':nbiter,
+			'exec_str':exec_str,
+			'func_str':'def xp_cfg('+','.join(param_names)+'):\n'+render(cfg_func,param_names),
+			'Tmax_str':'def Tmax_func('+','.join(param_names)+'):\n'+render(tmax,param_names),
+			'params':params_str,
+			'metrics':metrics_str,
+			'plt_func':plt_str,
+		}
+
 	main_str = """
 
 import experiment_manager as xp_man
@@ -783,3 +789,16 @@ if __name__ == '__main__':
 
 	with open(folder+'/metaexp_settings.py','w') as f:
 		f.write(main_str)
+
+
+
+class ConfigGenerator(object):
+
+	def __init__(self):
+		self.gen_cache = {}
+
+	def empty_cache(self):
+		self.gen_cache = {}
+
+	def auto_gen(self,**cfg):
+		auto_gen(cache=self.gen_cache,**cfg)
