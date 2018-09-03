@@ -154,7 +154,11 @@ class JobQueue(object):
 			except OSError:
 				pass
 
+	def init_connections(self):
+		pass
+
 	def update_queue(self,clear_output=False):
+		self.init_connections()
 		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
 			time.sleep(1)
 		self.save_status(message='Starting queue update')

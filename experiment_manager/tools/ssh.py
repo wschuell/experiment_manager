@@ -20,7 +20,8 @@ from builtins import input, bytes, chr
 
 
 class SSHSession(object):
-    def __init__(self, hostname, username=None, port = 22, password=None, key_file=None, auto_accept=False, prefix_command=None):
+    def __init__(self, hostname, auto_connect=True, username=None, port = 22, password=None, key_file=None, auto_accept=False, prefix_command=None):
+        self.connected = False
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -42,7 +43,8 @@ class SSHSession(object):
             self.key_file = '{}/.ssh/id_rsa'.format(home)
 
         self.client = paramiko.SSHClient()
-        self.connect()
+        if auto_connect:
+            self.connect()
 
     def get_username(self):
         if self.username is not None:
@@ -129,6 +131,7 @@ class SSHSession(object):
         #self.client._transport = self.transport
         self.scp = SCPClient(self.client.get_transport())
         self.sftp = self.client.open_sftp()
+        self.connected = True
 
     def reconnect(self):
         self.close()
@@ -438,6 +441,7 @@ sys.exit(0)
         self.scp.close()
         self.sftp.close()
         self.client.close()
+        self.connected = False
 
     def install_ssh_key(self):
         path = os.path.dirname(self.key_file)

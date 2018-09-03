@@ -18,7 +18,7 @@ class ClusterJobQueue(JobQueue):
 		self.modules = modules
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
-		self.ssh_session = SSHSession(**self.ssh_cfg)
+		self.ssh_session = SSHSession(auto_connect=False,**self.ssh_cfg)
 		self.waiting_to_submit = {}
 		self.basedir = os.path.join(basedir,'job_queues',self.jobqueue_dir)#basedir #
 		self.archivedir = os.path.join(basedir,'archive_job_queues',self.jobqueue_dir)
@@ -33,6 +33,9 @@ class ClusterJobQueue(JobQueue):
 		if len(self.base_work_dir)>1 and self.base_work_dir[-1] == '/':
 			self.base_work_dir = self.base_work_dir[:-1]
 
+	def init_connections(self):
+		if not self.ssh_session.connected:
+			self.ssh_session.connect()
 
 	def get_walltime(self,walltime_seconds):
 		wtime = walltime_seconds
@@ -471,7 +474,7 @@ class ClusterJobQueue(JobQueue):
 
 	def __setstate__(self, in_dict):
 		self.__dict__.update(in_dict)
-		self.ssh_session = SSHSession(**self.ssh_cfg)
+		self.ssh_session = SSHSession(auto_connect=False,**self.ssh_cfg)
 
 	def gen_files(self, format_dict):
 		return []
