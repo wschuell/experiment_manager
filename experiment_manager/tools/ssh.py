@@ -132,6 +132,7 @@ class SSHSession(object):
         self.scp = SCPClient(self.client.get_transport())
         self.sftp = self.client.open_sftp()
         self.connected = True
+        print('SSH session opened')
 
     def reconnect(self):
         self.close()

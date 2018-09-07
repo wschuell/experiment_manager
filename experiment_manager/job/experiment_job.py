@@ -22,6 +22,7 @@ class ExperimentJob(Job):
 		if exp._T[-1] >= tmax:
 			self.status = 'already done'
 		self.data = exp #copy.deepcopy(exp)
+		self.xp_cfg = copy.deepcopy(exp._pop_cfg)
 		self.xp_uuid = self.data.uuid
 		self.tmax = tmax
 		self.files.append(self.xp_uuid+'.b')
@@ -78,7 +79,9 @@ class ExperimentDBJob(Job):
 			with path.Path(self.get_path()):
 				self.db = db.__class__(db_type="sqlite3",**db_cfg)
 			self.xp_uuid = xp_uuid
+			self.xp_cfg = db.get_param(xp_uuid=xp_uuid,param='Config')
 		else:
+			self.xp_cfg = copy.deepcopy(exp._pop_cfg)
 			self.data = {'exp':exp} #copy.deepcopy(exp)
 			self.origin_db = self.data['exp'].db #copy.deepcopy(self.data.db)
 			with path.Path(self.get_path()):
@@ -229,6 +232,7 @@ class GraphExpJob(ExperimentJob):
 		self.graph_filename = None
 		self.xp_uuid = exp.uuid
 		self.data['exp'] = exp #copy.deepcopy(exp)
+		self.xp_cfg = copy.deepcopy(exp._pop_cfg)
 		self.graph_cfg = graph_cfg
 		self.graph_cfg['tmax'] = max(xp_tmax,self.graph_cfg['tmax'])
 		if 'tmin' not in graph_cfg:
@@ -315,9 +319,11 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 				self.xp_uuid = exp.uuid
 				self.origin_db = exp.db
 				xp_tmax = exp._T[-1]
+				self.xp_cfg = copy.deepcopy(exp._pop_cfg)
 			else:
 				self.xp_uuid = xp_uuid
 				self.origin_db = db
+				self.xp_cfg = self.origin_db.get_param(xp_uuid=self.xp_uuid, param='Config')
 				try:
 					xp_tmax = self.origin_db.get_param(xp_uuid=self.xp_uuid, param='Tmax')
 				except TypeError:

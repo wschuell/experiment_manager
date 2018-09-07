@@ -697,6 +697,9 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 	tmax = txt_to_dict('configs/tmax.py',cache=cache)[tmax_type]
 	cfg_func = txt_to_dict('configs/cfg_func.py',cache=cache)[func_type]
 
+
+	gen_fig = txt_to_dict('configs/gen_figs_list.py',cache=cache)
+
 	metrics_all = json.loads(get_file_content('configs/metrics.json',cache=cache))
 
 	metrics_list = [str(metrics_all[m]) for m in metrics_local]
@@ -790,6 +793,9 @@ if __name__ == '__main__':
 	with open(folder+'/metaexp_settings.py','w') as f:
 		f.write(main_str)
 
+	if folder in list(gen_fig.keys()):
+		with open(folder+'/gen_figs.py','w') as f:
+			f.write(gen_fig['header']+gen_fig[folder])
 
 
 class ConfigGenerator(object):
