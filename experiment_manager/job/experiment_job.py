@@ -553,13 +553,13 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 		if self.stop_on is not None:
 			if self.stop_on['comparison'] == 'l':
-				if self.data['exp'].tempgraph[self.stop_on['measure']]._Y[0][-1] <= self.stop_on['value']:
+				if self.data[self.stop_on['measure']]._Y[0][-1] <= self.stop_on['value']:
 					self.stop_condition = True
 			elif self.stop_on['comparison'] == 'g':
-				if self.data['exp'].tempgraph[self.stop_on['measure']]._Y[0][-1] >= self.stop_on['value']:
+				if self.data[self.stop_on['measure']]._Y[0][-1] >= self.stop_on['value']:
 					self.stop_condition = True
 			elif self.stop_on['comparison'] == 'e':
-				if self.data['exp'].tempgraph[self.stop_on['measure']]._Y[0][-1] == self.stop_on['value']:
+				if self.data[self.stop_on['measure']]._Y[0][-1] == self.stop_on['value']:
 					self.stop_condition = True
 		self.check_time()
 
