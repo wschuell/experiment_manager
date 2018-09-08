@@ -674,8 +674,37 @@ class MetaExperiment(object):
 					plt.colorbar()
 				plt.show()
 
-
-
+	@dbcheck
+	def list_check(self,nbiter=None,only_missing=True,**subparams):
+		if nbiter is None:
+			nbiter = self.default_nbiter
+		_subparams = copy.deepcopy(subparams)
+		for k in list(self.params.keys()):
+			if k not in list(_subparams.keys()) or _subparams[k]=='all':
+				_subparams[k] = copy.deepcopy(self.params[k]['values'])
+			if _subparams[k]=='all_but_default':
+				_subparams[k] = copy.deepcopy(self.params[k]['values'])
+				_subparams[k].remove(self.params[k]['default_value'])
+			if not isinstance(_subparams[k],list):
+				_subparams[k] = [_subparams[k]]
+		configs = []
+		for k in list(_subparams.keys()):
+			if configs == []:
+				configs = [{k:v} for v in _subparams[k]]
+			else:
+				configs_bis = []
+				for c in configs:
+					for v in _subparams[k]:
+						c2 = copy.deepcopy(c)
+						c2[k] = v
+						configs_bis.append(c2)
+				configs = configs_bis
+		cfg_list = [self.xp_cfg(**c) for c in configs]
+		for cfg,c in zip(cfg_list,configs):
+			idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)
+			nb = min(nbiter,len(idlist))
+			if not only_missing or nb < nbiter:
+				print(nb,'/',nbiter,'  ',cfg)
 
 def render(input_string,params_list):
 	ans = input_string

@@ -53,6 +53,7 @@ class SSHSession(object):
             return self.command_output('echo "$USER"')
 
     def connect(self):
+        print('Trying to open SSH session')
         home = os.environ['HOME']
         self.client.load_system_host_keys()
         cfg = paramiko.config.SSHConfig()
