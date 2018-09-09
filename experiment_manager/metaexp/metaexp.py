@@ -471,7 +471,8 @@ class MetaExperiment(object):
 							configs_bis.append(c2)
 					job_configs = configs_bis
 			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
-			if self.profile_test:
+			if self.profile_test and 'profile_test' not in _batch.jobqueue.get_tags():
+				print('Adding a profiled test job')
 				job_cfg_test = copy.deepcopy(job_cfg_list[-1])
 				job_cfg_test['tmax'] = math.ceil(job_cfg_test['tmax']/100.)
 				job_cfg_test['profiling'] = True
@@ -479,7 +480,12 @@ class MetaExperiment(object):
 				job_cfg_test['nb_iter'] = 1
 				job_cfg_test['force_new'] = True
 				job_cfg_list.insert(0,job_cfg_test)
+				_batch.jobqueue.add_tags('profile_test')
 			_batch.add_jobs(job_cfg_list,no_storage=self.no_storage)
+			if self.profile_test and len(_batch.jobqueue.job_list) == 1:
+				#_batch.jobqueue.cance_job(_batch.jobqueue.job_list[0])
+				#_batch.jobqueue.job_list = []
+				pass
 			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
 		#if hasattr(self.db,'get_back_from_RAM'):

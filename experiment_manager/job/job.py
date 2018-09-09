@@ -82,6 +82,26 @@ class Job(object):
 	def init(self,*args,**kwargs):
 		pass
 
+	def get_tags(self):
+		if hasattr(self,'tags'):
+			return copy.deepcopy(self.tags)
+		else:
+			return []
+
+	def add_tags(self,tags):
+		if not isinstance(tags,list):
+			tags = [tags]
+		if hasattr(self,'tags'):
+			self.tags.extend(tags)
+		else:
+			self.tags = copy.deepcopy(tags)
+
+	def remove_tags(self,tags):
+		if not isinstance(tags,list):
+			tags = [tags]
+		if hasattr(self,'tags'):
+			self.tags = [t for t in self.tags if t not in tags]
+
 	def get_completion_level(self):
 		self.get_completion_level = 0.
 

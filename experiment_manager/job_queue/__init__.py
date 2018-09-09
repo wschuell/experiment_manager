@@ -158,6 +158,9 @@ class JobQueue(object):
 		pass
 
 	def update_queue(self,clear_output=False):
+		if not self.job_list:
+			self.save_status(message='Queue is empty')
+			return
 		self.init_connections()
 		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
 			time.sleep(1)
@@ -319,6 +322,9 @@ class JobQueue(object):
 		return str_ans
 
 	def auto_finish_queue(self,t=10,coeff=1,max_time=1800,call_between=None,clear_output=True):
+		if not self.job_list:
+			self.save_status(message='Queue is empty')
+			return
 		self.update_queue()
 		step = t
 		state = str(self)
@@ -355,7 +361,7 @@ class JobQueue(object):
 				self.update_virtualenv(env, requirements=list(set(envs[env]+self.requirements)))
 
 	def cancel_job(self, job, clean=False):
-		if self.erase:
+		if self.erase or clean:
 			job.clean()
 		else:
 			job.status = 'canceled'
@@ -439,3 +445,23 @@ class JobQueue(object):
 
 	def check_python_version(self,virtual_env=None):
 		pass
+
+	def get_tags(self):
+		if hasattr(self,'tags'):
+			return copy.deepcopy(self.tags)
+		else:
+			return []
+
+	def add_tags(self,tags):
+		if not isinstance(tags,list):
+			tags = [tags]
+		if hasattr(self,'tags'):
+			self.tags.extend(tags)
+		else:
+			self.tags = copy.deepcopy(tags)
+
+	def remove_tags(self,tags):
+		if not isinstance(tags,list):
+			tags = [tags]
+		if hasattr(self,'tags'):
+			self.tags = [t for t in self.tags if t not in tags]

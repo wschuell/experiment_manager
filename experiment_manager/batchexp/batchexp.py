@@ -100,7 +100,7 @@ class BatchExp(object):
 	def add_jobs(self, cfg_list, save_jq=True, no_storage=False):
 		for cfg in cfg_list:
 			cfg_str = json.dumps(cfg, sort_keys=True)
-			if cfg_str not in self.jobqueue.past_job_cfg:
+			if cfg_str not in self.jobqueue.past_job_cfg or ('force_new' in list(cfg.keys()) and cfg['force_new']):
 				self.jobqueue.past_job_cfg.append(cfg_str)
 				if 'uuid' in list(cfg.keys()):
 					nb_iter = 1
@@ -111,21 +111,25 @@ class BatchExp(object):
 				uuid_l = []
 				if 'uuid' not in list(cfg.keys()):
 					uuid_l = self.db.get_id_list(**cfg['xp_cfg'])
-					uuid_l = list(set(uuid_l) - set(self.blacklist))
-					if nb_iter > len(uuid_l):
-						if 'force_new' not in list(cfg.keys()) or not cfg['force_new']:
-							nb_new = nb_iter-len(uuid_l)
-						else:
-							nb_new = nb_iter
-						for i in range(nb_new):
-							exp = self.db.get_experiment(blacklist=uuid_l, **cfg['xp_cfg'])
-							uuid1 = exp.uuid
-							uuid_l.append(uuid1)
+					uuid_l = [u for u in uuid_l if u not in self.blacklist]
+					if 'force_new' not in list(cfg.keys()) or not cfg['force_new']:
+						nb_new = max(nb_iter-len(uuid_l),0)
+						# force_new = False
 					else:
+						# force_new = True
+						uuid_l = []
+						nb_new = nb_iter
+					for i in range(nb_new):
+						exp = self.db.get_experiment(force_new=True, **cfg['xp_cfg'])
+						uuid1 = exp.uuid
+						uuid_l.append(uuid1)
+					if len(uuid_l) > nb_iter:
 						uuid_l = uuid_l[:nb_iter]
 				else:
 					uuid_l = [cfg['uuid']]
 				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling') if k in list(cfg.keys()))
+				print(cfg2['tmax'], end='  ')
+				print(uuid_l, end='  ')
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
 						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)
