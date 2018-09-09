@@ -128,8 +128,6 @@ class BatchExp(object):
 				else:
 					uuid_l = [cfg['uuid']]
 				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling') if k in list(cfg.keys()))
-				print(cfg2['tmax'], end='  ')
-				print(uuid_l, end='  ')
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
 						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)
