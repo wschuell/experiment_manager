@@ -39,6 +39,7 @@ class BatchExp(object):
 		self.estimated_time = estimated_time
 		if not hasattr(self.jobqueue,'past_job_cfg'):
 			self.jobqueue.past_job_cfg = []
+		self.blacklist = []
 #	def control_exp(self, exp):
 #		exp.originclass = copy.deepcopy(exp.__class__)
 #		exp.__class__ = Experiment
@@ -66,13 +67,17 @@ class BatchExp(object):
 			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax,no_storage=no_storage)
 			print('added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax))
 
-	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}):
+	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}, profiling=None):
+		if profiling is None:
+			profiling = self.profiling
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if exp._T[-1] < tmax:
-			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
+			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 
-	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}, no_storage=False):
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}, no_storage=False, profiling=None):
+		if profiling is None:
+			profiling = self.profiling
 		if xp_uuid is None:
 			exp = self.get_experiment(**xp_cfg)#modify in order to get only uuid and not whole exp
 			tmax_xp = exp._T[-1]
@@ -83,9 +88,9 @@ class BatchExp(object):
 			tmax = tmax_xp
 		try:
 			if no_storage:
-				job = ExperimentDBJobNoStorage(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
+				job = ExperimentDBJobNoStorage(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			else:
-				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=self.profiling, checktime=True, estimated_time=self.estimated_time)
+				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 		except Exception as e:
 			if e.args[0] != 'Job already done':
@@ -106,8 +111,13 @@ class BatchExp(object):
 				uuid_l = []
 				if 'uuid' not in list(cfg.keys()):
 					uuid_l = self.db.get_id_list(**cfg['xp_cfg'])
+					uuid_l = list(set(uuid_l) - set(self.blacklist))
 					if nb_iter > len(uuid_l):
-						for i in range(nb_iter-len(uuid_l)):
+						if 'force_new' not in list(cfg.keys()) or not cfg['force_new']:
+							nb_new = nb_iter-len(uuid_l)
+						else:
+							nb_new = nb_iter
+						for i in range(nb_new):
 							exp = self.db.get_experiment(blacklist=uuid_l, **cfg['xp_cfg'])
 							uuid1 = exp.uuid
 							uuid_l.append(uuid1)
@@ -115,13 +125,15 @@ class BatchExp(object):
 						uuid_l = uuid_l[:nb_iter]
 				else:
 					uuid_l = [cfg['uuid']]
-				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax') if k in list(cfg.keys()))
+				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling') if k in list(cfg.keys()))
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
 						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)
 				else:
 					for xp_uuid in uuid_l:
 						self.add_exp_job(xp_uuid=xp_uuid,save=False,**cfg2)
+				if 'blacklisting' in list(cfg.keys()):
+					self.blacklist.extend(uuid_l)
 		if save_jq:
 			self.jobqueue.save()
 

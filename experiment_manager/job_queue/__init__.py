@@ -115,8 +115,6 @@ class JobQueue(object):
 		elif lt_filter and not ge_filter:
 			job.status = 'dependencies not satisfied'
 			self.append_job(job)
-			if self.force_profiling:
-				job.profiling = True
 			#self.job_list.append(job)
 			#self.move_job(job)
 			#self.update_needed = True
@@ -138,6 +136,8 @@ class JobQueue(object):
 		self.job_list.append(job)
 		self.move_job(job)
 		self.update_needed = True
+		if self.force_profiling:
+			job.profiling = True
 		job.reinit_missubmitted_times = self.reinit_missubmitted_times
 		if job.virtual_env is None and hasattr(self,'virtual_env'):
 			job.virtual_env = self.virtual_env

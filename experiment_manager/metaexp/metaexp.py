@@ -100,7 +100,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=True, time_short_label='t',time_min=None,time_max=None,estimated_time=None):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=True, time_short_label='t',time_min=None,time_max=None,estimated_time=None,profile_test=True):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -117,6 +117,7 @@ class MetaExperiment(object):
 		self.measures = list(self.local_measures.keys()) + list(self.global_measures.keys())
 		self.no_storage = no_storage
 		self.estimated_time = estimated_time
+		self.profile_test = profile_test
 
 		for k,v in list(self.params.items()):
 			test1 = 'default_value' not in list(self.params[k].keys())
@@ -470,6 +471,14 @@ class MetaExperiment(object):
 							configs_bis.append(c2)
 					job_configs = configs_bis
 			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
+			if self.profile_test:
+				job_cfg_test = copy.deepcopy(job_cfg_list[-1])
+				job_cfg_test['tmax'] = math.ceil(job_cfg_test['tmax']/100.)
+				job_cfg_test['profiling'] = True
+				job_cfg_test['blacklisting'] = True
+				job_cfg_test['nb_iter'] = 1
+				job_cfg_test['force_new'] = True
+				job_cfg_list.insert(0,job_cfg_test)
 			_batch.add_jobs(job_cfg_list,no_storage=self.no_storage)
 			_batch.jobqueue.auto_finish_queue(t=t,coeff=coeff)
 			#TODO: clear output
