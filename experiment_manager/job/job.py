@@ -212,11 +212,12 @@ class Job(object):
 	def save_profile(self):
 		if self.profiling:
 			s = StringIO()
-			sortby = 'tottime'#'cumulative'
+			sortby = 'cum'#'tottime'#
+			ps = pstats.Stats(self.profiler, stream=s)
 			try:
-				ps = pstats.Stats(self.profiler, stream=s).sort_stats(sortby)
+				ps = ps.sort_stats(sortby)
 			except:
-				ps = pstats.Stats(self.profiler, stream=s)
+				pass
 			ps.print_stats()
 			with open('profile.txt','a') as f:
 				f.write(time.strftime("[%Y %m %d %H:%M:%S]\n", time.localtime()))
