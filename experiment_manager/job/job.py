@@ -212,7 +212,7 @@ class Job(object):
 	def save_profile(self):
 		if self.profiling:
 			s = StringIO()
-			sortby = 'cum'#'tottime'#
+			sortby = 'cumtime'#'tottime'#
 			ps = pstats.Stats(self.profiler, stream=s)
 			try:
 				ps = ps.sort_stats(sortby)

@@ -16,7 +16,7 @@ def requirements():
 
 setup(name='experiment_manager',
       version=version(),
-      packages=find_packages(),
+      packages=['experiment_manager'],#find_packages(),
       install_requires=[requirements()],
       author='William Schueller',
       author_email='william.schueller@gmail.com',
