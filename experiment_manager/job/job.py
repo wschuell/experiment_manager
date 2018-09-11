@@ -168,6 +168,7 @@ class Job(object):
 
 	def run(self):
 		self.lastsave_time = -1
+		print('__debug__ is set to ',__debug__)
 		with pathpy.Path(self.get_path()):
 			self.check_md5()
 			self.status = 'unfinished'
