@@ -222,7 +222,7 @@ exit 0
 {prefix}
 #PBS -N {job_name}
 
-
+{optimize}
 
 JOBID=$PBS_JOBID
 
@@ -289,6 +289,8 @@ exit 0
 
 JOBID=$PBS_JOBID
 ARRAYID=$PBS_ARRAYID
+
+{optimize}
 
 date
 echo "Starting Job"

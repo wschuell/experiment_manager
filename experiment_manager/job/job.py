@@ -184,9 +184,6 @@ class Job(object):
 				self.status = 'missubmitted'
 				self.save(chdir=False)
 				raise
-			previous_debug_val = __debug__
-			if hasattr(self,'optimize') and self.optimize:
-				__debug__ = False
 			try:
 				self.get_data()
 				self.script()
@@ -195,8 +192,6 @@ class Job(object):
 				with open('scripterror_notifier','w') as f:#directly change job status and save, then raise?
 					f.write(str(e)+'\n')
 				raise
-			finally:
-				__debug__ = previous_debug_val
 			self.get_prg_states()
 			self.stop_profiler()
 			self.save_profile()

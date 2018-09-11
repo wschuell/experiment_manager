@@ -26,6 +26,8 @@ class SlurmJobQueue(ClusterJobQueue):
 date
 echo "Starting Job"
 
+{optimize}
+
 chmod u+x {job_dir}/script.py
 {job_dir}/script.py &
 PID=$!
@@ -159,10 +161,11 @@ WAIT_TIME=$(({walltime_seconds}>1200?{walltime_seconds}-120:{walltime_seconds}-{
 
 scontrol show job $JOBID
 
+{optimize}
+
 date
 echo "Starting Job"
 chmod u+x {multijob_dir}/script.py
-
 
 {multijob_dir}/script.py &
 PID=$!

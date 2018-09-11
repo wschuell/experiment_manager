@@ -79,6 +79,10 @@ class ClusterJobQueue(JobQueue):
 
 		walltime = self.get_walltime(job.estimated_time)
 
+		if job.optimize:
+			optimize = 'export PYTHONOPTIMIZE=1'
+		else:
+			optimize = ''
 
 		format_dict = {
 			'username':self.ssh_session.get_username(),
@@ -97,6 +101,7 @@ class ClusterJobQueue(JobQueue):
 			'walltime_seconds': job.estimated_time,
 			'walltime': walltime,
 			'prefix':self.get_prefix(job),
+			'optimize':optimize
 		}
 
 		return format_dict
