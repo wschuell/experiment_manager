@@ -67,15 +67,17 @@ class BatchExp(object):
 			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax,no_storage=no_storage)
 			print('added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax))
 
-	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}, profiling=None):
+	def add_exp_job(self, tmax, xp_uuid=None, save=True, xp_cfg={}, profiling=None, erase=None):
 		if profiling is None:
 			profiling = self.profiling
 		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
 		if exp._T[-1] < tmax:
 			job = ExperimentDBJob(exp=exp, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
+			if erase is not None:
+				job.erase = erase
 
-	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}, no_storage=False, profiling=None):
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, save=True, xp_cfg={}, no_storage=False, profiling=None, erase=None):
 		if profiling is None:
 			profiling = self.profiling
 		if xp_uuid is None:
@@ -92,6 +94,8 @@ class BatchExp(object):
 			else:
 				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
+			if erase is not None:
+				job.erase = erase
 		except Exception as e:
 			if e.args[0] != 'Job already done':
 				raise
@@ -127,7 +131,7 @@ class BatchExp(object):
 						uuid_l = uuid_l[:nb_iter]
 				else:
 					uuid_l = [cfg['uuid']]
-				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling') if k in list(cfg.keys()))
+				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling', 'erase') if k in list(cfg.keys()))
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
 						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)

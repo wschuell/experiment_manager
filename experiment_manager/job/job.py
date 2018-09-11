@@ -35,7 +35,7 @@ def get_md5(filename):
 
 class Job(object):
 
-	def __init__(self, descr=None, virtual_env=None, optimize=False, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=False,*args,**kwargs):
+	def __init__(self, descr=None, virtual_env=None, optimize=False, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=True, profiling=False, checktime=False, seeds=None, get_data_at_unpack=False,*args,**kwargs):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
 		self.optimize = optimize

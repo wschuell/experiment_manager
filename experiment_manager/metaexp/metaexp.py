@@ -479,6 +479,7 @@ class MetaExperiment(object):
 				job_cfg_test['blacklisting'] = True
 				job_cfg_test['nb_iter'] = 1
 				job_cfg_test['force_new'] = True
+				job_cfg_test['erase'] = False
 				job_cfg_list.insert(0,job_cfg_test)
 				_batch.jobqueue.add_tags('profile_test')
 			_batch.add_jobs(job_cfg_list,no_storage=self.no_storage)

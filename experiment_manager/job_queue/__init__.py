@@ -242,7 +242,8 @@ class JobQueue(object):
 			if j.status == 'to be cleaned':
 				self.job_list.remove(j)
 				if self.erase:
-					j.clean()
+					if j.erase:
+						j.clean()
 			elif self.verbose and j.status == 'missubmitted':
 				print('Missubmitted job: '+'_'.join([j.descr,j.uuid]))
 			elif self.verbose and j.status == 'dependencies not satisfied':
