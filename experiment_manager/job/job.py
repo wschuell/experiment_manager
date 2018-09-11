@@ -35,9 +35,10 @@ def get_md5(filename):
 
 class Job(object):
 
-	def __init__(self, descr=None, virtual_env=None, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=False,*args,**kwargs):
+	def __init__(self, descr=None, virtual_env=None, optimize=False, requirements=[], estimated_time=2*3600, max_time=48*3600, path = 'jobs', erase=False, profiling=False, checktime=False, seeds=None, get_data_at_unpack=False,*args,**kwargs):
 		self.uuid = str(uuid.uuid1())
 		self.status = 'pending'
+		self.optimize = optimize
 		if descr is None:
 			self.descr = self.__class__.__name__
 		else:
@@ -183,6 +184,9 @@ class Job(object):
 				self.status = 'missubmitted'
 				self.save(chdir=False)
 				raise
+			previous_debug_val = __debug__
+			if hasattr(self,'optimize') and self.optimize:
+				__debug__ = False
 			try:
 				self.get_data()
 				self.script()
@@ -191,14 +195,16 @@ class Job(object):
 				with open('scripterror_notifier','w') as f:#directly change job status and save, then raise?
 					f.write(str(e)+'\n')
 				raise
+			finally:
+				__debug__ = previous_debug_val
 			self.get_prg_states()
 			self.stop_profiler()
 			self.save_profile()
 			self.update_exec_time()
-		self.status = 'done'
-		self.save(keep_data=False)
-		with pathpy.Path(self.get_path()):
-			self.clean_backup()
+			self.status = 'done'
+			self.save(keep_data=False)
+			with pathpy.Path(self.get_path()):
+				self.clean_backup()
 
 	def start_profiler(self):
 		if self.profiling:

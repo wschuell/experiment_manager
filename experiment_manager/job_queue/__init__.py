@@ -53,9 +53,10 @@ def get_jobqueue(jq_type='local', name =None, **jq_cfg2):
 
 
 class JobQueue(object):
-	def __init__(self, erase=False, auto_update=True, force_profiling=False, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
+	def __init__(self, erase=False, auto_update=True, force_optimize=False, force_profiling=False, virtual_env = None, requirements = [], name=None, deep_check=False, verbose=False,path='job_queues/', reinit_missubmitted_times=0, py3_suffix=True):
 		self.verbose = verbose
 		self.force_profiling = force_profiling
+		self.force_optimize = force_optimize
 		self.job_list = []
 		self.erase = erase
 		self.update_needed = False
@@ -138,6 +139,8 @@ class JobQueue(object):
 		self.update_needed = True
 		if self.force_profiling:
 			job.profiling = True
+		if self.force_optimize:
+			job.optimize = True
 		job.reinit_missubmitted_times = self.reinit_missubmitted_times
 		if job.virtual_env is None and hasattr(self,'virtual_env'):
 			job.virtual_env = self.virtual_env
