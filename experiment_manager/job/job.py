@@ -197,10 +197,10 @@ class Job(object):
 			self.stop_profiler()
 			self.save_profile()
 			self.update_exec_time()
-			self.status = 'done'
-			self.save(keep_data=False)
-			with pathpy.Path(self.get_path()):
-				self.clean_backup()
+		self.status = 'done'
+		self.save(keep_data=False)
+		with pathpy.Path(self.get_path()):
+			self.clean_backup()
 
 	def start_profiler(self):
 		if self.profiling:

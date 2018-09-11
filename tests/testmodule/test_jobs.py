@@ -79,7 +79,7 @@ def job(request):
 
 def test_jobs(job,jq):
 	jq.add_job(job)
-	jq.auto_finish_queue(t=3)
+	jq.auto_finish_queue(t=0.5)
 
 def test_job_checkpoint(job,jq):
 	job.estimated_time = 2
@@ -87,4 +87,4 @@ def test_job_checkpoint(job,jq):
 	jq.update_queue()
 	time.sleep(1.2)
 	jq.kill()
-	jq.auto_finish_queue(t=3)
+	jq.auto_finish_queue(t=0.5)
