@@ -43,7 +43,7 @@ class Job(object):
 			self.descr = self.__class__.__name__
 		else:
 			self.descr = descr
-		self.files = ['job.json','prg_states.b']
+		self.files = ['job.json','prg_states.b','profile.txt']
 		self.get_data_at_unpack = get_data_at_unpack
 		self.erase = erase
 		self.virtual_env = virtual_env
@@ -257,7 +257,7 @@ class Job(object):
 					raise Exception('JobError: Job is too long, consider saving it while running! Command check_time() does it, depending wisely on execution time.')
 				if self.exec_time > 0:
 					self.init_time = -self.exec_time
-					self.estimated_time = int(min(self.estimated_time*1.1, self.max_time))
+					self.estimated_time = int(min(self.estimated_time*1.5, self.max_time))
 				else:
 					self.estimated_time = int(min(self.estimated_time*2, self.max_time))
 				filelist = [txtfile for txtfile in glob.glob('*.txt') if not (len(txtfile)>=8 and txtfile[-8:]!='_old.txt')]

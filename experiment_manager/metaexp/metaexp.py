@@ -12,38 +12,6 @@ import math
 
 from ..batchexp.batchexp import BatchExp
 
-def get_file_content(filename,cache=None):
-	if cache is None or filename not in list(cache.keys()):
-		with open(filename,'r') as f:
-			ans = f.read()
-	else:
-		ans = cache[filename]
-	if cache is not None and filename not in list(cache.keys()):
-		cache[filename] = ans
-	return ans
-
-def txt_to_dict(filename,cache=None):
-	txt = get_file_content(filename=filename,cache=cache)
-	lines = txt.split('\n')
-	ans = {}
-	txt_str = ''
-	key = ''
-	for l in lines:
-		if len(l)>=3 and l[0] == '#' and l[-1] == '#':
-			if key != '':
-				ans[key] = txt_str
-			txt_str = ''
-			key = l.replace('#','')
-		else:
-			txt_str += l + '\n'
-	if key != '':
-		ans[key] = txt_str
-	return ans
-
-
-def dict_to_txt(filename,in_dict):
-	with open(filename,'w') as f:
-		f.write('\n'.join(['#####'+k+'#####\n\n'+v for k,v in list(in_dict.items())]))
 
 def dbcheck(func):
 	def dbcheckobj(obj_self,*args,**kwargs):
@@ -190,16 +158,20 @@ class MetaExperiment(object):
 			ans.show()
 
 	@dbcheck
-	def plot(self,measure,merge=True,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
+	def plot(self,measure,merge=True,check_tmax=True,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		try:
 			_subparams = self.complete_params(subparams,allow_list=False)
 		except TypeError:
-			return self.plot_several(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
+			return self.plot_several(measure=measure,nbiter=nbiter,check_tmax=check_tmax,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
 			#raise ValueError('Parameter '+str(k)+' has several values: '+str(_subparams[k])+'. Use plot_several to use different parameter values.')
 		cfg = self.xp_cfg(**_subparams)
-		xp_uuid = self.db.get_graph_id_list(method=measure,xp_cfg=cfg)[:nbiter]
+		if check_tmax:
+			tmax = self.Tmax(**_subparams)
+		else:
+			tmax = None
+		xp_uuid = self.db.get_graph_id_list(method=measure,xp_cfg=cfg,tmax=tmax)[:nbiter]
 		if len(xp_uuid)<nbiter:
 			if len(xp_uuid)>1:
 				plural = 's'
@@ -245,7 +217,7 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot_several(self,measure,nbiter=None,get_object=False,loglog=False,semilog=False,**subparams):
+	def plot_several(self,measure,nbiter=None,check_tmax=True,get_object=False,loglog=False,semilog=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		_subparams = self.complete_params(subparams,allow_list=True)
@@ -255,7 +227,7 @@ class MetaExperiment(object):
 				varying_params.append(k)
 		configs = []
 		if varying_params == []:
-			return self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
+			return self.plot(measure=measure,check_tmax=check_tmax,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
 		for k in varying_params:
 			if configs == []:
 				configs = [{k:v} for v in _subparams[k]]
@@ -269,12 +241,12 @@ class MetaExperiment(object):
 				configs = configs_bis
 		_subparams_bis = copy.deepcopy(_subparams)
 		_subparams_bis.update(configs[0])
-		gr = self.plot(measure=measure,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
+		gr = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 		if len(configs) > 1:
 			for c in configs[1:]:
 				_subparams_bis = copy.deepcopy(_subparams)
 				_subparams_bis.update(c)
-				gr2 = self.plot(measure=measure,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
+				gr2 = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
 				gr.add_graph(gr2)
 		gr.legendoptions['labels'] = [', '.join([self.params[k]['short_label']+'='+str(c[k]) for k in varying_params]) for c in configs]
 		if get_object:
@@ -292,13 +264,13 @@ class MetaExperiment(object):
 			token_values = copy.deepcopy(subparams[token])
 		_subparams = copy.deepcopy(subparams)
 		_subparams[token] = token_values[0]
-		gr = self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
+		gr = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
 		for i in range(len(gr._X)):
 			gr._X[i][0] = _subparams[token]
 		for v in token_values[1:]:
 			_subparams = copy.deepcopy(subparams)
 			_subparams[token] = v
-			gr2 = self.plot(measure=measure,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
+			gr2 = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
 			for i in range(len(gr2._X)):
 				gr2._X[i][0] = _subparams[token]
 			gr.complete_with(gr2)
@@ -716,140 +688,12 @@ class MetaExperiment(object):
 						configs_bis.append(c2)
 				configs = configs_bis
 		cfg_list = [self.xp_cfg(**c) for c in configs]
+		cfg_str_list = set()
 		for cfg,c in zip(cfg_list,configs):
-			idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)
-			nb = min(nbiter,len(idlist))
-			if not only_missing or nb < nbiter:
-				print(nb,'/',nbiter,'  ',cfg)
-
-def render(input_string,params_list):
-	ans = input_string
-	inner_params_list = [s.split(' %}}')[0].split(',') for s in input_string.split('{{% ')[1:]]
-	for p,val in inner_params_list:
-		if p in params_list:
-			ans = ans.replace('{{% '+p+','+val+' %}}',p)
-		else:
-			ans = ans.replace('{{% '+p+','+val+' %}}',val)
-	return ans
-
-
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,cache=None):
-	if not os.path.exists(folder):
-		os.makedirs(folder)
-
-	exec_str = txt_to_dict('configs/exec.py',cache=cache)[exec_type]
-	plt_str = txt_to_dict('configs/plt_settings.py',cache=cache)[plt_settings]
-	tmax = txt_to_dict('configs/tmax.py',cache=cache)[tmax_type]
-	cfg_func = txt_to_dict('configs/cfg_func.py',cache=cache)[func_type]
-
-
-	gen_fig = txt_to_dict('configs/gen_figs_list.py',cache=cache)
-
-	metrics_all = json.loads(get_file_content('configs/metrics.json',cache=cache))
-
-	metrics_list = [str(metrics_all[m]) for m in metrics_local]
-	metrics_str = 'local_measures = {'+',\n                  '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_local])+'\n                  }'
-
-	metrics_list = [str(metrics_all[m]) for m in metrics_global]
-	metrics_str += '\n\nglobal_measures = {'+',\n                   '.join(['\''+str(m)+'\':'+str(metrics_all[m]) for m in metrics_global])+'\n                   }'
-
-	params_all = json.loads(get_file_content('configs/params.json',cache=cache))
-	params_list = [params_all[p] for p in params]
-	param_names = [params_all[p]['param_name'] for p in params]
-	for pl in params_list:
-		del pl['param_name']
-	params_info = zip(param_names,params_list)
-	params_str = 'params = {'+',\n          '.join(['\''+str(n)+'\':'+str(p) for n,p in params_info])+'\n          }'
-
-	format_dict = {
-			'imports':'\n'.join(imports),
-			'nbiter':nbiter,
-			'exec_str':exec_str,
-			'func_str':'def xp_cfg('+','.join(param_names)+'):\n'+render(cfg_func,param_names),
-			'Tmax_str':'def Tmax_func('+','.join(param_names)+'):\n'+render(tmax,param_names),
-			'params':params_str,
-			'metrics':metrics_str,
-			'plt_func':plt_str,
-		}
-
-	main_str = """
-
-import experiment_manager as xp_man
-{imports}
-
-from experiment_manager.metaexp.metaexp import MetaExperiment
-
-
-#### Function to construct the configuration of each simulation, depending on a few parameters, described below ####
-
-{func_str}
-
-
-#### Function to determine the number of time steps for each simulation ####
-
-{Tmax_str}
-
-
-#### Number of trials per distinct configuration ####
-
-nbiter = {nbiter}
-
-
-#### Description of the parameters of experiment configuration ####
-
-{params}
-
-
-#### Measures, to be found in naminggamesal.ngmeth ####
-
-{metrics}
-
-
-#### Defining the MetaExperiment object, containing all this information ####
-
-meta_exp = MetaExperiment(params=params,
-              local_measures=local_measures,
-              global_measures=global_measures,
-              xp_cfg=xp_cfg,
-              Tmax_func=Tmax_func,
-              default_nbiter=nbiter,
-              time_label='#interactions',
-              time_short_label='T',
-              #time_max=80000,
-              time_min=0)
-
-#### Parameters for running the simulations. By default, using all available cores on local computer ####
-
-db = ngal.ngdb.NamingGamesDB(do_not_close=True)
-meta_exp.set_db(db)
-
-{exec_str}
-
-
-##### Making matplotlib more readable #####
-
-{plt_func}
-
-
-if __name__ == '__main__':
-    meta_exp.run()
-	""".format(**format_dict)
-
-	with open(folder+'/metaexp_settings.py','w') as f:
-		f.write(main_str)
-
-	if folder in list(gen_fig.keys()):
-		with open(folder+'/gen_figs.py','w') as f:
-			f.write(gen_fig['header']+gen_fig[folder])
-
-
-class ConfigGenerator(object):
-
-	def __init__(self):
-		self.gen_cache = {}
-
-	def empty_cache(self):
-		self.gen_cache = {}
-
-	def auto_gen(self,**cfg):
-		auto_gen(cache=self.gen_cache,**cfg)
+			cfg_str = json.dumps(xp_cfg, sort_keys=True)
+			if cfg_str not in cfg_str_list:
+				cfg_str_list.add(cfg_str)
+				idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)
+				nb = min(nbiter,len(idlist))
+				if not only_missing or nb < nbiter:
+					print(nb,'/',nbiter,'  ',cfg)
