@@ -6,9 +6,11 @@ import numpy as np
 import random
 import json
 from scipy.optimize import curve_fit
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
 import math
+import itertools
 
 from ..batchexp.batchexp import BatchExp
 
@@ -21,9 +23,9 @@ def dbcheck(func):
 			return func(obj_self,*args,**kwargs)
 	return dbcheckobj
 
-def number_str(number):
+def number_str(number,rounding=2):
 	try:
-		return str(round(number,int(-round(np.log10(number))+2)))
+		return str(round(number,int(-round(np.log10(number))+rounding)))
 	except:
 		return 'NaN'
 
@@ -484,12 +486,18 @@ class MetaExperiment(object):
 		if set_as_default:
 			self.default_batch = name
 
-	def powerlaw_fit(self,graph,get_object=False,get_values=False,display_mode=None,use_formula=False,loglog=True,stdvec_mode=True):
+	def powerlaw_fit(self,graph,xmin=None,xmax=None,get_object=False,scatter=True,get_values=False,display_mode=None,simple_labels=False,alpha_noind=False,use_formula=False,loglog=True,stdvec_mode=True):
 		gr = copy.deepcopy(graph)
 		if 'labels' in list(graph.legendoptions.keys()) and len(graph.legendoptions['labels']) == len(graph._X):
 			labels = copy.deepcopy(graph.legendoptions['labels'])
 		else:
 			labels = ['' for _ in graph._X]
+		if xmin is not None:
+			if not isinstance(xmin,list):
+				xmin = [xmin for _ in graph._X]
+		if xmax is not None:
+			if not isinstance(xmax,list):
+				xmax = [xmax for _ in graph._X]
 		if display_mode=='2columns':
 			gr.legendoptions['labels'] = labels
 		else:
@@ -500,20 +508,31 @@ class MetaExperiment(object):
 			gr.minvec = []
 			gr.maxvec = []
 			gr.legendoptions['labels'] = []
+		marker_style = itertools.cycle(['d','p','o','X','^'])
 		for i in range(len(graph._X)):
 			x = copy.deepcopy(graph._X[i])
 			y = copy.deepcopy(graph._Y[i])
 			stdvec = copy.deepcopy(graph.stdvec[i])
+			x2,y2,stdvec2 = x,y,stdvec
+			if xmin is not None:
+				x2 = [a for a in x if a >= xmin[i]]
+				y2 = [b for a,b in zip(x,y) if a >= xmin[i]]
+				stdvec2 = [b for a,b in zip(x,stdvec) if a >= xmin[i]]
+			if xmax is not None:
+				x2 = [a for a in x if a <= xmax[i] and a in x2]
+				y2 = [b for a,b in zip(x,y) if a <= xmax[i] and a in x2]
+				stdvec2 = [b for a,b in zip(x,stdvec) if a <= xmax[i] and a in x2]
 
 			xx = []
 			yy = []
 			x_resample = []
 			y_resample = []
 			for j in range(len(graph._X[i])):
-				yy += graph.all_data[i][j]
-				xx += [graph._X[i][j] for _ in graph.all_data[i][j]]
-				y_resample.append(copy.deepcopy(graph.all_data[i][j]))
-				x_resample.append(graph._X[i][j])
+				if (xmin is None or xmin[i] <= graph._X[i][j]) and (xmax is None or graph._X[i][j] <= xmax[i]):
+					yy += graph.all_data[i][j]
+					xx += [graph._X[i][j] for _ in graph.all_data[i][j]]
+					y_resample.append(copy.deepcopy(graph.all_data[i][j]))
+					x_resample.append(graph._X[i][j])
 			exponents = []
 			const = []
 			for elt in y_resample:
@@ -526,17 +545,23 @@ class MetaExperiment(object):
 			if yy:
 				params,r2,perr = powerlaw_loglogfit(xx,yy)
 			elif stdvec_mode:
-				params,r2,perr = powerlaw_loglogfit(x,y,stdvec=stdvec)
+				params,r2,perr = powerlaw_loglogfit(x2,y2,stdvec=stdvec2)
 			else:
-				params,r2,perr = powerlaw_loglogfit(x,y)
+				params,r2,perr = powerlaw_loglogfit(x2,y2)
 			y_fit = params[0]*np.power(x,params[1])
 			if not display_mode=='2columns':
 				gr._X.append(copy.deepcopy(x))
 				gr._Y.append(copy.deepcopy(y))
-				gr.stdvec.append(copy.deepcopy(graph.stdvec[i]))
+				if scatter:
+					gr.stdvec.append([0 for _ in x])
+				else:
+					gr.stdvec.append(copy.deepcopy(graph.stdvec[i]))
 				gr.minvec.append(copy.deepcopy(graph.minvec[i]))
 				gr.maxvec.append(copy.deepcopy(graph.maxvec[i]))
 				gr.Yoptions.append(copy.deepcopy(graph.Yoptions[i]))
+				if scatter:
+					gr.Yoptions[-1]['linestyle'] = ''
+					gr.Yoptions[-1]['marker'] = next(marker_style)
 				gr.legendoptions['labels'].append(labels[i])
 			else:
 				gr.legendoptions['ncol'] = 2
@@ -547,6 +572,7 @@ class MetaExperiment(object):
 			gr.maxvec.append([np.nan for _ in x])
 			options = copy.deepcopy(graph.Yoptions[i])
 			options['linestyle'] = '--'
+			options['linewidth'] = 0.67*matplotlib.rcParams['lines.linewidth']
 			options['color'] = 'black'
 			gr.Yoptions.append(options)
 			gr.loglog = loglog
@@ -560,6 +586,12 @@ class MetaExperiment(object):
 				x_symbol = 'x'
 			if use_formula:
 				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+number_str(perr[0])+')$\\cdot$'+x_symbol+'$^{'+number_str(params[1])+'(±'+number_str(perr[1])+')}$, R$^2$='+number_str(r2))
+			elif simple_labels:
+				if alpha_noind:
+					i_ind = ''
+				else:
+					i_ind = str(i)
+				gr.legendoptions['labels'].append('$'+y_symbol+'\\propto '+x_symbol+'^{\\alpha_{'+str(i_ind)+'}}$, $\\alpha_{'+str(i_ind)+'} \\approx '+number_str(params[1],1)+'$')
 			else:
 				gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+'(±'+number_str(perr[0])+')*'+x_symbol+'^'+number_str(params[1])+'(±'+number_str(perr[1])+'), R^2='+number_str(r2))
 			#gr.legendoptions['labels'].append(y_symbol+'='+number_str(params[0])+r'$\cdot$'+x_symbol+'^{'+number_str(params[1])+'}, R^2='+number_str(r2))

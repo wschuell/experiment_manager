@@ -47,7 +47,7 @@ def render(input_string,params_list):
 	return ans
 
 
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,cache=None):
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,figures_dir=False,cache=None):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
@@ -155,6 +155,9 @@ if __name__ == '__main__':
 	if folder in list(gen_fig.keys()):
 		with open(folder+'/gen_figs.py','w') as f:
 			f.write(gen_fig['header']+gen_fig[folder])
+
+	if figures_dir and not os.path.exists(folder+'/figures'):
+		os.makedirs(folder+'/figures')
 
 
 class ConfigGenerator(object):
