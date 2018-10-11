@@ -12,9 +12,13 @@ from . import JobQueue
 from ..tools.ssh import SSHSession,get_username_from_hostname,check_hostname
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, base_work_dir=None, without_epilogue=False, install_as_job=False, modules=[], **kwargs):
+	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, max_jobs_total=None, base_work_dir=None, without_epilogue=False, install_as_job=False, modules=[], **kwargs):
 		super(ClusterJobQueue,self).__init__(requirements=requirements,**kwargs)
 		self.max_jobs = max_jobs
+		if max_jobs_total is None:
+			self.max_jobs_total = max_jobs
+		else:
+			self.max_jobs_total = max_jobs_total
 		self.modules = modules
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
@@ -461,15 +465,15 @@ class ClusterJobQueue(JobQueue):
 		#session = SSHSession(**self.ssh_cfg)
 		if not hasattr(self,'available_workers'):
 			self.refresh_avail_workers()
-		offset_waiting = sum([len(j_list) for j_list in list(self.waiting_to_submit.values())])
-		return self.available_workers - offset_waiting
+		offset_waiting = sum([len(j_list) for j_list in self.waiting_to_submit.values()])
+		return min(self.available_workers,self.max_jobs) - offset_waiting
 		#session.close()
 
 	def refresh_avail_workers(self):
 		#session = SSHSession(**self.ssh_cfg)
 		session = self.ssh_session
 		Njobs = self.count_running_jobs()
-		self.available_workers = self.max_jobs - Njobs
+		self.available_workers = self.max_jobs_total - Njobs
 		#session.close()
 
 	def __getstate__(self):

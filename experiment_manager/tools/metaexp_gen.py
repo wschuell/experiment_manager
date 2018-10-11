@@ -47,7 +47,7 @@ def render(input_string,params_list):
 	return ans
 
 
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,figures_dir=False,cache=None):
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,figures_dir=False,cache=None,foldername_venv=True):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
@@ -74,6 +74,9 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 		del pl['param_name']
 	params_info = zip(param_names,params_list)
 	params_str = 'params = {'+',\n          '.join(['\''+str(n)+'\':'+str(p) for n,p in params_info])+'\n          }'
+
+	if foldername_venv:
+		exec_str = exec_str.replace("'virtual_env':'","'virtual_env':'"+os.path.basename(folder))
 
 	format_dict = {
 			'imports':'\n'.join(imports),
@@ -127,8 +130,8 @@ meta_exp = MetaExperiment(params=params,
               xp_cfg=xp_cfg,
               Tmax_func=Tmax_func,
               default_nbiter=nbiter,
-              time_label='#interactions',
-              time_short_label='T',
+              time_label='$t$',
+              time_short_label='$t$',
               #time_max=80000,
               time_min=0)
 

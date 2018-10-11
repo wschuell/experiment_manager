@@ -24,6 +24,10 @@ def dbcheck(func):
 	return dbcheckobj
 
 def number_str(number,rounding=2):
+	if number == 0:
+		return '0'
+	elif number < 0:
+		return '-'+number_str(-number)
 	try:
 		return str(round(number,int(-round(np.log10(number))+rounding)))
 	except:
@@ -105,9 +109,15 @@ class MetaExperiment(object):
 			if 'unit_label' not in list(self.params[k].keys()):
 				self.params[k]['unit_label'] = self.params[k]['short_label']
 			if 'min' not in list(self.params[k].keys()):
-				self.params[k]['min'] = min(copy.deepcopy(self.params[k]['values']))
+				try:
+					self.params[k]['min'] = min(copy.deepcopy(self.params[k]['values']))
+				except:
+					self.params[k]['min'] = copy.deepcopy(self.params[k]['values'])[0]
 			if 'max' not in list(self.params[k].keys()):
-				self.params[k]['max'] = max(copy.deepcopy(self.params[k]['values']))
+				try:
+					self.params[k]['max'] = max(copy.deepcopy(self.params[k]['values']))
+				except:
+					self.params[k]['max'] = copy.deepcopy(self.params[k]['values'])[-1]
 
 	def complete_params(self,subparams,allow_list=False):
 		_subparams = copy.deepcopy(subparams)
@@ -548,7 +558,8 @@ class MetaExperiment(object):
 				params,r2,perr = powerlaw_loglogfit(x2,y2,stdvec=stdvec2)
 			else:
 				params,r2,perr = powerlaw_loglogfit(x2,y2)
-			y_fit = params[0]*np.power(x,params[1])
+			xb = np.asarray(x,dtype=np.float64)
+			y_fit = np.exp(np.log(params[0])+params[1]*np.log(x))#params[0]*np.power(x,params[1])
 			if not display_mode=='2columns':
 				gr._X.append(copy.deepcopy(x))
 				gr._Y.append(copy.deepcopy(y))
@@ -576,11 +587,14 @@ class MetaExperiment(object):
 			options['color'] = 'black'
 			gr.Yoptions.append(options)
 			gr.loglog = loglog
-			if gr.ylabel is not None and (len(gr.ylabel)<4 or (gr.ylabel[:2]=='$\\' and gr.ylabel[-1] == '$')):
-				y_symbol = gr.ylabel
+			if gr.ylabel is not None and (len(gr.ylabel)<4 or (gr.ylabel[0]=='$' and gr.ylabel[-1] == '$')):
+				if gr.ylabel[0] =='$' and gr.ylabel[-1]=='$':
+					y_symbol = gr.ylabel[1:-1]
+				else:
+					y_symbol = gr.ylabel
 			else:
 				y_symbol = 'y'
-			if gr.xlabel is not None and (len(gr.xlabel)<4 or (gr.xlabel[:2]=='$\\' and gr.xlabel[-1] == '$')):
+			if gr.xlabel is not None and (len(gr.xlabel)<4 or (gr.xlabel[0]=='$' and gr.xlabel[-1] == '$')):
 				x_symbol = gr.xlabel
 			else:
 				x_symbol = 'x'
@@ -722,7 +736,7 @@ class MetaExperiment(object):
 		cfg_list = [self.xp_cfg(**c) for c in configs]
 		cfg_str_list = set()
 		for cfg,c in zip(cfg_list,configs):
-			cfg_str = json.dumps(xp_cfg, sort_keys=True)
+			cfg_str = json.dumps(cfg, sort_keys=True)
 			if cfg_str not in cfg_str_list:
 				cfg_str_list.add(cfg_str)
 				idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)

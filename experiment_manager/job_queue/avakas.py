@@ -8,7 +8,7 @@ import uuid
 from .torque import TorqueJobQueue
 
 class AvakasJobQueue(TorqueJobQueue):
-	def __init__(self, username=None, hostname='avakas', basedir=None, local_basedir='', base_work_dir='/tmp', max_jobs=1000, key_file='avakas', password=None, without_epilogue=True, **kwargs):
+	def __init__(self, username=None, hostname='avakas', basedir=None, local_basedir='', base_work_dir='/tmp', max_jobs=1000, max_jobs_total=10000, key_file='avakas', password=None, without_epilogue=True, **kwargs):
 		if username is None:
 			username = self.get_username_from_hostname(hostname)
 		ssh_cfg = {'username':username,
@@ -22,7 +22,7 @@ class AvakasJobQueue(TorqueJobQueue):
 					}
 		if basedir is None:
 			basedir = '/scratch/'+username
-		TorqueJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs, without_epilogue=without_epilogue, **kwargs)
+		TorqueJobQueue.__init__(self,ssh_cfg=ssh_cfg,base_work_dir=base_work_dir,basedir=basedir,local_basedir=local_basedir, max_jobs=max_jobs,  max_jobs_total=max_jobs_total, without_epilogue=without_epilogue, **kwargs)
 
 #class AvakasJobQueueOld(JobQueue):
 #	def __init__(self,username=None, ssh_cfg={}, basedir=None, local_basedir=None, max_jobs=1000, **kwargs):
