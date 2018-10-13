@@ -74,7 +74,7 @@ def powerlaw_loglogfit(X,Y,stdvec=None):
 	return best_vals, r2, perr
 
 class MetaExperiment(object):
-	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,default_nbiter=1,time_label='Time',no_storage=True, time_short_label='t',time_min=None,time_max=None,estimated_time=None,profile_test=True):
+	def __init__(self,params,local_measures,global_measures,xp_cfg,Tmax_func,additional_metrics={},default_nbiter=1,stop_on=None,time_label='Time',no_storage=True, time_short_label='t',time_min=None,time_max=None,estimated_time=None,profile_test=True):
 		self.params = copy.deepcopy(params)
 		self.local_measures = copy.deepcopy(local_measures)
 		self.global_measures = copy.deepcopy(global_measures)
@@ -92,6 +92,8 @@ class MetaExperiment(object):
 		self.no_storage = no_storage
 		self.estimated_time = estimated_time
 		self.profile_test = profile_test
+		self.stop_on = stop_on
+		self.additional_metrics = copy.copy(additional_metrics)
 
 		for k,v in list(self.params.items()):
 			test1 = 'default_value' not in list(self.params[k].keys())
@@ -170,6 +172,30 @@ class MetaExperiment(object):
 			ans.show()
 
 	@dbcheck
+	def get_measure(self,measure,xp_uuid):
+		if hasattr(self,'additional_metrics') and measure in self.additional_metrics.keys():
+			return self.additional_metrics[measure]['func'](db=self.db,xp_uuid=xp_uuid)
+		else:
+			return self.db.get_graph(method=measure,xp_uuid=xp_uuid)
+
+	@dbcheck
+	def get_measure_id_list(self,measure,xp_cfg,tmax):
+		if hasattr(self,'additional_metrics') and measure in self.additional_metrics.keys():
+			deps = self.additional_metrics[measure]['dependencies']
+
+			if deps:
+				ans = set(self.get_measure_id_list(measure=deps[0],xp_cfg=xp_cfg,tmax=tmax))
+				for d in deps[1:]:
+					ans = ans & set(self.get_measure_id_list(measure=d,xp_cfg=xp_cfg,tmax=tmax))
+				return list(ans)
+			else:
+				raise NotImplementedError('Provide at least one dependency for additional metric '+ measure +' , or implement usage of get_id_list')
+
+		else:
+			return  self.db.get_graph_id_list(method=measure,xp_cfg=xp_cfg,tmax=tmax)
+
+
+	@dbcheck
 	def plot(self,measure,merge=True,check_tmax=True,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
@@ -183,16 +209,16 @@ class MetaExperiment(object):
 			tmax = self.Tmax(**_subparams)
 		else:
 			tmax = None
-		xp_uuid = self.db.get_graph_id_list(method=measure,xp_cfg=cfg,tmax=tmax)[:nbiter]
+		xp_uuid = self.get_measure_id_list(measure=measure,xp_cfg=cfg,tmax=tmax)[:nbiter]
 		if len(xp_uuid)<nbiter:
 			if len(xp_uuid)>1:
 				plural = 's'
 			else:
 				plural = ''
 			raise ValueError('Only '+str(len(xp_uuid))+' experiment'+plural+' available in the database, nbiter=' +str(nbiter)+ ' asked, for configuration: '+str(cfg))
-		gr = self.db.get_graph(method=measure,xp_uuid=xp_uuid[0])
+		gr = self.get_measure(measure=measure,xp_uuid=xp_uuid[0])
 		for i in range(nbiter-1):
-			gr.add_graph(self.db.get_graph(method=measure,xp_uuid=xp_uuid[i+1]))
+			gr.add_graph(self.get_measure(measure=measure,xp_uuid=xp_uuid[i+1]))
 		if nbiter > 1 and merge:
 			gr.merge(keep_all_data=prepare_for_fit)
 		try:
@@ -454,7 +480,7 @@ class MetaExperiment(object):
 							c2[k] = v
 							configs_bis.append(c2)
 					job_configs = configs_bis
-			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
+			job_cfg_list = [{'xp_cfg':self.xp_cfg(**c),'stop_on':self.stop_on,'method': list(self.local_measures.keys())+list(self.global_measures.keys()),'tmax':self.Tmax(**c),'nb_iter':nbiter} for c in job_configs]
 			if self.profile_test and 'profile_test' not in _batch.jobqueue.get_tags():
 				print('Adding a profiled test job')
 				job_cfg_test = copy.deepcopy(job_cfg_list[-1])

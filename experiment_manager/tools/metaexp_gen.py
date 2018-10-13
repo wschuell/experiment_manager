@@ -47,14 +47,16 @@ def render(input_string,params_list):
 	return ans
 
 
-def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,imports,figures_dir=False,cache=None,foldername_venv=True):
+def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,metrics_local,metrics_global,additional_metrics,imports,figures_dir=False,cache=None,foldername_venv=True,stop_on='default'):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
 	exec_str = txt_to_dict('configs/exec.py',cache=cache)[exec_type]
 	plt_str = txt_to_dict('configs/plt_settings.py',cache=cache)[plt_settings]
+	additional_metrics_str = txt_to_dict('configs/additional_metrics.py',cache=cache)[additional_metrics]
 	tmax = txt_to_dict('configs/tmax.py',cache=cache)[tmax_type]
 	cfg_func = txt_to_dict('configs/cfg_func.py',cache=cache)[func_type]
+	stop_on_str = txt_to_dict('configs/stopon.py',cache=cache)[stop_on]
 
 
 	gen_fig = txt_to_dict('configs/gen_figs_list.py',cache=cache)
@@ -87,9 +89,15 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 			'params':params_str,
 			'metrics':metrics_str,
 			'plt_func':plt_str,
+			'additional_metrics':additional_metrics_str,
+			'stop_on_str':stop_on_str,
 		}
 
 	main_str = """
+import os
+
+import math
+import numpy as np
 
 import experiment_manager as xp_man
 {imports}
@@ -121,6 +129,14 @@ nbiter = {nbiter}
 
 {metrics}
 
+#### Additional measures ####
+
+{additional_metrics}
+
+#### Stopping condition for jobs ####
+
+{stop_on_str}
+
 
 #### Defining the MetaExperiment object, containing all this information ####
 
@@ -133,6 +149,8 @@ meta_exp = MetaExperiment(params=params,
               time_label='$t$',
               time_short_label='$t$',
               #time_max=80000,
+              additional_metrics=additional_metrics,
+              stop_on=stop_on,
               time_min=0)
 
 #### Parameters for running the simulations. By default, using all available cores on local computer ####
@@ -149,7 +167,10 @@ meta_exp.set_db(db)
 
 
 if __name__ == '__main__':
-    meta_exp.run()
+	with open('metaexp_running','a'):
+		os.utime('metaexp_running',None)
+	meta_exp.run()
+	os.remove('metaexp_running')
 	""".format(**format_dict)
 
 	with open(folder+'/metaexp_settings.py','w') as f:

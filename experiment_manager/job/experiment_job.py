@@ -56,9 +56,10 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
-	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, *args, **kwargs):
+	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, stop_on=None, *args, **kwargs):
 		self.get_data_at_unpack = False
 		self.tmax = tmax
+		self.stop_on = stop_on
 		if exp is None:
 			if db is None:
 				db = ngal.ngdb.NamingGamesDB()
@@ -124,7 +125,7 @@ class ExperimentDBJob(Job):
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
 		while self.data['exp']._T[-1] < self.tmax and not self.stop_condition:
 			self.data['exp'].continue_exp(autocommit=False,monitoring_func=self.monitoring_func)
-		assert  self.data['exp']._T[-1] >= self.tmax
+		assert  (self.data['exp']._T[-1] >= self.tmax) or self.stop_on is not None
 		self.save_data()
 
 	def get_completion_level(self):
@@ -135,6 +136,7 @@ class ExperimentDBJob(Job):
 
 	def monitoring_func(self,*args,**kwargs):
 		self.check_time()
+		#TODO: implement stop_on
 
 	def get_data(self):
 		if not hasattr(self.db,'connection'):
@@ -288,7 +290,8 @@ class GraphExpJob(ExperimentJob):
 
 class MultipleGraphExpDBJob(ExperimentDBJob):
 
-	def init(self, xp_uuid=None, db=None, exp=None, db_cfg={}, **graph_cfg):
+	def init(self, xp_uuid=None, db=None, exp=None, stop_on=None, db_cfg={}, **graph_cfg):
+		self.stop_on = stop_on
 		self.get_data_at_unpack = False
 		self.dep_path = None
 		methods = graph_cfg['method']
@@ -507,7 +510,7 @@ class MultipleGraphExpDBJob(ExperimentDBJob):
 	def gen_depend(self):
 		#exp = self.origin_db.get_experiment(xp_uuid=self.xp_uuid)
 		tmax = self.graph_cfg['tmax']
-		j = ExperimentDBJob(tmax=tmax, estimated_time=self.estimated_time, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
+		j = ExperimentDBJob(tmax=tmax, estimated_time=self.estimated_time, stop_on=self.stop_on, profiling=self.profiling, checktime=self.checktime, xp_uuid=self.xp_uuid, db=self.origin_db, db_cfg=self.db_cfg, descr=None, requirements=self.requirements, virtual_env=self.virtual_env)
 		self.dep_path = j.path
 		return[j]
 
