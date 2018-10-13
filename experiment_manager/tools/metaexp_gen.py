@@ -56,7 +56,7 @@ def auto_gen(folder,exec_type,plt_settings,func_type,tmax_type,nbiter,params,met
 	additional_metrics_str = txt_to_dict('configs/additional_metrics.py',cache=cache)[additional_metrics]
 	tmax = txt_to_dict('configs/tmax.py',cache=cache)[tmax_type]
 	cfg_func = txt_to_dict('configs/cfg_func.py',cache=cache)[func_type]
-	stop_on_str = txt_to_dict('configs/stopon.py',cache=cache)[stop_on]
+	stop_on_str = txt_to_dict('configs/stop_on.py',cache=cache)[stop_on]
 
 
 	gen_fig = txt_to_dict('configs/gen_figs_list.py',cache=cache)
