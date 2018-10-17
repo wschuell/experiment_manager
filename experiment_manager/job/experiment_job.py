@@ -559,7 +559,7 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 
 	def monitoring_func(self,*args,**kwargs):
-		if self.stop_on is not None:
+		if self.stop_on is not None and self.stop_on['measure'] in self.data.keys():
 			if self.stop_on['comparison'] == 'l':
 				if self.data[self.stop_on['measure']]._Y[0][-1] <= self.stop_on['value']:
 					self.stop_condition = True
