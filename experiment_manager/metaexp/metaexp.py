@@ -206,7 +206,10 @@ class MetaExperiment(object):
 			#raise ValueError('Parameter '+str(k)+' has several values: '+str(_subparams[k])+'. Use plot_several to use different parameter values.')
 		cfg = self.xp_cfg(**_subparams)
 		if check_tmax:
-			tmax = self.Tmax(**_subparams)
+			if self.stop_on:
+				tmax = 1
+			else:
+				tmax = self.Tmax(**_subparams)
 		else:
 			tmax = None
 		xp_uuid = self.get_measure_id_list(measure=measure,xp_cfg=cfg,tmax=tmax)[:nbiter]
@@ -454,10 +457,14 @@ class MetaExperiment(object):
 						xp = self.db.get_experiment(force_new=True,**cfg)
 						id_list.append(xp.uuid)
 				for xp_uuid in id_list:
-					test = self.db.get_param(xp_uuid=xp_uuid, param='Tmax')>=self.Tmax(**c)
+					if self.stop_on:
+						tmax = 1
+					else:
+						tmax = self.Tmax(**c)
+					test = self.db.get_param(xp_uuid=xp_uuid, param='Tmax')>=tmax
 					for m in list(self.local_measures.keys())+list(self.global_measures.keys()):
 						test = test and self.db.data_exists(xp_uuid=xp_uuid, method=m)
-						test = test and self.db.get_param(xp_uuid=xp_uuid, param='Time_max',method=m)>=self.Tmax(**c)
+						test = test and self.db.get_param(xp_uuid=xp_uuid, param='Time_max',method=m)>=tmax
 					if not test:
 						xp = self.db.get_experiment(xp_uuid=xp_uuid)
 						xp.continue_exp_until(T=self.Tmax(**c))
@@ -490,6 +497,7 @@ class MetaExperiment(object):
 				job_cfg_test['nb_iter'] = 1
 				job_cfg_test['force_new'] = True
 				job_cfg_test['erase'] = False
+				job_cfg_test['db_test'] = True
 				job_cfg_list.insert(0,job_cfg_test)
 				_batch.jobqueue.add_tags('profile_test')
 			_batch.add_jobs(job_cfg_list,no_storage=self.no_storage)
@@ -614,7 +622,7 @@ class MetaExperiment(object):
 			gr.Yoptions.append(options)
 			gr.loglog = loglog
 			if gr.ylabel is not None and (len(gr.ylabel)<4 or (gr.ylabel[0]=='$' and gr.ylabel[-1] == '$')):
-				if gr.ylabel[0] =='$' and gr.ylabel[-1]=='$':
+				if gr.ylabel and gr.ylabel[0] =='$' and gr.ylabel[-1]=='$':
 					y_symbol = gr.ylabel[1:-1]
 				else:
 					y_symbol = gr.ylabel
@@ -765,7 +773,10 @@ class MetaExperiment(object):
 			cfg_str = json.dumps(cfg, sort_keys=True)
 			if cfg_str not in cfg_str_list:
 				cfg_str_list.add(cfg_str)
-				idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)
+				if self.stop_on:
+					idlist = self.db.get_id_list(tmax=1,**cfg)
+				else:
+					idlist = self.db.get_id_list(tmax=self.Tmax(**c),**cfg)
 				nb = min(nbiter,len(idlist))
 				if not only_missing or nb < nbiter:
 					print(nb,'/',nbiter,'  ',cfg)

@@ -482,7 +482,7 @@ class ClusterJobQueue(JobQueue):
 		return out_dict
 
 	def __setstate__(self, in_dict):
-		self.__dict__.update(in_dict)
+		JobQueue.__setstate__(self,in_dict)
 		self.ssh_session = SSHSession(auto_connect=False,**self.ssh_cfg)
 
 	def gen_files(self, format_dict):

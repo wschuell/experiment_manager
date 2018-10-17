@@ -29,7 +29,7 @@ class BatchExp(object):
 		elif db_cfg is not None:
 			self.db = get_database(**db_cfg)
 		else:
-			self.db = get_database(**{'db_type':'sqlite','name':self.name})
+			self.db = get_database(**{'db_type':'sqlite3','name':self.name})
 		self.other_dbs = other_dbs
 		self.other_dbs_lookup = other_dbs_lookup
 		self.auto_job = auto_job
@@ -50,11 +50,15 @@ class BatchExp(object):
 #		delattr(exp,'_batch_exp')
 #		delattr(exp,'originclass')
 
-	def get_experiment(self, xp_uuid=None, force_new=False, blacklist=[], pattern=None, tmax=0, auto_job=True, **xp_cfg):
-		exp = self.db.get_experiment(xp_uuid=xp_uuid, force_new=force_new, blacklist=blacklist, pattern=pattern, tmax=tmax, **xp_cfg)
+	def get_experiment(self, xp_uuid=None, force_new=False, blacklist=[], db_test=False, pattern=None, tmax=0, auto_job=True, **xp_cfg):
+		if db_test:
+			job_db = self.get_test_db()
+		else:
+			job_db = self.db
+		exp = job_db.get_experiment(xp_uuid=xp_uuid, force_new=force_new, blacklist=blacklist, pattern=pattern, tmax=tmax, **xp_cfg)
 #		self.control_exp(exp)
 		if auto_job and exp._T[-1] < tmax:
-			self.add_exp_job(xp_uuid=exp.uuid, tmax=tmax)
+			self.add_exp_job(db_test=db_test,xp_uuid=exp.uuid, tmax=tmax)
 			print('added job for exp {}, from {} to {}'.format(xp_uuid, exp._T[-1], tmax))
 		return exp
 
@@ -67,32 +71,45 @@ class BatchExp(object):
 			self.add_graph_job(xp_uuid=exp.uuid, method=method, tmax=tmax,no_storage=no_storage)
 			print('added graph job for exp {}, method {} to {}'.format(xp_uuid, method, tmax))
 
-	def add_exp_job(self, tmax, xp_uuid=None, save=True, stop_on=None, xp_cfg={}, profiling=None, erase=None):
+	def add_exp_job(self, tmax, xp_uuid=None, save=True, stop_on=None, xp_cfg={}, profiling=None, db_test=False, erase=None):
+		if db_test:
+			job_db = self.get_test_db()
+		else:
+			job_db = self.db
 		if profiling is None:
 			profiling = self.profiling
-		exp = self.get_experiment(xp_uuid=xp_uuid, **xp_cfg)
+		exp = self.get_experiment(db_test=db_test,xp_uuid=xp_uuid, auto_job=False, **xp_cfg)
 		if exp._T[-1] < tmax:
 			job = ExperimentDBJob(exp=exp, tmax=tmax, stop_on=stop_on, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 			if erase is not None:
 				job.erase = erase
 
-	def add_graph_job(self, method, xp_uuid=None, tmax=None, stop_on=None, save=True, xp_cfg={}, no_storage=False, profiling=None, erase=None):
+	def get_test_db(self):
+		if not hasattr(self,'test_db'):
+			self.test_db = self.db.__class__(db_type='sqlite3',name='test_db')
+		return self.test_db
+
+	def add_graph_job(self, method, xp_uuid=None, tmax=None, stop_on=None, save=True, xp_cfg={}, db_test=False, no_storage=False, profiling=None, erase=None):
+		if db_test:
+			job_db = self.get_test_db()
+		else:
+			job_db = self.db
 		if profiling is None:
 			profiling = self.profiling
 		if xp_uuid is None:
-			exp = self.get_experiment(**xp_cfg)#modify in order to get only uuid and not whole exp
+			exp = self.get_experiment(db_test=db_test,auto_job=False,**xp_cfg)#modify in order to get only uuid and not whole exp
 			tmax_xp = exp._T[-1]
 		else:
 			exp = None
-			tmax_xp = self.db.get_param(xp_uuid=xp_uuid,param='Tmax')
+			tmax_xp = job_db.get_param(xp_uuid=xp_uuid,param='Tmax')
 		if tmax is None:
 			tmax = tmax_xp
 		try:
 			if no_storage:
-				job = ExperimentDBJobNoStorage(xp_uuid=xp_uuid, stop_on=stop_on, db=self.db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
+				job = ExperimentDBJobNoStorage(xp_uuid=xp_uuid, stop_on=stop_on, db=job_db, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			else:
-				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=self.db, stop_on=stop_on, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
+				job = MultipleGraphExpDBJob(xp_uuid=xp_uuid, db=job_db, stop_on=stop_on, exp=exp, method=method, tmax=tmax, virtual_env=self.virtual_env, requirements=self.requirements, profiling=profiling, checktime=True, estimated_time=self.estimated_time)
 			self.jobqueue.add_job(job,save=save)
 			if erase is not None:
 				job.erase = erase
@@ -105,6 +122,10 @@ class BatchExp(object):
 		for cfg in cfg_list:
 			cfg_str = json.dumps(cfg, sort_keys=True)
 			if cfg_str not in self.jobqueue.past_job_cfg or ('force_new' in list(cfg.keys()) and cfg['force_new']):
+				if 'db_test' in cfg.keys() and cfg['db_test']:
+					job_db = self.get_test_db()
+				else:
+					job_db = self.db
 				self.jobqueue.past_job_cfg.append(cfg_str)
 				if 'uuid' in list(cfg.keys()):
 					nb_iter = 1
@@ -114,7 +135,7 @@ class BatchExp(object):
 					nb_iter = cfg['nb_iter']
 				uuid_l = []
 				if 'uuid' not in list(cfg.keys()):
-					uuid_l = self.db.get_id_list(**cfg['xp_cfg'])
+					uuid_l = job_db.get_id_list(**cfg['xp_cfg'])
 					uuid_l = [u for u in uuid_l if u not in self.blacklist]
 					if 'force_new' not in list(cfg.keys()) or not cfg['force_new']:
 						nb_new = max(nb_iter-len(uuid_l),0)
@@ -124,14 +145,14 @@ class BatchExp(object):
 						uuid_l = []
 						nb_new = nb_iter
 					for i in range(nb_new):
-						exp = self.db.get_experiment(force_new=True, **cfg['xp_cfg'])
+						exp = job_db.get_experiment(force_new=True, **cfg['xp_cfg'])
 						uuid1 = exp.uuid
 						uuid_l.append(uuid1)
 					if len(uuid_l) > nb_iter:
 						uuid_l = uuid_l[:nb_iter]
 				else:
 					uuid_l = [cfg['uuid']]
-				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling', 'erase','stop_on') if k in list(cfg.keys()))
+				cfg2 = dict((k,cfg[k]) for k in ('method', 'tmax', 'profiling', 'erase','stop_on', 'db_test') if k in list(cfg.keys()))
 				if 'method' in list(cfg.keys()):
 					for xp_uuid in uuid_l:
 						self.add_graph_job(xp_uuid=xp_uuid,save=False,no_storage=no_storage,**cfg2)

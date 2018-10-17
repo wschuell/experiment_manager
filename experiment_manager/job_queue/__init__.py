@@ -76,6 +76,9 @@ class JobQueue(object):
 		self.virtual_env = virtual_env
 		self.requirements = requirements
 		self.python_version = sys.version_info[0]
+		self.path_force_update = os.path.join(self.path,'force_update')
+		self.path_update_status = os.path.join(self.path,'force_requirements_update')
+		self.path_rerun_errored = os.path.join(self.path,'restart_errored_jobs')
 
 	def save(self):
 		if not os.path.isdir(self.path):#'jobs'):
@@ -160,10 +163,21 @@ class JobQueue(object):
 	def init_connections(self):
 		pass
 
+	def check_folder(self):
+		if os.path.exists(self.path_update_status):
+			self.update_needed = True
+			os.remove(self.path_update_status)
+
+		if os.path.exists(self.path_rerun_errored):
+			for j in [jj for jj in self.job_list if jj.status == 'script error']:
+				j.restart()
+			os.remove(self.path_rerun_errored)
+
 	def update_queue(self,clear_output=False):
 		if not self.job_list:
 			self.save_status(message='Queue is empty')
 			return
+		self.check_folder()
 		self.init_connections()
 		if hasattr(self,'last_update') and time.time() - self.last_update < 1:
 			time.sleep(1)
@@ -331,15 +345,28 @@ class JobQueue(object):
 			return
 		self.update_queue()
 		step = t
+		remaining_time = step
+		coeff_current = 1.
 		state = str(self)
 		while [j for j in self.job_list if (j.status != 'missubmitted' and j.status != 'dependencies not satisfied')]:
-			time.sleep(step)#rlist, wlist, xlist = select([sys.stdin], [], [], step)
+			while remaining_time>step:
+				time.sleep(step)#rlist, wlist, xlist = select([sys.stdin], [], [], step)
+				remaining_time -= step
+				if os.path.exists(self.path_force_update):
+					remaining_time = 0.
+					os.remove(self.path_force_update)
+			time.sleep(remaining_time)
 			self.update_queue(clear_output=clear_output)
 			if str(self) == state:
-				step = min(step*coeff,max_time)
+				if step*coeff_current*coeff >= max_time:
+					remaining_time = max_time
+				else:
+					coeff_current *= coeff
+					remaining_time = step*coeff_current
 			else:
 				state = str(self)
-				step = t
+				remaining_time = step
+				coeff_current = 1.
 			if call_between is not None:
 				call_between()
 			if self.job_list and not [j for j in self.job_list if j.status != 'to be cleaned']:
@@ -469,3 +496,13 @@ class JobQueue(object):
 			tags = [tags]
 		if hasattr(self,'tags'):
 			self.tags = [t for t in self.tags if t not in tags]
+
+
+	def __setstate__(self, in_dict):
+		self.__dict__.update(in_dict)
+		if not hasattr(self,'path_force_update'):
+			self.path_force_update = os.path.join(self.path,'force_update')
+		if not hasattr(self,'path_update_status'):
+			self.path_update_status = os.path.join(self.path,'force_requirements_update')
+		if not hasattr(self,'path_rerun_errored'):
+			self.path_rerun_errored = os.path.join(self.path,'restart_errored_jobs')

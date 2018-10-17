@@ -56,6 +56,24 @@ class ExperimentJob(Job):
 
 class ExperimentDBJob(Job):
 
+	def check_stop_condition(self):
+		if not hasattr(self,'stop_on') or self.stop_on is None:
+			return False
+		else:
+			measure = self.stop_on['measure']
+			try:
+				gr = self.db.get_graph(xp_uuid=self.xp_uuid,method=measure)
+			except:
+				return False
+			val = gr._Y[0][-1]
+			if self.stop_on['comparison'] == 'g':
+				return val >= self.stop_on['value']
+			elif self.stop_on['comparison'] == 'l':
+				return val <= self.stop_on['value']
+			elif self.stop_on['comparison'] == 'e':
+				return val == self.stop_on['value']
+
+
 	def init(self, tmax, exp=None, xp_cfg={}, xp_uuid=None, db=None, db_cfg={}, stop_on=None, *args, **kwargs):
 		self.get_data_at_unpack = False
 		self.tmax = tmax
@@ -69,7 +87,9 @@ class ExperimentDBJob(Job):
 			xp_tmax = db.get_param(xp_uuid=xp_uuid,param='Tmax')
 		else:
 			xp_tmax = exp._T[-1]
-		if xp_tmax >= tmax:
+			xp_uuid = exp.uuid
+		self.xp_uuid = xp_uuid
+		if xp_tmax >= tmax or (xp_tmax >0 and self.check_stop_condition()):
 			raise Exception('Job already done')
 			#self.status = 'already done'
 			#self.xp_uuid = None
@@ -539,6 +559,16 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 
 
 	def monitoring_func(self,*args,**kwargs):
+		if self.stop_on is not None:
+			if self.stop_on['comparison'] == 'l':
+				if self.data[self.stop_on['measure']]._Y[0][-1] <= self.stop_on['value']:
+					self.stop_condition = True
+			elif self.stop_on['comparison'] == 'g':
+				if self.data[self.stop_on['measure']]._Y[0][-1] >= self.stop_on['value']:
+					self.stop_condition = True
+			elif self.stop_on['comparison'] == 'e':
+				if self.data[self.stop_on['measure']]._Y[0][-1] == self.stop_on['value']:
+					self.stop_condition = True
 		graph_cfg = copy.deepcopy(self.graph_cfg)
 		for method in self.methods:
 			graph_cfg['method'] = method
@@ -550,20 +580,10 @@ class ExperimentDBJobNoStorage(ExperimentDBJob):
 					if not hasattr(self.data['exp'],'tempgraph'):
 						self.data['exp'].tempgraph = {}
 					self.data['exp'].tempgraph[method] = self.data[method]
-				elif self.data['exp']._T and self.data['exp']._T[-1] >= self.tmax:
+				elif self.stop_condition or (self.data['exp']._T and self.data['exp']._T[-1] >= self.tmax):
 					self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
 			else:
 				self.data[method] = self.data['exp'].graph(autocommit=False, **graph_cfg)
-		if self.stop_on is not None:
-			if self.stop_on['comparison'] == 'l':
-				if self.data[self.stop_on['measure']]._Y[0][-1] <= self.stop_on['value']:
-					self.stop_condition = True
-			elif self.stop_on['comparison'] == 'g':
-				if self.data[self.stop_on['measure']]._Y[0][-1] >= self.stop_on['value']:
-					self.stop_condition = True
-			elif self.stop_on['comparison'] == 'e':
-				if self.data[self.stop_on['measure']]._Y[0][-1] == self.stop_on['value']:
-					self.stop_condition = True
 		self.check_time()
 
 	def get_data(self):

@@ -105,14 +105,14 @@ import experiment_manager as xp_man
 from experiment_manager.metaexp.metaexp import MetaExperiment
 
 
+#### Function to determine the number of time steps for each simulation ####
+
+{Tmax_str}
+
 #### Function to construct the configuration of each simulation, depending on a few parameters, described below ####
 
 {func_str}
 
-
-#### Function to determine the number of time steps for each simulation ####
-
-{Tmax_str}
 
 
 #### Number of trials per distinct configuration ####
