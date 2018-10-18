@@ -532,6 +532,7 @@ class MetaExperiment(object):
 
 	def powerlaw_fit(self,graph,xmin=None,xmax=None,get_object=False,scatter=True,get_values=False,display_mode=None,simple_labels=False,alpha_noind=False,use_formula=False,loglog=True,stdvec_mode=True):
 		gr = copy.deepcopy(graph)
+		gr.symlog = False
 		if 'labels' in list(graph.legendoptions.keys()) and len(graph.legendoptions['labels']) == len(graph._X):
 			labels = copy.deepcopy(graph.legendoptions['labels'])
 		else:
