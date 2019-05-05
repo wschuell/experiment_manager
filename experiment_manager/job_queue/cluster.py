@@ -12,13 +12,14 @@ from . import JobQueue
 from ..tools.ssh import SSHSession,get_username_from_hostname,check_hostname
 
 class ClusterJobQueue(JobQueue):
-	def __init__(self, ssh_cfg={}, basedir='', local_basedir='', requirements=[], max_jobs=1000, max_jobs_total=None, base_work_dir=None, without_epilogue=False, install_as_job=False, modules=[], **kwargs):
+	def __init__(self, ssh_cfg={}, home_prefix='/home', basedir='', local_basedir='', requirements=[], max_jobs=1000, max_jobs_total=None, base_work_dir=None, without_epilogue=False, install_as_job=False, modules=[], **kwargs):
 		super(ClusterJobQueue,self).__init__(requirements=requirements,**kwargs)
 		self.max_jobs = max_jobs
 		if max_jobs_total is None:
 			self.max_jobs_total = max_jobs
 		else:
 			self.max_jobs_total = max_jobs_total
+		self.home_prefix = home_prefix
 		self.modules = modules
 		self.ssh_cfg = ssh_cfg
 		self.update_needed = False
@@ -79,7 +80,7 @@ class ClusterJobQueue(JobQueue):
 			else:
 				python_bin = '/usr/bin/env python'
 		else:
-			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_session.get_username(), job.virtual_env)
+			python_bin = '{}/{}/virtualenvs/{}/bin/python'.format(self.home_prefix,self.ssh_session.get_username(), job.virtual_env)
 
 		walltime = self.get_walltime(job.estimated_time)
 
@@ -373,9 +374,9 @@ class ClusterJobQueue(JobQueue):
 			for package in requirements:
 				session.command('pip'+python_version+' install --user '+package)
 		else:
-			if not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_session.get_username(), virtual_env)):
-				cmd.append(virtualenv_bin + ' {}/home/{}/virtualenvs/{}'.format(site_pack,self.ssh_session.get_username(), virtual_env))
-			cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_session.get_username(), virtual_env))
+			if not session.path_exists('{}/{}/virtualenvs/{}'.format(self.home_prefix,self.ssh_session.get_username(), virtual_env)):
+				cmd.append(virtualenv_bin + ' {}{}/{}/virtualenvs/{}'.format(site_pack,self.home_prefix,self.ssh_session.get_username(), virtual_env))
+			cmd.append('source {}/{}/virtualenvs/{}/bin/activate'.format(self.home_prefix,self.ssh_session.get_username(), virtual_env))
 			for package in requirements:
 				cmd.append('pip'+ python_version + ' install '+package)
 			cmd.append('deactivate')
@@ -396,12 +397,12 @@ class ClusterJobQueue(JobQueue):
 		session = self.ssh_session
 		if hasattr(self,'modules') and self.modules:
 			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
-		if virtual_env is not None and not session.path_exists('/home/{}/virtualenvs/{}'.format(self.ssh_session.get_username(), virtual_env)):
+		if virtual_env is not None and not session.path_exists('{}/{}/virtualenvs/{}'.format(self.home_prefix,self.ssh_session.get_username(), virtual_env)):
 			#session.close()
 			self.set_virtualenv(virtual_env=virtual_env, requirements=requirements)
 		else:
 			if virtual_env is not None:
-				cmd.append('source /home/{}/virtualenvs/{}/bin/activate'.format(self.ssh_session.get_username(), virtual_env))
+				cmd.append('source {}/{}/virtualenvs/{}/bin/activate'.format(self.home_prefix,self.ssh_session.get_username(), virtual_env))
 				option=''
 				python_version = ''
 			else:
@@ -482,6 +483,8 @@ class ClusterJobQueue(JobQueue):
 		return out_dict
 
 	def __setstate__(self, in_dict):
+		if 'home_prefix' not in in_dict.keys():
+			in_dict['home_prefix'] = '/home'
 		JobQueue.__setstate__(self,in_dict)
 		self.ssh_session = SSHSession(auto_connect=False,**self.ssh_cfg)
 
@@ -537,7 +540,7 @@ class ClusterJobQueue(JobQueue):
 		if hasattr(self,'modules') and self.modules:
 			session.prefix_command = 'module load '+ ' '.join(self.modules) + ' && '
 		if virtual_env is not None:
-			python_bin = '/home/{}/virtualenvs/{}/bin/python'.format(self.ssh_session.get_username(), virtual_env)
+			python_bin = '{}/{}/virtualenvs/{}/bin/python'.format(self.home_prefix,self.ssh_session.get_username(), virtual_env)
 			if not self.ssh_session.path_exists(python_bin):
 				self.set_virtualenv(virtual_env)
 		else:

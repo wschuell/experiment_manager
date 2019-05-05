@@ -24,6 +24,7 @@ job_queue_class={
 	'local':'local.LocalJobQueue',
 	'local_multiprocess':'local.LocalMultiProcessJobQueue',
 	'avakas':'avakas.AvakasJobQueue',
+	'curta':'avakas.CurtaJobQueue',
 	'plafrim':'plafrim.PlafrimJobQueue',
 	'plafrim_oldslurm':'plafrim.PlafrimOldSlurm',
 	'torque':'torque.TorqueJobQueue',

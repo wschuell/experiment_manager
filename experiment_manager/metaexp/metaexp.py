@@ -196,13 +196,13 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot(self,measure,merge=True,check_tmax=True,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,**subparams):
+	def plot(self,measure,merge=True,check_tmax=True,nbiter=None,get_object=False,loglog=False,semilog=False,prepare_for_fit=False,force_x_collapse=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		try:
 			_subparams = self.complete_params(subparams,allow_list=False)
 		except TypeError:
-			return self.plot_several(measure=measure,nbiter=nbiter,check_tmax=check_tmax,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
+			return self.plot_several(measure=measure,nbiter=nbiter,check_tmax=check_tmax,loglog=loglog,semilog=semilog,get_object=get_object,force_x_collapse=force_x_collapse,**subparams)
 			#raise ValueError('Parameter '+str(k)+' has several values: '+str(_subparams[k])+'. Use plot_several to use different parameter values.')
 		cfg = self.xp_cfg(**_subparams)
 		if check_tmax:
@@ -223,7 +223,7 @@ class MetaExperiment(object):
 		for i in range(nbiter-1):
 			gr.add_graph(self.get_measure(measure=measure,xp_uuid=xp_uuid[i+1]))
 		if nbiter > 1 and merge:
-			gr.merge(keep_all_data=prepare_for_fit)
+			gr.merge(keep_all_data=prepare_for_fit,force_x_collapse=force_x_collapse)
 		try:
 			gr.title = self.local_measures[measure]['label']
 			if 'unit_label' in list(self.local_measures[measure].keys()):
@@ -258,7 +258,7 @@ class MetaExperiment(object):
 
 
 	@dbcheck
-	def plot_several(self,measure,nbiter=None,check_tmax=True,get_object=False,loglog=False,semilog=False,**subparams):
+	def plot_several(self,measure,nbiter=None,check_tmax=True,get_object=False,loglog=False,semilog=False,force_x_collapse=False,**subparams):
 		if nbiter is None:
 			nbiter = self.default_nbiter
 		_subparams = self.complete_params(subparams,allow_list=True)
@@ -268,7 +268,7 @@ class MetaExperiment(object):
 				varying_params.append(k)
 		configs = []
 		if varying_params == []:
-			return self.plot(measure=measure,check_tmax=check_tmax,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,**subparams)
+			return self.plot(measure=measure,check_tmax=check_tmax,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=get_object,force_x_collapse=force_x_collapse,**subparams)
 		for k in varying_params:
 			if configs == []:
 				configs = [{k:v} for v in _subparams[k]]
@@ -282,12 +282,12 @@ class MetaExperiment(object):
 				configs = configs_bis
 		_subparams_bis = copy.deepcopy(_subparams)
 		_subparams_bis.update(configs[0])
-		gr = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
+		gr = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,force_x_collapse=force_x_collapse,**_subparams_bis)
 		if len(configs) > 1:
 			for c in configs[1:]:
 				_subparams_bis = copy.deepcopy(_subparams)
 				_subparams_bis.update(c)
-				gr2 = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,**_subparams_bis)
+				gr2 = self.plot(measure=measure,check_tmax=check_tmax,get_object=True,nbiter=nbiter,loglog=loglog,semilog=semilog,force_x_collapse=force_x_collapse,**_subparams_bis)
 				gr.add_graph(gr2)
 		gr.legendoptions['labels'] = [', '.join([self.params[k]['short_label']+'='+str(c[k]) for k in varying_params]) for c in configs]
 		if get_object:
@@ -305,13 +305,13 @@ class MetaExperiment(object):
 			token_values = copy.deepcopy(subparams[token])
 		_subparams = copy.deepcopy(subparams)
 		_subparams[token] = token_values[0]
-		gr = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
+		gr = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,force_x_collapse=True,**_subparams)
 		for i in range(len(gr._X)):
 			gr._X[i][0] = _subparams[token]
 		for v in token_values[1:]:
 			_subparams = copy.deepcopy(subparams)
 			_subparams[token] = v
-			gr2 = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,**_subparams)
+			gr2 = self.plot(measure=measure,check_tmax=True,nbiter=nbiter,loglog=loglog,semilog=semilog,get_object=True,force_x_collapse=True,**_subparams)
 			for i in range(len(gr2._X)):
 				gr2._X[i][0] = _subparams[token]
 			gr.complete_with(gr2)
